@@ -1,1 +1,1 @@
-web: python manage.py collectstatic --noinput && gunicorn emaus.wsgi
+web: gunicorn emaus.wsgi
