@@ -34,54 +34,44 @@
     <form style="display:none">
         {% csrf_token %}
     </form>
-    <!-- Preloader Start -->
 	<div class="preloader">
 		<div class="loading-container">
 			<div class="loading"></div>
 			<div id="loading-icon"><img src="{% static 'images/loaderlogo.svg' %}" alt=""></div>
 		</div>
 	</div>
-	<!-- Preloader End -->
 
-    <!-- Header Start -->
 	<header class="main-header">
 		<div class="header-sticky">
 			<nav class="navbar navbar-expand-lg">
 				<div class="container">
-					<!-- Logo Start -->
 					<a class="navbar-brand" href="./">
 						<img src="{% static 'images/logomio.svg' %}" alt="Logo">
 					</a>
-					<!-- Logo End -->
-
-                    <!-- Main Menu Start -->
                     <div class="collapse navbar-collapse main-menu">
                         <div class="nav-menu-wrapper">
                             <ul class="navbar-nav mr-auto" id="menu">
                                 <li class="nav-item"><a class="nav-link" href="{% url 'loginin' %}">Inicio</a></li>
-                                <li class="nav-item"><a class="nav-link" href="{% url 'contact' %}l">Servicios</a></li></li>
+                                <li class="nav-item"><a class="nav-link" href="{% url 'contact' %}l">Servicios</a></li>
                                 <li class="nav-item"><a class="nav-link" href="{% url 'contact' %}">Grupos y Servidores</a></li>
                                 <li class="nav-item"><a class="nav-link" href="{% url 'contact' %}">Calendario</a></li>
-                                <li class="nav-item"><a class="nav-link" href="{% url 'contact' %}">Contactanos</a></li
-                                <li class="nav-item"><a class="nav-link" href="{% url 'logout' %}">Cerrar Sesión</a></li
+                                <li class="nav-item"><a class="nav-link" href="{% url 'contact' %}">Contactanos</a></li>
+                                <li class="nav-item"><a class="nav-link" href="{% url 'logout' %}">Cerrar Sesión</a></li>
                             </ul>
                         </div>
                     </div>
-					<!-- Main Menu End -->
 					<div class="navbar-toggle"></div>
 				</div>
 			</nav>
 			<div class="responsive-menu"></div>
 		</div>
 	</header>
-	<!-- Header End -->
 
     <!-- Page Header Section Start -->
-    <div class="page-header dark-section parallaxie">
+    <div class="page-header dark-section parallaxie categorias-header">
         <div class="container">
             <div class="row">
                 <div class="col-lg-12">
-                    <!-- Page Header Box Start -->
                     <div class="page-header-box">
                         <h1 class="text-anime-style-3" data-cursor="-opaque">{{ categoria.nombre }}</h1>
                         <nav class="wow fadeInUp">
@@ -92,409 +82,146 @@
                             </ol>
                         </nav>
                     </div>
-                    <!-- Page Header Box End -->
                 </div>
             </div>
         </div>
     </div>
-    <!-- Page Header Section End -->
 
-    <!-- Page Service Single Start -->
     <div class="page-service-single">
         <div class="container">
             <div class="row">
                 <div class="col-lg-4">
-                    <!-- Page Single Sidebar Start -->
                     <div class="page-single-sidebar">
-                        <!-- Page Category List Start -->
                         <div class="page-category-list wow fadeInUp">
-                            <div class="categorias-toggle"
-                            onclick="toggleCategorias()">
-
-                            <h2 class="page-category-list-title">
-                            Categorías
-                            </h2>
-
-                            <i id="categoriaIcon"
-                            class="fa fa-plus">
-                            </i>
-
+                            <div class="categorias-toggle" onclick="toggleCategorias()">
+                                <h2 class="page-category-list-title">Categorías</h2>
+                                <i id="categoriaIcon" class="fa fa-plus"></i>
                             </div>
-
                             <div id="categoriasLista">
-
-                            <ul>
-                                <li><a href="{% url 'categoria' 1 %}">01 - Cantos de Entrada</a></li>
-                                <li><a href="{% url 'categoria' 2 %}">02 - Cantos de Perdón</a></li>
-                                <li><a href="{% url 'categoria' 3 %}">03 - Cantos de gloria</a></li>
-                                <li><a href="{% url 'categoria' 4 %}">04 - Cantos antes del evangelio</a></li>
-                                <li><a href="{% url 'categoria' 5 %}">05 - Cantos del ofertorio</a></li>
-                                <li><a href="{% url 'categoria' 6 %}">06 - Cantos de Santo</a></li>
-                                <li><a href="{% url 'categoria' 7 %}">07 - Cantos de la Paz</a></li>
-                                <li><a href="{% url 'categoria' 8 %}">08 - Cantos de la Comunión</a></li>
-                                <li><a href="{% url 'categoria' 9 %}">09 - Cantos de salida</a></li>
-                                <li><a href="{% url 'categoria' 10 %}">10 - Cantos a María</a></li>
-                                <li><a href="{% url 'categoria' 11 %}">11 - Cantos al Santísimo</a></li>
-                                <li><a href="{% url 'categoria' 12 %}">12 - Cantos al Espíritu Santo</a></li>
-                                <li><a href="{% url 'categoria' 13 %}">13 - Cantos de Semana Santa</a></li>
-                                <li><a href="{% url 'categoria' 14 %}">14 - Cantos de Navidad</a></li>
-                                <li><a href="{% url 'categoria' 15 %}">15 - Retiro de Mujeres</a></li>
-                                <li><a href="{% url 'categoria' 16 %}">16 - Retiro de Varones</a></li>
-                            </ul>
-                        </div>
-                        </div>
-                        <!-- Page Category List End -->
-
-
-                    </div>
-                    <!-- Page Single Sidebar End -->
-                </div>
-
-                <div class="col-lg-8">
-                    <!-- Service Single Content Start -->
-                    <div class="service-single-content">
-
-                        <!-- Page Single FAQs Start -->
-                        <div class="page-single-faqs">
-
-                            <div class="section-title">
-                                <h2 class="text-anime-style-3" data-cursor="-opaque">
-                                    Listado de Canciones
-                                </h2>
+                                <ul>
+                                    <li><a href="{% url 'categoria' 1 %}">01 - Cantos de Entrada</a></li>
+                                    <li><a href="{% url 'categoria' 2 %}">02 - Cantos de Perdón</a></li>
+                                    <li><a href="{% url 'categoria' 3 %}">03 - Cantos de gloria</a></li>
+                                    <li><a href="{% url 'categoria' 4 %}">04 - Cantos antes del evangelio</a></li>
+                                    <li><a href="{% url 'categoria' 5 %}">05 - Cantos del ofertorio</a></li>
+                                    <li><a href="{% url 'categoria' 6 %}">06 - Cantos de Santo</a></li>
+                                    <li><a href="{% url 'categoria' 7 %}">07 - Cantos de la Paz</a></li>
+                                    <li><a href="{% url 'categoria' 8 %}">08 - Cantos de la Comunión</a></li>
+                                    <li><a href="{% url 'categoria' 9 %}">09 - Cantos de salida</a></li>
+                                    <li><a href="{% url 'categoria' 10 %}">10 - Cantos a María</a></li>
+                                    <li><a href="{% url 'categoria' 11 %}">11 - Cantos al Santísimo</a></li>
+                                    <li><a href="{% url 'categoria' 12 %}">12 - Cantos al Espíritu Santo</a></li>
+                                    <li><a href="{% url 'categoria' 13 %}">13 - Cantos de Semana Santa</a></li>
+                                    <li><a href="{% url 'categoria' 14 %}">14 - Cantos de Navidad</a></li>
+                                    <li><a href="{% url 'categoria' 15 %}">15 - Retiro de Mujeres</a></li>
+                                    <li><a href="{% url 'categoria' 16 %}">16 - Retiro de Varones</a></li>
+                                </ul>
                             </div>
-
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-8">
+                    <div class="service-single-content">
+                        <div class="page-single-faqs">
+                            <div class="section-title">
+                                <h2 class="text-anime-style-3" data-cursor="-opaque">Listado de Canciones</h2>
+                            </div>
                             <div class="faq-accordion" id="accordion">
-
                                 {% for cancion in canciones %}
-
                                 <div class="accordion-item wow fadeInUp">
-
-                                    <h2 class="accordion-header"
-                                        id="heading{{forloop.counter}}">
-
-                                        <button
-                                            class="accordion-button collapsed"
-                                            type="button"
-                                            data-bs-toggle="collapse"
-                                            data-bs-target="#collapse{{forloop.counter}}"
-                                            aria-expanded="false">
-
+                                    <h2 class="accordion-header" id="heading{{forloop.counter}}">
+                                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{forloop.counter}}" aria-expanded="false">
                                             {{cancion.numero}} - {{cancion.titulo}}
-
                                         </button>
-
                                     </h2>
-
-                                    <div
-                                        id="collapse{{forloop.counter}}"
-                                        class="accordion-collapse collapse"
-                                        data-bs-parent="#accordion">
-
+                                    <div id="collapse{{forloop.counter}}" class="accordion-collapse collapse" data-bs-parent="#accordion">
                                         <div class="accordion-body">
-
                                             <div class="song-info">
-
                                                 {% if cancion.usa_capodastro %}
-                                                <span class="badge bg-warning">
-                                                    🎸 Capo:
-                                                    {{cancion.traste_capodastro}}
-                                                </span>
+                                                <span class="badge bg-warning">🎸 Capo: {{cancion.traste_capodastro}}</span>
                                                 {% endif %}
-
                                             </div>
-
-                                            <pre id="cancion{{cancion.id}}"class="texto-musical">{{ cancion.letra_coloreada|safe }}</pre>
+                                            <pre id="cancion{{cancion.id}}" class="texto-musical">{{ cancion.letra_coloreada|safe }}</pre>
                                             <div class="acciones-cancion">
-
-                                                <button
-                                                    onclick="editarCancion({{cancion.id}})"
-                                                    class="btn-accion">
-
-                                                    <i class="fa fa-pen"></i>
-                                                    Editar
-
-                                                </button>
-
-                                                <button
-                                                    onclick="guardarCancion({{cancion.id}})"
-                                                    class="btn-accion">
-
-                                                    <i class="fa fa-save"></i>
-                                                    Guardar
-
-                                                </button>
-
-                                                <button
-                                                    onclick="exportarPDF({{cancion.id}})"
-                                                    class="btn-accion">
-
-                                                    <i class="fa fa-file-pdf"></i>
-                                                    PDF
-
-                                                </button>
-
-                                                <button
-                                                    onclick="agregarServicio({{cancion.id}})"
-                                                    class="btn-accion">
-
-                                                    <i class="fa fa-plus"></i>
-                                                    Servicio
-
-                                                </button>
-
+                                                <button onclick="editarCancion({{cancion.id}})" class="btn-accion"><i class="fa fa-pen"></i> Editar</button>
+                                                <button onclick="guardarCancion({{cancion.id}})" class="btn-accion"><i class="fa fa-save"></i> Guardar</button>
+                                                <button onclick="exportarPDF({{cancion.id}})" class="btn-accion"><i class="fa fa-file-pdf"></i> PDF</button>
+                                                <button onclick="agregarServicio({{cancion.id}})" class="btn-accion"><i class="fa fa-plus"></i> Servicio</button>
                                             </div>
-
-
-
                                         </div>
                                     </div>
-
                                 </div>
-
                                 {% endfor %}
-
                             </div>
-
                         </div>
-
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    <!-- Page Service Single End -->
 
-<!-- Main Footer Start -->
-<footer class="main-footer bg-section dark-section">
-
-    <!-- Footer Copyright Start -->
-    <div class="footer-copyright">
-        <div class="container">
-            <div class="row">
-                <div class="col-lg-12">
-                    <!-- Footer Copyright Text Start -->
-                    <div class="footer-copyright-text">
-                        <p>Imashuti © 2026 Todos los derechos reservados.</p>
+    <footer class="main-footer bg-section dark-section">
+        <div class="footer-copyright">
+            <div class="container">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <div class="footer-copyright-text">
+                            <p>Imashuti © 2026 Todos los derechos reservados.</p>
+                        </div>
                     </div>
-                    <!-- Footer Copyright Text End -->
                 </div>
             </div>
         </div>
-    </div>
-    <!-- Footer Copyright End -->
-</footer>
-<!-- Main Footer End -->
+    </footer>
 
-    <!-- Jquery Library File -->
     <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
-    <!-- Bootstrap js file -->
     <script src="{% static 'js/bootstrap.min.js' %}"></script>
-    <!-- Validator js file -->
     <script src="{% static 'js/validator.min.js' %}"></script>
-    <!-- SlickNav js file -->
     <script src="{% static 'js/jquery.slicknav.js' %}"></script>
-<!-- Parallax js -->
     <script src="{% static 'js/parallaxie.js' %}"></script>
-    <!-- MagicCursor js file -->
     <script src="{% static 'js/gsap.min.js' %}"></script>
     <script src="{% static 'js/magiccursor.js' %}"></script>
-    <!-- Text Effect js file -->
     <script src="{% static 'js/SplitText.min.js' %}"></script>
     <script src="{% static 'js/ScrollTrigger.min.js' %}"></script>
-</script>
-    <!-- Main Custom js file -->
     <script src="{% static 'js/function.js' %}"></script>
-
     <script>
-
     function toggleCategorias(){
-
-    let lista =
-    document.getElementById("categoriasLista");
-
-    let icono =
-    document.getElementById("categoriaIcon");
-
-    lista.classList.toggle("activo");
-
-    icono.classList.toggle("fa-plus");
-    icono.classList.toggle("fa-minus");
-
+        let lista = document.getElementById("categoriasLista");
+        let icono = document.getElementById("categoriaIcon");
+        lista.classList.toggle("activo");
+        icono.classList.toggle("fa-plus");
+        icono.classList.toggle("fa-minus");
     }
-
-    </script>
-
-<script>
-
-function getCookie(nombre){
-
-    let valor = null;
-
-    if(document.cookie && document.cookie !== ''){
-
-        let cookies =
-        document.cookie.split(';');
-
-        for(let i=0;i<cookies.length;i++){
-
-            let cookie =
-            cookies[i].trim();
-
-            if(
-                cookie.substring(
-                0,
-                nombre.length+1
-                )===(
-                nombre+'='
-                )
-            ){
-
-                valor =
-                decodeURIComponent(
-                    cookie.substring(
-                        nombre.length+1
-                    )
-                );
-
-                break;
+    function getCookie(nombre){
+        let valor = null;
+        if(document.cookie && document.cookie !== ''){
+            let cookies = document.cookie.split(';');
+            for(let i=0;i<cookies.length;i++){
+                let cookie = cookies[i].trim();
+                if(cookie.substring(0,nombre.length+1)===(nombre+'=')){
+                    valor = decodeURIComponent(cookie.substring(nombre.length+1));
+                    break;
+                }
             }
         }
+        return valor;
     }
-
-    return valor;
-}
-
-function editarCancion(id){
-
-    let editor =
-    document.getElementById(
-        "cancion"+id
-    );
-
-    editor.contentEditable=true;
-
-    editor.classList.add(
-        "modo-edicion"
-    );
-
-    editor.focus();
-
-}
-
-
-
-function guardarCancion(id){
-
-    let editor =
-    document.getElementById(
-        "cancion"+id
-    );
-
-    let letra =
-    editor.innerText;
-
-    fetch(
-        "/guardar-cancion/"+id+"/",
-        {
-
-            method:"POST",
-
-            headers:{
-
-                "Content-Type":
-                "application/json",
-
-                "X-CSRFToken":
-                getCookie(
-                    "csrftoken"
-                )
-
-            },
-
-            body:JSON.stringify({
-
-                letra:letra
-
-            })
-
-        }
-    )
-
-    .then(response => {
-
-        if(!response.ok){
-
-            throw new Error(
-                "Error HTTP: " +
-                response.status
-            );
-
-        }
-
-        return response.json();
-
-    })
-
-    .then(data=>{
-
-        console.log(data);
-
-        if(data.ok){
-
-            editor.contentEditable=false;
-
-            editor.classList.remove(
-                "modo-edicion"
-            );
-
-            alert(
-                "Cambios guardados correctamente"
-            );
-
-        }else{
-
-            alert(
-                "No se pudo guardar"
-            );
-
-        }
-
-    })
-
-    .catch(error=>{
-
-        console.error(error);
-
-        alert(
-            "Error guardando: "
-            + error.message
-        );
-
-    });
-
-}
-
-function exportarPDF(id){
-
-    window.location=
-    "/exportar-pdf/"+id+"/";
-
-}
-
-function agregarServicio(id){
-
-    alert(
-    "Lo conectaremos luego"
-    );
-
-}
-
-</script>
-
+    function editarCancion(id){
+        let editor = document.getElementById("cancion"+id);
+        editor.contentEditable=true;
+        editor.classList.add("modo-edicion");
+        editor.focus();
+    }
+    function guardarCancion(id){
+        let editor = document.getElementById("cancion"+id);
+        let letra = editor.innerText;
+        fetch("/guardar-cancion/"+id+"/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCookie("csrftoken")},body:JSON.stringify({letra:letra})})
+        .then(response=>{if(!response.ok) throw new Error("Error HTTP: "+response.status); return response.json();})
+        .then(data=>{if(data.ok){editor.contentEditable=false;editor.classList.remove("modo-edicion");alert("Cambios guardados correctamente");}else{alert("No se pudo guardar");}})
+        .catch(error=>{console.error(error);alert("Error guardando: "+error.message);});
+    }
+    function exportarPDF(id){window.location="/exportar-pdf/"+id+"/";}
+    function agregarServicio(id){alert("Lo conectaremos luego");}
+    </script>
 </body>
 </html>
-
-
-
-
-
