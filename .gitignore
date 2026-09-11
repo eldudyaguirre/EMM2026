@@ -1,0 +1,47 @@
+# Entorno virtual
+venv/
+.venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+
+# Variables de entorno y secretos
+.env
+.env.*
+!.env.example
+
+# Archivos estáticos/media generados
+staticfiles/
+media/
+
+# IDE
+.vscode/
+.idea/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+
+# PyCharm
+*.iml
+
+# Coverage
+.coverage
+htmlcov/
+.pytest_cache/
+# Respaldos y archivos temporales de limpieza
+templates/backup-antiguos/
+static/images/backup-obsoletos/
+static/js/backup-obsoletos/
+static/js/function.backup.js
+static/css/custom.backup.css
+static/css/custom.before-responsive.css
+responsive-*-revision.txt

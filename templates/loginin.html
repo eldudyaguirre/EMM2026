@@ -1,0 +1,561 @@
+{% load static %}
+
+
+<!DOCTYPE html>
+<html lang="zxx">
+<head>
+	<!-- Meta -->
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+	<meta name="description" content="">
+	<meta name="keywords" content="">
+	<meta name="author" content="Awaiken">
+	<!-- Page Title -->
+    <title>Emaús - Menú Principal</title>
+	<!-- Favicon Icon -->
+	<link rel="shortcut icon" type="image/x-icon" href="{% static 'images/favicon.png' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Phudu:wght@300..900&display=swap" rel="stylesheet">
+	<!-- Bootstrap Css -->
+	<link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet" media="screen">
+	<!-- SlickNav Css -->
+	<link href="{% static 'css/slicknav.min.css' %}" rel="stylesheet">
+<!-- Font Awesome Icon Css-->
+	<link href="{% static 'css/all.min.css' %}" rel="stylesheet" media="screen">
+	<!-- Animated Css -->
+	<link href="{% static 'css/animate.css' %}" rel="stylesheet">
+<!-- Mouse Cursor Css File -->
+	<link rel="stylesheet" href="{% static 'css/mousecursor.css' %}">
+<!-- Main Custom Css -->
+	<link href="{% static 'css/custom.css' %}" rel="stylesheet" media="screen">
+</head>
+<body>
+
+    <!-- Preloader Start -->
+	<div class="preloader">
+		<div class="loading-container">
+			<div class="loading"></div>
+			<div id="loading-icon"><img src="{% static 'images/loaderlogo.svg' %}" alt=""></div>
+		</div>
+	</div>
+	<!-- Preloader End -->
+
+    <!-- Header Start -->
+	<header class="main-header" >
+		<div class="header-sticky">
+			<nav class="navbar navbar-expand-lg">
+				<div class="container">
+					<!-- Logo Start -->
+					<a class="navbar-brand" href="./">
+						<img src="{% static 'images/logomio.svg' %}" alt="Logo">
+					</a>
+					<!-- Logo End -->
+
+                    <!-- Main Menu Start -->
+                    <div class="collapse navbar-collapse main-menu">
+                        <div class="nav-menu-wrapper">
+                            <ul class="navbar-nav mr-auto" id="menu">
+                                <li class="nav-item"><a class="nav-link" href="{% url 'loginin' %}">Inicio</a></li>
+                                <li class="nav-item"><a class="nav-link" href="#">Servicios</a></li></li>
+                                <li class="nav-item"><a class="nav-link" href="#">Grupos y Servidores</a></li>
+                                <li class="nav-item"><a class="nav-link" href="#">Calendario</a></li>
+                                <li class="nav-item"><a class="nav-link" href="{% url 'contact' %}">Contactanos</a></li>
+                                <li class="nav-item"><a class="nav-link" href="{% url 'logout' %}">Cerrar Sesión</a></li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Header Btn Start -->
+                        <div class="header-btn">
+                            <a href="{% url 'contact' %}" class="btn-default btn-highlighted">Contactanos</a>
+                        </div>
+                        <!-- Header Btn End -->
+                    </div>
+					<!-- Main Menu End -->
+					<div class="navbar-toggle"></div>
+				</div>
+			</nav>
+			<div class="responsive-menu"></div>
+		</div>
+	</header>
+	<!-- Header End -->
+
+    <!-- Page Header Section Start -->
+    <div class="page-header dark-section parallaxie categorias-header">
+        <div class="container">
+            <div class="row">
+                <div class="col-lg-12">
+                    <!-- Page Header Box Start -->
+                    <div class="page-header-box">
+                        <h1 class="text-anime-style-3" data-cursor="-opaque">Categorias</h1>
+                        <nav class="wow fadeInUp">
+                            <ol class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="./">Inicio</a></li>
+                                <li class="breadcrumb-item active" aria-current="page">Categorías</li>
+                            </ol>
+                        </nav>
+                    </div>
+                    <!-- Page Header Box End -->
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Page Header Section End -->
+
+    <!-- Interactive Process Layout Start -->
+    <div class="interactive interactive-process-layout bg-section">
+        <!-- Interactive Process Wrapper Start -->
+        <div class="interactive-interactive-process-wrapper interactive-wrapper">
+            <div class="interactive-con">
+                <!-- Interactive Inner Grid Start -->
+                <div class="interactive-con-inner interactive-grid">
+
+                    <!-- Cantos de Entrada Start -->
+                    <div class="interactive-process-item">
+                        <div class="interactive-inner-process activate" data-index="0">
+                            <div class="process-content-wap">
+                                <div class="interactive-process-item-wap">
+                                    <div class="interactive-process-item-body-wap">
+                                        <div class="icon-box">
+                                            <img src="{% static 'images/icon-categoria-01.svg' %}" alt="">
+                                        </div>
+                                        <div class="interactive-process-item-content-wap">
+                                            <h3><a href="#">01 - Cantos de Entrada</a></h3>
+                                            <p>Alabanzas de bienvenida para comenzar la celebración.</p>
+                                        </div>
+                                        <div class="interactive-process-item-btn">
+                                            <a href="{% url 'categoria' 1 %}" class="readmore-btn">Ver Canciones</a>
+                                        </div>
+                                    </div>
+                                </div>                                
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Cantos de Entrada End -->
+                    
+                    <!-- Cantos de Perdon Start -->
+                    <div class="interactive-process-item">
+                        <div class="interactive-inner-process" data-index="1">
+                            <div class="process-content-wap">
+                                <div class="interactive-process-item-wap">
+                                    <div class="interactive-process-item-body-wap">
+                                        <div class="icon-box">
+                                            <img src="{% static 'images/icon-categoria-02.svg' %}" alt="">
+                                        </div>
+                                        <div class="interactive-process-item-content-wap">
+                                            <h3><a href="#">02 - Cantos de Perdón</a></h3>
+                                            <p>Reconocemos nuestras faltas y pedimos misericordia.</p>
+                                        </div>
+                                        <div class="interactive-process-item-btn">
+                                            <a href="{% url 'categoria' 2 %}" class="readmore-btn">Ver Canciones</a>
+                                        </div>
+                                    </div>                                                                                                    
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Cantos de Perdon End -->
+
+                    <!-- Cantos de gloria Start -->
+                    <div class="interactive-process-item">
+                        <div class="interactive-inner-process" data-index="2">
+                            <div class="process-content-wap">
+                                <div class="interactive-process-item-wap">
+                                    <div class="interactive-process-item-body-wap">
+                                        <div class="icon-box">
+                                            <img src="{% static 'images/icon-categoria-03.svg' %}" alt="">
+                                        </div>
+                                        <div class="interactive-process-item-content-wap">
+                                            <h3><a href="#">03 - Cantos de gloria</a></h3>
+                                            <p>Elevamos nuestra voz en gloria y alabanza.</p>
+                                        </div>
+                                        <div class="interactive-process-item-btn">
+                                            <a href="{% url 'categoria' 3 %}" class="readmore-btn">Ver Canciones</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Cantos de gloria End -->
+                    
+                    <!-- Cantos antes del evangelio Start -->
+                    <div class="interactive-process-item">
+                        <div class="interactive-inner-process" data-index="3">
+                            <div class="process-content-wap">
+                                <div class="interactive-process-item-wap">
+                                    <div class="interactive-process-item-body-wap">
+                                        <div class="icon-box">
+                                            <img src="{% static 'images/icon-categoria-04.svg' %}" alt="">
+                                        </div>
+                                        <div class="interactive-process-item-content-wap">
+                                            <h3><a href="#">04 - Cantos antes del evangelio</a></h3>
+                                            <p>Nos preparamos para escuchar la Palabra del Señor.</p>
+                                        </div>
+                                        <div class="interactive-process-item-btn">
+                                            <a href="{% url 'categoria' 4 %}" class="readmore-btn">Ver Canciones</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Cantos antes del evangelio End -->
+
+                    <!-- Cantos del ofertorio Start -->
+                    <div class="interactive-process-item">
+                        <div class="interactive-inner-process" data-index="4">
+                            <div class="process-content-wap">
+                                <div class="interactive-process-item-wap">
+                                    <div class="interactive-process-item-body-wap">
+                                        <div class="icon-box">
+                                            <img src="{% static 'images/icon-categoria-05.svg' %}" alt="">
+                                        </div>
+                                        <div class="interactive-process-item-content-wap">
+                                            <h3><a href="#">05 - Cantos del ofertorio</a></h3>
+                                            <p>Cantos de entrega y ofrecimiento al altar.</p>
+                                        </div>
+                                        <div class="interactive-process-item-btn">
+                                            <a href="{% url 'categoria' 5 %}" class="readmore-btn">Ver Canciones</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Cantos del ofertorio End -->
+
+                    <!-- Cantos de Santo Start -->
+                    <div class="interactive-process-item">
+                        <div class="interactive-inner-process" data-index="5">
+                            <div class="process-content-wap">
+                                <div class="interactive-process-item-wap">
+                                    <div class="interactive-process-item-body-wap">
+                                        <div class="icon-box">
+                                            <img src="{% static 'images/icon-categoria-06.svg' %}" alt="">
+                                        </div>
+                                        <div class="interactive-process-item-content-wap">
+                                            <h3><a href="#">06 - Cantos de Santo</a></h3>
+                                            <p>Proclamamos con alegría la santidad del Señor.</p>
+                                        </div>
+                                        <div class="interactive-process-item-btn">
+                                            <a href="{% url 'categoria' 6 %}" class="readmore-btn">Ver Canciones</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Cantos de Santo End -->
+
+                    <!-- Cantos de la Paz Start -->
+                    <div class="interactive-process-item">
+                        <div class="interactive-inner-process" data-index="6">
+                            <div class="process-content-wap">
+                                <div class="interactive-process-item-wap">
+                                    <div class="interactive-process-item-body-wap">
+                                        <div class="icon-box">
+                                            <img src="{% static 'images/icon-interactive-process-item-2.svg' %}" alt="">
+                                        </div>
+                                        <div class="interactive-process-item-content-wap">
+                                            <h3><a href="#">07 - Cantos de la Paz</a></h3>
+                                            <p>Nos unimos como hermanos en la paz del Señor.</p>
+                                        </div>
+                                        <div class="interactive-process-item-btn">
+                                            <a href="{% url 'categoria' 7 %}" class="readmore-btn">Ver Canciones</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Cantos de la Paz End -->
+
+                    <!-- Cantos de la Comunión Start -->
+                    <div class="interactive-process-item">
+                        <div class="interactive-inner-process" data-index="7">
+                            <div class="process-content-wap">
+                                <div class="interactive-process-item-wap">
+                                    <div class="interactive-process-item-body-wap">
+                                        <div class="icon-box">
+                                            <img src="{% static 'images/icon-categoria-07.svg' %}" alt="">
+                                        </div>
+                                        <div class="interactive-process-item-content-wap">
+                                            <h3><a href="#">08 - Cantos de la Comunión</a></h3>
+                                            <p>Nos acercamos al encuentro con Cristo en la Eucaristía.</p>
+                                        </div>
+                                        <div class="interactive-process-item-btn">
+                                            <a href="{% url 'categoria' 8 %}" class="readmore-btn">Ver Canciones</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Cantos de la Comunión End -->                    
+
+                    <!-- Cantos de salida Start -->
+                    <div class="interactive-process-item">
+                        <div class="interactive-inner-process" data-index="8">
+                            <div class="process-content-wap">
+                                <div class="interactive-process-item-wap">
+                                    <div class="interactive-process-item-body-wap">
+                                        <div class="icon-box">
+                                            <img src="{% static 'images/icon-categoria-08.svg' %}" alt="">
+                                        </div>
+                                        <div class="interactive-process-item-content-wap">
+                                            <h3><a href="#">09 - Cantos de salida</a></h3>
+                                            <p>La celebración termina, la misión continúa.</p>
+                                        </div>
+                                        <div class="interactive-process-item-btn">
+                                            <a href="{% url 'categoria' 9 %}" class="readmore-btn">Ver Canciones</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Cantos de salida End -->                    
+
+                    <!-- Cantos a María Start -->
+                    <div class="interactive-process-item">
+                        <div class="interactive-inner-process" data-index="9">
+                            <div class="process-content-wap">
+                                <div class="interactive-process-item-wap">
+                                    <div class="interactive-process-item-body-wap">
+                                        <div class="icon-box">
+                                            <img src="{% static 'images/icon-categoria-10.svg' %}" alt="">
+                                        </div>
+                                        <div class="interactive-process-item-content-wap">
+                                            <h3><a href="#">10 - Cantos a María</a></h3>
+                                            <p>Honramos a nuestra Madre con alegría y devoción.</p>
+                                        </div>
+                                        <div class="interactive-process-item-btn">
+                                            <a href="{% url 'categoria' 10 %}" class="readmore-btn">Ver Canciones</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Cantos a María End -->
+
+                    <!-- Cantos al Santísimo Start -->
+                    <div class="interactive-process-item">
+                        <div class="interactive-inner-process" data-index="10">
+                            <div class="process-content-wap">
+                                <div class="interactive-process-item-wap">
+                                    <div class="interactive-process-item-body-wap">
+                                        <div class="icon-box">
+                                            <img src="{% static 'images/icon-categoria-11.svg' %}" alt="">
+                                        </div>
+                                        <div class="interactive-process-item-content-wap">
+                                            <h3><a href="#">11 - Cantos al Santísimo</a></h3>
+                                            <p>Adoramos con fe la presencia viva de Jesús.</p>
+                                        </div>
+                                        <div class="interactive-process-item-btn">
+                                            <a href="{% url 'categoria' 11 %}" class="readmore-btn">Ver Canciones</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Cantos al Santísimo End -->
+
+                    <!-- Cantos al Espíritu Santo Start -->
+                    <div class="interactive-process-item">
+                        <div class="interactive-inner-process" data-index="11">
+                            <div class="process-content-wap">
+                                <div class="interactive-process-item-wap">
+                                    <div class="interactive-process-item-body-wap">
+                                        <div class="icon-box">
+                                            <img src="{% static 'images/icon-categoria-12.svg' %}" alt="">
+                                        </div>
+                                        <div class="interactive-process-item-content-wap">
+                                            <h3><a href="#">12 - Cantos al Espíritu Santo</a></h3>
+                                            <p>Invocamos la presencia y la fuerza del Espíritu Santo.</p>
+                                        </div>
+                                        <div class="interactive-process-item-btn">
+                                            <a href="{% url 'categoria' 12 %}" class="readmore-btn">Ver Canciones</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Cantos al Espíritu Santo End -->
+
+                    <!-- Cantos de Semana Santa Start -->
+                    <div class="interactive-process-item">
+                        <div class="interactive-inner-process" data-index="12">
+                            <div class="process-content-wap">
+                                <div class="interactive-process-item-wap">
+                                    <div class="interactive-process-item-body-wap">
+                                        <div class="icon-box">
+                                            <img src="{% static 'images/icon-categoria-13.svg' %}" alt="">
+                                        </div>
+                                        <div class="interactive-process-item-content-wap">
+                                            <h3><a href="#">13 - Cantos de Semana Santa</a></h3>
+                                            <p>Vivimos con fe el amor y sacrificio de Cristo.</p>
+                                        </div>
+                                        <div class="interactive-process-item-btn">
+                                            <a href="{% url 'categoria' 13 %}" class="readmore-btn">Ver Canciones</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Cantos de Semana Santa End -->
+
+                    <!-- Cantos de Navidad Start -->
+                    <div class="interactive-process-item">
+                        <div class="interactive-inner-process" data-index="13">
+                            <div class="process-content-wap">
+                                <div class="interactive-process-item-wap">
+                                    <div class="interactive-process-item-body-wap">
+                                        <div class="icon-box">
+                                            <img src="{% static 'images/icon-categoria-14.svg' %}" alt="">
+                                        </div>
+                                        <div class="interactive-process-item-content-wap">
+                                            <h3><a href="#">14 - Cantos de Navidad</a></h3>
+                                            <p>Celebramos con alegría el nacimiento de Jesús.</p>
+                                        </div>
+                                        <div class="interactive-process-item-btn">
+                                            <a href="{% url 'categoria' 14 %}" class="readmore-btn">Ver Canciones</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Cantos de Navidad End -->
+
+                    <!-- Retiro de Mujeres Start -->
+                    <div class="interactive-process-item">
+                        <div class="interactive-inner-process" data-index="14">
+                            <div class="process-content-wap">
+                                <div class="interactive-process-item-wap">
+                                    <div class="interactive-process-item-body-wap">
+                                        <div class="icon-box">
+                                            <img src="{% static 'images/icon-categoria-15.svg' %}" alt="">
+                                        </div>
+                                        <div class="interactive-process-item-content-wap">
+                                            <h3><a href="#">15 - Retiro de Mujeres</a></h3>
+                                            <p>Mujeres unidas en oración y encuentro con Dios.</p>
+                                        </div>
+                                        <div class="interactive-process-item-btn">
+                                            <a href="{% url 'categoria' 15 %}" class="readmore-btn">Ver Canciones</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Retiro de Mujeres End -->
+
+                    <!-- Retiro de Varones Start -->
+                    <div class="interactive-process-item">
+                        <div class="interactive-inner-process" data-index="15">
+                            <div class="process-content-wap">
+                                <div class="interactive-process-item-wap">
+                                    <div class="interactive-process-item-body-wap">
+                                        <div class="icon-box">
+                                            <img src="{% static 'images/icon-categoria-16.svg' %}" alt="">
+                                        </div>
+                                        <div class="interactive-process-item-content-wap">
+                                            <h3><a href="#">16 - Retiro de Varones</a></h3>
+                                            <p>Varones unidos en fe, oración y crecimiento espiritual.</p>
+                                        </div>
+                                        <div class="interactive-process-item-btn">
+                                            <a href="{% url 'categoria' 16 %}" class="readmore-btn">Ver Canciones</a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Retiro de Varones End -->
+
+
+
+
+                </div>
+                <!-- Interactive Inner Grid End -->
+
+
+
+
+
+                <!-- Interactive Process Image Start -->
+                <div class="interactive-process-list-image">
+                    <div class="interactive-process-image img-0 show" data-bg="{% static 'images/bg-categoria-01.jpg' %}" style="background-image: url('{% static 'images/bg-categoria-01.jpg' %}');"></div>
+                    <div class="interactive-process-image img-1" data-bg="{% static 'images/bg-categoria-02.jpg' %}" style="background-image: url('{% static 'images/bg-categoria-02.jpg' %}');"></div>
+                    <div class="interactive-process-image img-2" data-bg="{% static 'images/bg-categoria-03.jpg' %}" style="background-image: url('{% static 'images/bg-categoria-03.jpg' %}');"></div>
+                    <div class="interactive-process-image img-3" data-bg="{% static 'images/bg-categoria-04.jpg' %}" style="background-image: url('{% static 'images/bg-categoria-04.jpg' %}');"></div>                
+                    <div class="interactive-process-image img-4 show" data-bg="{% static 'images/bg-categoria-05.jpg' %}" style="background-image: url('{% static 'images/bg-categoria-05.jpg' %}');"></div>
+                    <div class="interactive-process-image img-5" data-bg="{% static 'images/bg-categoria-06.jpg' %}" style="background-image: url('{% static 'images/bg-categoria-06.jpg' %}');"></div>
+                    <div class="interactive-process-image img-6" data-bg="{% static 'images/bg-categoria-07.jpg' %}" style="background-image: url('{% static 'images/bg-categoria-07.jpg' %}');"></div>
+                    <div class="interactive-process-image img-7" data-bg="{% static 'images/bg-categoria-08.jpg' %}" style="background-image: url('{% static 'images/bg-categoria-08.jpg' %}');"></div>                
+                    <div class="interactive-process-image img-8 show" data-bg="{% static 'images/bg-categoria-09.jpg' %}" style="background-image: url('{% static 'images/bg-categoria-09.jpg' %}');"></div>
+                    <div class="interactive-process-image img-9" data-bg="{% static 'images/bg-categoria-10.jpg' %}" style="background-image: url('{% static 'images/bg-categoria-10.jpg' %}');"></div>
+                    <div class="interactive-process-image img-10" data-bg="{% static 'images/bg-categoria-11.jpg' %}" style="background-image: url('{% static 'images//bg-categoria-11.jpg' %}');"></div>
+                    <div class="interactive-process-image img-11" data-bg="{% static 'images/bg-categoria-12.jpg' %}" style="background-image: url('{% static 'images//bg-categoria-12.jpg' %}');"></div>                
+                    <div class="interactive-process-image img-12 show" data-bg="{% static 'images/bg-categoria-13.jpg' %}" style="background-image: url('{% static 'images//bg-categoria-13.jpg' %}');"></div>
+                    <div class="interactive-process-image img-13" data-bg="{% static 'images/bg-categoria-14.jpg' %}" style="background-image: url('{% static 'images//bg-categoria-14.jpg' %}');"></div>
+                    <div class="interactive-process-image img-14" data-bg="{% static 'images/bg-categoria-15.jpg' %}" style="background-image: url('{% static 'images//bg-categoria-15.jpg' %}');"></div>
+                    <div class="interactive-process-image img-15" data-bg="{% static 'images/bg-categoria-16.jpg' %}" style="background-image: url('{% static 'images//bg-categoria-16.jpg' %}');"></div>                
+                </div>
+                <!-- Interactive Process Image End -->
+            </div>
+        </div>
+    </div>
+    <!-- Main Footer Start -->
+    <footer class="main-footer bg-section dark-section">
+
+        <!-- Footer Copyright Start -->
+        <div class="footer-copyright">
+            <div class="container-fluid">
+                <div class="row">
+                    <div class="col-lg-12">
+                        <!-- Footer Copyright Text Start -->
+                        <div class="footer-copyright-text">
+                            <p>Imashuti © 2026 Todos los derechos reservados.</p>
+                        </div>
+                        <!-- Footer Copyright Text End -->
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Footer Copyright End -->
+    </footer>
+    <!-- Main Footer End -->
+
+    <!-- Jquery Library File -->
+    <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
+    <!-- Bootstrap js file -->
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>
+    <!-- Validator js file -->
+    <script src="{% static 'js/validator.min.js' %}"></script>
+    <!-- SlickNav js file -->
+    <script src="{% static 'js/jquery.slicknav.js' %}"></script>
+<!-- Parallax js -->
+    <script src="{% static 'js/parallaxie.js' %}"></script>
+    <!-- MagicCursor js file -->
+    <script src="{% static 'js/gsap.min.js' %}"></script>
+    <script src="{% static 'js/magiccursor.js' %}"></script>
+    <!-- Text Effect js file -->
+    <script src="{% static 'js/SplitText.min.js' %}"></script>
+    <script src="{% static 'js/ScrollTrigger.min.js' %}"></script>
+</script>
+    <!-- Main Custom js file -->
+    <script src="{% static 'js/function.js' %}"></script>
+</body>
+</html>
+
+
+
+
+
