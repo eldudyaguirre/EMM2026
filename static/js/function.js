@@ -160,12 +160,12 @@
 			animatedTextElements.forEach((element) => {
 				let animationSplitText = new SplitText(element, { type: "chars, words" });
 					gsap.from(animationSplitText.words, {
-					duration: 1,
-					delay: delayValue,
-					x: 20,
-					autoAlpha: 0,
-					stagger: staggerAmount,
-					scrollTrigger: { trigger: element, start: "top 85%" },
+						duration: 1,
+						delay: delayValue,
+						x: 20,
+						autoAlpha: 0,
+						stagger: staggerAmount,
+						scrollTrigger: { trigger: element, start: "top 85%" },
 					});
 			});		
 		}
@@ -344,3 +344,105 @@ function agregarServicio(id){
 }
 
 
+
+/* =========================================================
+   CATEGORIAS - IMAGEN POR TARJETA EN RESPONSIVE
+   ========================================================= */
+(function () {
+    function configurarCategoriasResponsive() {
+        var layout = document.querySelector('.interactive-process-layout');
+        if (!layout) return;
+
+        var mobile = window.innerWidth <= 991;
+        var items = layout.querySelectorAll('.interactive-process-item');
+        var images = layout.querySelectorAll('.interactive-process-image');
+
+        var style = document.getElementById('categorias-responsive-style');
+        if (!style) {
+            style = document.createElement('style');
+            style.id = 'categorias-responsive-style';
+            style.textContent = `
+                @media (max-width: 991px) {
+                    .interactive-process-layout {
+                        min-height: auto !important;
+                    }
+                    .interactive-process-layout .interactive-con-inner {
+                        min-height: auto !important;
+                    }
+                    .interactive-process-layout .interactive-process-list-image {
+                        display: none !important;
+                    }
+                    .interactive-process-layout .interactive-process-item {
+                        position: relative !important;
+                        width: 50% !important;
+                        min-height: 360px;
+                        background-color: #010101 !important;
+                        background-repeat: no-repeat !important;
+                        background-position: center center !important;
+                        background-size: cover !important;
+                        overflow: hidden;
+                    }
+                    .interactive-process-layout .interactive-process-item::before {
+                        content: '';
+                        position: absolute;
+                        inset: 0;
+                        background: rgba(0,0,0,.48);
+                        z-index: 1;
+                    }
+                    .interactive-process-layout .interactive-process-item > * {
+                        position: relative;
+                        z-index: 2;
+                    }
+                    .interactive-process-layout .interactive-process-item:not(.mobile-image-active) {
+                        background-image: none !important;
+                    }
+                }
+                @media (max-width: 575px) {
+                    .interactive-process-layout .interactive-process-item {
+                        width: 50% !important;
+                        min-height: 330px;
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+
+        if (!mobile) {
+            items.forEach(function (item) {
+                item.style.backgroundImage = '';
+                item.classList.remove('mobile-image-active');
+            });
+            return;
+        }
+
+        items.forEach(function (item, index) {
+            var image = layout.querySelector('.interactive-process-image.img-' + index);
+            var bg = image ? image.style.backgroundImage : '';
+            if (!bg && image) bg = window.getComputedStyle(image).backgroundImage;
+            item.dataset.mobileBg = bg || '';
+
+            if (item.classList.contains('activate')) {
+                item.classList.add('mobile-image-active');
+                item.style.backgroundImage = item.dataset.mobileBg;
+            } else {
+                item.classList.remove('mobile-image-active');
+                item.style.backgroundImage = 'none';
+            }
+        });
+
+        items.forEach(function (item) {
+            item.onclick = function () {
+                items.forEach(function (other) {
+                    other.classList.remove('activate', 'mobile-image-active');
+                    other.style.backgroundImage = 'none';
+                });
+
+                item.classList.add('activate', 'mobile-image-active');
+                item.style.backgroundImage = item.dataset.mobileBg || '';
+            };
+        });
+    }
+
+    configurarCategoriasResponsive();
+    window.addEventListener('resize', configurarCategoriasResponsive);
+})();
