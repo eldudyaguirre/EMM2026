@@ -45,7 +45,7 @@
                 float: none !important;
                 inset: auto !important;
                 transform: none !important;
-                display: block !important;
+                display: none !important;
                 width: auto !important;
                 min-width: 0 !important;
                 max-height: none !important;
@@ -56,6 +56,14 @@
                 border-radius: 0 0 6px 6px !important;
                 box-shadow: none !important;
                 background: #191a20 !important;
+            }
+            .slicknav_nav li.emaus-admin-dropdown.emaus-submenu-open > .dropdown-menu {
+                display: block !important;
+            }
+            /* Ocultar la segunda flecha que añade SlickNav; se conserva la flecha junto al texto. */
+            .slicknav_nav li.emaus-admin-dropdown > .slicknav_item .slicknav_arrow,
+            .slicknav_nav li.emaus-admin-dropdown > .slicknav_item > .slicknav_arrow {
+                display: none !important;
             }
             .slicknav_nav li.emaus-admin-dropdown > .dropdown-menu .dropdown-item {
                 white-space: normal !important;
@@ -532,6 +540,20 @@
     <script src="{% static 'js/bootstrap.min.js' %}"></script>
     <!-- Validator js file -->
     <script src="{% static 'js/validator.min.js' %}"></script>
+    <script>
+        // En móvil, tocar Administración abre/cierra el submenú sin la flecha duplicada de SlickNav.
+        (function () {
+            document.addEventListener('click', function (event) {
+                const link = event.target.closest('.slicknav_nav li.emaus-admin-dropdown > a');
+                if (!link || window.matchMedia('(min-width: 992px)').matches) return;
+                event.preventDefault();
+                event.stopPropagation();
+                const item = link.closest('li.emaus-admin-dropdown');
+                item.classList.toggle('emaus-submenu-open');
+                link.setAttribute('aria-expanded', item.classList.contains('emaus-submenu-open') ? 'true' : 'false');
+            }, true);
+        })();
+    </script>
     <!-- SlickNav js file -->
     <script src="{% static 'js/jquery.slicknav.js' %}"></script>
 <!-- Parallax js -->
