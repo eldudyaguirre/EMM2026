@@ -543,15 +543,41 @@
     <script>
         // En móvil, tocar Administración abre/cierra el submenú sin la flecha duplicada de SlickNav.
         (function () {
+            function updateAdminArrow(link, isOpen) {
+                if (!link) return;
+                let arrow = link.querySelector('.emaus-admin-arrow');
+                if (!arrow) {
+                    arrow = document.createElement('span');
+                    arrow.className = 'emaus-admin-arrow';
+                    arrow.setAttribute('aria-hidden', 'true');
+                    arrow.style.cssText = 'display:inline-block;margin-left:6px;font-size:11px;line-height:1;vertical-align:middle;transition:transform .18s ease;';
+                    link.appendChild(arrow);
+                }
+                arrow.textContent = isOpen ? '▲' : '▼';
+                arrow.style.transform = 'none';
+            }
             document.addEventListener('click', function (event) {
                 const link = event.target.closest('.slicknav_nav li.emaus-admin-dropdown > a');
                 if (!link || window.matchMedia('(min-width: 992px)').matches) return;
                 event.preventDefault();
                 event.stopPropagation();
                 const item = link.closest('li.emaus-admin-dropdown');
-                item.classList.toggle('emaus-submenu-open');
-                link.setAttribute('aria-expanded', item.classList.contains('emaus-submenu-open') ? 'true' : 'false');
+                const isOpen = !item.classList.contains('emaus-submenu-open');
+                item.classList.toggle('emaus-submenu-open', isOpen);
+                link.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+                updateAdminArrow(link, isOpen);
             }, true);
+            document.addEventListener('DOMContentLoaded', function () {
+                document.querySelectorAll('.slicknav_nav li.emaus-admin-dropdown > a').forEach(function (link) {
+                    updateAdminArrow(link, link.closest('li').classList.contains('emaus-submenu-open'));
+                });
+            });
+            const observer = new MutationObserver(function () {
+                document.querySelectorAll('.slicknav_nav li.emaus-admin-dropdown > a').forEach(function (link) {
+                    updateAdminArrow(link, link.closest('li').classList.contains('emaus-submenu-open'));
+                });
+            });
+            observer.observe(document.documentElement, {childList:true, subtree:true});
         })();
     </script>
     <!-- SlickNav js file -->
