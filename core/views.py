@@ -270,5 +270,6 @@ def servidores(request):
         'perfiles': perfiles,
         'grupos': Grupo.objects.filter(activo=True).order_by('nombre'),
         'grupos_perfil': list(perfil_editar.grupos_asignados.values_list('id', flat=True)) if perfil_editar else [],
+        'grupos_permanentes': Perfil.GRUPOS,
         'perfil_editar': perfil_editar,
     })
