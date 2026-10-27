@@ -223,6 +223,8 @@ def exportar_grupos_pdf(request):
     """Genera un listado elegante de los grupos activos y sus servidores."""
     from django.contrib.staticfiles import finders
     from reportlab.lib.utils import ImageReader
+    from svglib.svglib import svg2rlg
+    from reportlab.graphics import renderPDF
     from xml.sax.saxutils import escape
 
     buffer = BytesIO()
@@ -281,17 +283,18 @@ def exportar_grupos_pdf(request):
                 ),
                 styles['GrupoTitle']
             ))
-            rows = [['N.º', 'Nombre del servidor', 'Teléfono']]
+            rows = [['N.º', 'Nombre del servidor', 'Teléfono', 'Email']]
             if integrantes:
                 for numero, perfil in enumerate(integrantes, start=1):
                     rows.append([
                         str(numero),
                         Paragraph(escape(str(perfil.nombres or '')), styles['ServidorText']),
-                        Paragraph(escape(str(perfil.telefono or '—')), styles['ServidorText'])
+                        Paragraph(escape(str(perfil.telefono or '—')), styles['ServidorText']),
+                        Paragraph(escape(str(perfil.correo or '—')), styles['ServidorText'])
                     ])
             else:
-                rows.append(['', Paragraph('Sin servidores asignados', styles['SmallMuted']), ''])
-            table = Table(rows, colWidths=[13*mm, 105*mm, 43*mm], repeatRows=1, hAlign='LEFT')
+                rows.append(['', Paragraph('Sin servidores asignados', styles['SmallMuted']), '', ''])
+            table = Table(rows, colWidths=[11*mm, 68*mm, 29*mm, 53*mm], repeatRows=1, hAlign='LEFT')
             table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#25252b')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
@@ -310,19 +313,19 @@ def exportar_grupos_pdf(request):
         canvas.saveState()
         canvas.setFillColor(colors.HexColor('#bd0026'))
         canvas.rect(0, A4[1] - 7*mm, A4[0], 7*mm, fill=1, stroke=0)
-        logo_path = None
-        for candidate in ('images/logo.png', 'images/logo.jpg', 'images/logo.jpeg', 'images/logo.svg',
-                          'images/logo-emaus.png', 'images/logo-emaus.jpg'):
-            logo_path = finders.find(candidate)
-            if logo_path and not logo_path.lower().endswith('.svg'):
-                break
-            logo_path = None
+        logo_path = finders.find('images/logo.svg')
         if logo_path:
             try:
-                canvas.drawImage(ImageReader(logo_path), 17*mm, A4[1]-29*mm,
-                                 width=27*mm, height=17*mm, preserveAspectRatio=True,
-                                 anchor='c', mask='auto')
-                titulo_x = 48*mm
+                logo_drawing = svg2rlg(logo_path)
+                if logo_drawing:
+                    scale = min((30*mm) / max(logo_drawing.width, 1), (20*mm) / max(logo_drawing.height, 1))
+                    logo_drawing.width *= scale
+                    logo_drawing.height *= scale
+                    logo_drawing.scale(scale, scale)
+                    renderPDF.draw(logo_drawing, canvas, 17*mm, A4[1]-29*mm)
+                    titulo_x = 51*mm
+                else:
+                    titulo_x = 17*mm
             except Exception:
                 titulo_x = 17*mm
         else:
