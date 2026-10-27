@@ -205,7 +205,25 @@ def grupos_servidores(request):
             grupo = get_object_or_404(Grupo, pk=request.POST.get('grupo_id'))
             perfil = get_object_or_404(Perfil, pk=request.POST.get('perfil_id'))
             grupo.integrantes.remove(perfil)
+            if grupo.lider_id == perfil.pk:
+                grupo.lider = None
+                grupo.save(update_fields=['lider'])
             messages.success(request, f'{perfil.nombres} fue retirado de «{grupo.nombre}».')
+        elif accion == 'establecer_lider':
+            grupo = get_object_or_404(Grupo, pk=request.POST.get('grupo_id'))
+            perfil_id = request.POST.get('perfil_id')
+            if perfil_id:
+                perfil = get_object_or_404(Perfil, pk=perfil_id)
+                if not grupo.integrantes.filter(pk=perfil.pk).exists():
+                    messages.error(request, 'El líder debe ser un servidor agregado a este grupo.')
+                    return redirect('grupos_servidores')
+                grupo.lider = perfil
+                grupo.save(update_fields=['lider'])
+                messages.success(request, f'{perfil.nombres} es ahora líder de «{grupo.nombre}».')
+            else:
+                grupo.lider = None
+                grupo.save(update_fields=['lider'])
+                messages.success(request, f'Se quitó el líder de «{grupo.nombre}».')
         elif accion == 'cambiar_estado':
             grupo = get_object_or_404(Grupo, pk=request.POST.get('grupo_id'))
             grupo.activo = not grupo.activo
