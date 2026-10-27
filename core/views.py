@@ -214,6 +214,7 @@ def servidores(request):
             perfil = get_object_or_404(Perfil, pk=perfil_id) if perfil_id else None
             nombres = request.POST.get('nombres', '').strip()
             correo = request.POST.get('correo', '').strip()
+            telefono = request.POST.get('telefono', '').strip()
             username = request.POST.get('username', '').strip()
             password = request.POST.get('password', '')
             grupo_num = request.POST.get('grupo')
@@ -242,13 +243,14 @@ def servidores(request):
                             usuario.save()
                             perfil.nombres = nombres
                             perfil.correo = correo
+                            perfil.telefono = telefono
                             perfil.grupo = int(grupo_num)
                             perfil.fecha_nacimiento = nacimiento
                             perfil.save()
                             mensaje = f'Datos de {nombres} actualizados.'
                         else:
                             usuario = User.objects.create_user(username=username, password=password, email=correo, first_name=nombres, is_active=True)
-                            perfil = Perfil.objects.create(usuario=usuario, nombres=nombres, correo=correo, grupo=int(grupo_num), fecha_nacimiento=nacimiento)
+                            perfil = Perfil.objects.create(usuario=usuario, nombres=nombres, correo=correo, telefono=telefono, grupo=int(grupo_num), fecha_nacimiento=nacimiento)
                             mensaje = f'Servidor {nombres} creado con su cuenta de acceso.'
                         for grupo in Grupo.objects.filter(integrantes=perfil):
                             grupo.integrantes.remove(perfil)
