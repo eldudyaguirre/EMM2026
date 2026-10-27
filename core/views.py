@@ -272,7 +272,7 @@ def exportar_grupos_pdf(request):
                         str(numero),
                         Paragraph(str(perfil.nombres or '').replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;'), styles['SmallText']),
                         str(perfil.telefono or '—'),
-                        '☐',
+                        '[   ]',
                         ''
                     ])
             else:
