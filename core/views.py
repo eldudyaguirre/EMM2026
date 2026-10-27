@@ -1,5 +1,8 @@
 from django.shortcuts import render,get_object_or_404
 from .models import Categoria, Cancion, Servicio, Grupo, Perfil
+from django.contrib.auth.models import User
+from django.db import transaction
+from datetime import date
 from django.utils.safestring import mark_safe
 import re
 from django.contrib.auth import authenticate, login
@@ -196,3 +199,76 @@ def grupos_servidores(request):
     grupos = Grupo.objects.prefetch_related('integrantes').order_by('tipo', 'nombre')
     perfiles = Perfil.objects.select_related('usuario').order_by('nombres')
     return render(request, 'grupos_servidores.html', {'grupos': grupos, 'perfiles': perfiles})
+
+
+@staff_member_required(login_url='home')
+def servidores(request):
+    """Gestión de cuentas y perfiles de servidores; solo usuarios staff."""
+    editar_id = request.GET.get('editar')
+    perfil_editar = get_object_or_404(Perfil, pk=editar_id) if editar_id else None
+
+    if request.method == 'POST':
+        accion = request.POST.get('accion')
+        if accion in ('crear_servidor', 'editar_servidor'):
+            perfil_id = request.POST.get('perfil_id')
+            perfil = get_object_or_404(Perfil, pk=perfil_id) if perfil_id else None
+            nombres = request.POST.get('nombres', '').strip()
+            correo = request.POST.get('correo', '').strip()
+            username = request.POST.get('username', '').strip()
+            password = request.POST.get('password', '')
+            grupo_num = request.POST.get('grupo')
+            fecha_nacimiento = request.POST.get('fecha_nacimiento')
+            grupos_ids = request.POST.getlist('grupos_servicio')
+
+            if not all([nombres, correo, username, grupo_num, fecha_nacimiento]):
+                messages.error(request, 'Completa todos los campos obligatorios.')
+            elif not perfil and not password:
+                messages.error(request, 'Define una contraseña para la nueva cuenta.')
+            elif User.objects.filter(username=username).exclude(pk=perfil.usuario_id if perfil else None).exists():
+                messages.error(request, 'Ese nombre de usuario ya está ocupado.')
+            elif Perfil.objects.filter(correo__iexact=correo).exclude(pk=perfil.pk if perfil else None).exists():
+                messages.error(request, 'Ese correo ya está registrado en otro perfil.')
+            else:
+                try:
+                    nacimiento = date.fromisoformat(fecha_nacimiento)
+                    with transaction.atomic():
+                        if perfil:
+                            usuario = perfil.usuario
+                            usuario.username = username
+                            usuario.email = correo
+                            usuario.first_name = nombres
+                            if password:
+                                usuario.set_password(password)
+                            usuario.save()
+                            perfil.nombres = nombres
+                            perfil.correo = correo
+                            perfil.grupo = int(grupo_num)
+                            perfil.fecha_nacimiento = nacimiento
+                            perfil.save()
+                            mensaje = f'Datos de {nombres} actualizados.'
+                        else:
+                            usuario = User.objects.create_user(username=username, password=password, email=correo, first_name=nombres, is_active=True)
+                            perfil = Perfil.objects.create(usuario=usuario, nombres=nombres, correo=correo, grupo=int(grupo_num), fecha_nacimiento=nacimiento)
+                            mensaje = f'Servidor {nombres} creado con su cuenta de acceso.'
+                        for grupo in Grupo.objects.filter(integrantes=perfil):
+                            grupo.integrantes.remove(perfil)
+                        for grupo in Grupo.objects.filter(pk__in=grupos_ids, activo=True):
+                            grupo.integrantes.add(perfil)
+                    messages.success(request, mensaje)
+                    return redirect('servidores')
+                except (ValueError, TypeError):
+                    messages.error(request, 'La fecha de nacimiento o el grupo no son válidos.')
+        elif accion == 'cambiar_estado_servidor':
+            perfil = get_object_or_404(Perfil.objects.select_related('usuario'), pk=request.POST.get('perfil_id'))
+            perfil.usuario.is_active = not perfil.usuario.is_active
+            perfil.usuario.save(update_fields=['is_active'])
+            messages.success(request, f'Cuenta de {perfil.nombres}: ' + ('activada.' if perfil.usuario.is_active else 'desactivada.'))
+            return redirect('servidores')
+
+    perfiles = Perfil.objects.select_related('usuario').prefetch_related('grupos_asignados').order_by('nombres')
+    return render(request, 'servidores.html', {
+        'perfiles': perfiles,
+        'grupos': Grupo.objects.filter(activo=True).order_by('nombre'),
+        'grupos_perfil': list(perfil_editar.grupos_asignados.values_list('id', flat=True)) if perfil_editar else [],
+        'perfil_editar': perfil_editar,
+    })
