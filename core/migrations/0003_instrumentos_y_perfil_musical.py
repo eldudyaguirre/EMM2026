@@ -33,7 +33,7 @@ def revertir_instrumentos(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('core', '0002_alter_cancion_categoria'),
+        ('core', '0007_perfil_telefono'),
     ]
 
     operations = [
