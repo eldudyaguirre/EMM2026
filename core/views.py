@@ -1,8 +1,10 @@
 from django.shortcuts import render,get_object_or_404
-from .models import Categoria, Cancion, Servicio
+from .models import Categoria, Cancion, Servicio, Grupo, Perfil
 from django.utils.safestring import mark_safe
 import re
 from django.contrib.auth import authenticate, login
+from django.contrib.admin.views.decorators import staff_member_required
+from django.contrib import messages
 from django.shortcuts import render, redirect
 from django.contrib.auth import logout
 from django.http import JsonResponse
@@ -158,3 +160,39 @@ def guardar_cancion(request, id):
     return JsonResponse({
         "ok": False
     })
+
+@staff_member_required(login_url='home')
+def grupos_servidores(request):
+    """Panel de gestión de grupos e integrantes, exclusivo para usuarios staff."""
+    if request.method == 'POST':
+        accion = request.POST.get('accion')
+        if accion == 'crear_grupo':
+            nombre = request.POST.get('nombre', '').strip()
+            tipo = request.POST.get('tipo', 'permanente')
+            descripcion = request.POST.get('descripcion', '').strip()
+            integrantes_ids = request.POST.getlist('integrantes')
+            if not nombre:
+                messages.error(request, 'Escribe el nombre del grupo.')
+            elif tipo not in ('permanente', 'temporal'):
+                messages.error(request, 'El tipo de grupo no es válido.')
+            elif Grupo.objects.filter(nombre__iexact=nombre).exists():
+                messages.error(request, 'Ya existe un grupo con ese nombre.')
+            else:
+                grupo = Grupo.objects.create(nombre=nombre, tipo=tipo, descripcion=descripcion)
+                grupo.integrantes.set(Perfil.objects.filter(pk__in=integrantes_ids))
+                messages.success(request, f'El grupo «{grupo.nombre}» fue creado correctamente.')
+        elif accion == 'actualizar_integrantes':
+            grupo = get_object_or_404(Grupo, pk=request.POST.get('grupo_id'))
+            integrantes_ids = request.POST.getlist('integrantes')
+            grupo.integrantes.set(Perfil.objects.filter(pk__in=integrantes_ids))
+            messages.success(request, f'Integrantes de «{grupo.nombre}» actualizados.')
+        elif accion == 'cambiar_estado':
+            grupo = get_object_or_404(Grupo, pk=request.POST.get('grupo_id'))
+            grupo.activo = not grupo.activo
+            grupo.save(update_fields=['activo'])
+            messages.success(request, f'Estado del grupo «{grupo.nombre}» actualizado.')
+        return redirect('grupos_servidores')
+
+    grupos = Grupo.objects.prefetch_related('integrantes').order_by('tipo', 'nombre')
+    perfiles = Perfil.objects.select_related('usuario').order_by('nombres')
+    return render(request, 'grupos_servidores.html', {'grupos': grupos, 'perfiles': perfiles})
