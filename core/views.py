@@ -64,6 +64,11 @@ def loginin(request):
     return render(request, 'loginin.html')
 
 
+def calendario(request):
+    """Muestra el calendario visual de los servicios habituales de Emaús."""
+    return render(request, 'calendario.html')
+
+
 def categoria(request,id):
 
     categoria=Categoria.objects.get(id=id)
