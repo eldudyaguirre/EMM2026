@@ -301,18 +301,23 @@ def exportar_grupos_pdf(request):
                 ),
                 styles['GrupoTitle']
             ))
-            rows = [['N.º', 'Nombre del servidor', 'Teléfono', 'Email']]
+            rows = [['N.º', 'Nombre del servidor', 'Teléfono', 'Email', 'Instrumento / voz']]
             if integrantes:
                 for numero, perfil in enumerate(integrantes, start=1):
+                    instrumentos = list(perfil.instrumentos.filter(activo=True).values_list('nombre', flat=True))
+                    if perfil.es_cantante:
+                        instrumentos.append('Canto')
+                    instrumento_voz = ' y '.join(instrumentos) if instrumentos else '—'
                     rows.append([
                         str(numero),
                         Paragraph(escape(str(perfil.nombres or '')), styles['ServidorText']),
                         Paragraph(escape(str(perfil.telefono or '—')), styles['ServidorText']),
-                        Paragraph(escape(str(perfil.correo or '—')), styles['ServidorText'])
+                        Paragraph(escape(str(perfil.correo or '—')), styles['ServidorText']),
+                        Paragraph(escape(instrumento_voz), styles['ServidorText'])
                     ])
             else:
-                rows.append(['', Paragraph('Sin servidores asignados', styles['SmallMuted']), '', ''])
-            table = Table(rows, colWidths=[11*mm, 68*mm, 29*mm, 53*mm], repeatRows=1, hAlign='LEFT')
+                rows.append(['', Paragraph('Sin servidores asignados', styles['SmallMuted']), '', '', ''])
+            table = Table(rows, colWidths=[9*mm, 49*mm, 25*mm, 42*mm, 36*mm], repeatRows=1, hAlign='LEFT')
             table.setStyle(TableStyle([
                 ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#25252b')),
                 ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
