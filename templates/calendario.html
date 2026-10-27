@@ -35,6 +35,7 @@
         .day-card{min-height:126px;background:var(--cal-panel);border:1px solid var(--cal-line);border-radius:13px;padding:11px;min-width:0;transition:border-color .2s,transform .2s}
         .day-card.has-service{border-color:rgba(255,255,255,.2);background:linear-gradient(155deg,#202127,#17181d)}
         .day-card.today{box-shadow:inset 0 0 0 1px #ff4967;border-color:#ff4967}
+        .day-card.other-month{opacity:.38}
         .day-number{font-size:20px;font-weight:800;line-height:1.2}
         .day-month{color:var(--cal-muted);font-size:11px;text-transform:uppercase;margin-top:3px}
         .today-label{display:inline-block;color:#ff8295;font-size:10px;font-weight:800;margin-top:4px}
@@ -85,13 +86,13 @@
         <div class="container">
             <div class="calendar-toolbar">
                 <div>
-                    <h2 id="calendar-title">Próximos 30 días</h2>
+                    <h2 id="calendar-title">Calendario mensual</h2>
                     <div class="calendar-range" id="calendar-range"></div>
                 </div>
                 <div class="calendar-actions">
                     <button class="calendar-btn" type="button" id="today-btn">Hoy</button>
-                    <button class="calendar-btn" type="button" id="back-btn" aria-label="Ver 30 días anteriores">← Anterior</button>
-                    <button class="calendar-btn" type="button" id="forward-btn" aria-label="Ver 30 días siguientes">Siguiente →</button>
+                    <button class="calendar-btn" type="button" id="back-btn" aria-label="Mes anterior">← Mes anterior</button>
+                    <button class="calendar-btn" type="button" id="forward-btn" aria-label="Mes siguiente">Mes siguiente →</button>
                 </div>
             </div>
             <div class="calendar-legend">
@@ -113,7 +114,7 @@
         const weekdays=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
         const months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
         const groups=['Grupo 1','Grupo 2','Grupo 3','Grupo 4'];
-        let start=localToday();
+        let currentMonth=localToday(); currentMonth.setDate(1);
         const fmt=d=>d.getDate()+' de '+months[d.getMonth()]+' de '+d.getFullYear();
         function localToday(){
             // Usa la fecha local del navegador para evitar desfases por UTC.
@@ -122,15 +123,19 @@
         }
         function render(){
             grid.innerHTML='';
-            const end=new Date(start); end.setDate(end.getDate()+29);
-            title.textContent='Próximos 30 días';
-            range.textContent=fmt(start)+' — '+fmt(end);
+            const firstDay=new Date(currentMonth.getFullYear(),currentMonth.getMonth(),1);
+            const lastDay=new Date(currentMonth.getFullYear(),currentMonth.getMonth()+1,0);
+            const offset=firstDay.getDay();
+            const totalCells=Math.ceil((offset+lastDay.getDate())/7)*7;
+            title.textContent=months[currentMonth.getMonth()].charAt(0).toUpperCase()+months[currentMonth.getMonth()].slice(1)+' de '+currentMonth.getFullYear();
+            range.textContent=fmt(new Date(currentMonth.getFullYear(),currentMonth.getMonth(),1))+' — '+fmt(new Date(currentMonth.getFullYear(),currentMonth.getMonth()+1,0));
             weekdays.forEach(day=>{const el=document.createElement('div');el.className='weekday';el.textContent=day;grid.appendChild(el);});
             const today=localToday();
-            for(let i=0;i<30;i++){
-                const date=new Date(start);date.setDate(start.getDate()+i);
+            for(let i=0;i<totalCells;i++){
+                const date=new Date(currentMonth.getFullYear(),currentMonth.getMonth(),i-offset+1);
+                const isCurrentMonth=date.getMonth()===currentMonth.getMonth();
                 const card=document.createElement('article');
-                card.className='day-card'+((date.getDay()===4||date.getDay()===0)?' has-service':'')+(date.getTime()===today.getTime()?' today':'');
+                card.className='day-card'+(!isCurrentMonth?' other-month':'')+((date.getDay()===4||date.getDay()===0)?' has-service':'')+(date.getTime()===today.getTime()?' today':'');
                 card.dataset.weekday=weekdays[date.getDay()];
                 const num=document.createElement('div');num.className='day-number';num.textContent=date.getDate();card.appendChild(num);
                 const mon=document.createElement('div');mon.className='day-month';mon.textContent=months[date.getMonth()];card.appendChild(mon);
@@ -145,9 +150,9 @@
                 grid.appendChild(card);
             }
         }
-        document.getElementById('today-btn').addEventListener('click',()=>{start=localToday();render();});
-        document.getElementById('back-btn').addEventListener('click',()=>{start.setDate(start.getDate()-30);render();});
-        document.getElementById('forward-btn').addEventListener('click',()=>{start.setDate(start.getDate()+30);render();});
+        document.getElementById('today-btn').addEventListener('click',()=>{currentMonth=localToday();currentMonth.setDate(1);render();});
+        document.getElementById('back-btn').addEventListener('click',()=>{currentMonth=new Date(currentMonth.getFullYear(),currentMonth.getMonth()-1,1);render();});
+        document.getElementById('forward-btn').addEventListener('click',()=>{currentMonth=new Date(currentMonth.getFullYear(),currentMonth.getMonth()+1,1);render();});
         render();
     })();
     </script>
