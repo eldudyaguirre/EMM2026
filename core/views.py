@@ -331,7 +331,7 @@ def exportar_grupos_pdf(request):
         canvas.saveState()
         canvas.setFillColor(colors.HexColor('#bd0026'))
         canvas.rect(0, A4[1] - 7*mm, A4[0], 7*mm, fill=1, stroke=0)
-        logo_path = finders.find('images/logomio.svg')
+        logo_path = finders.find('images/logomio_negro.svg')
         if logo_path:
             try:
                 logo_drawing = svg2rlg(logo_path)
