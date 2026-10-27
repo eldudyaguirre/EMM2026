@@ -295,9 +295,10 @@ def exportar_grupos_pdf(request):
     else:
         for grupo in grupos:
             integrantes = list(grupo.integrantes.all().order_by('nombres'))
+            nombre_lider = grupo.lider.nombres if grupo.lider_id else 'Sin líder asignado'
             story.append(Paragraph(
-                '{} <font size="9" color="#626262">· {} · {} servidor(es)</font>'.format(
-                    escape(grupo.nombre), escape(grupo.get_tipo_display()), len(integrantes)
+                '{} <font size="9" color="#626262">· {} · {} servidor(es)</font><br/><font size="9" color="#333333">Líder: {}</font>'.format(
+                    escape(grupo.nombre), escape(grupo.get_tipo_display()), len(integrantes), escape(nombre_lider)
                 ),
                 styles['GrupoTitle']
             ))
@@ -341,26 +342,17 @@ def exportar_grupos_pdf(request):
             try:
                 logo_drawing = svg2rlg(logo_path)
                 if logo_drawing:
-                    scale = min((30*mm) / max(logo_drawing.width, 1), (20*mm) / max(logo_drawing.height, 1))
+                    scale = min((68*mm) / max(logo_drawing.width, 1), (25*mm) / max(logo_drawing.height, 1))
                     logo_drawing.width *= scale
                     logo_drawing.height *= scale
                     logo_drawing.scale(scale, scale)
-                    renderPDF.draw(logo_drawing, canvas, 17*mm, A4[1]-29*mm)
-                    titulo_x = 51*mm
-                else:
-                    titulo_x = 17*mm
+                    logo_x = (A4[0] - logo_drawing.width) / 2
+                    logo_y = A4[1] - 34*mm
+                    renderPDF.draw(logo_drawing, canvas, logo_x, logo_y)
             except Exception:
-                titulo_x = 17*mm
-        else:
-            titulo_x = 17*mm
-        canvas.setFillColor(colors.HexColor('#bd0026'))
-        canvas.setFont('Helvetica-Bold', 9)
-        canvas.drawString(titulo_x, A4[1]-16*mm, 'EMAÚS')
-        canvas.setFillColor(colors.HexColor('#55555d'))
-        canvas.setFont('Helvetica', 8)
-        canvas.drawString(titulo_x, A4[1]-21*mm, 'MINISTERIO DE MÚSICA')
+                pass
         canvas.setStrokeColor(colors.HexColor('#e1e1e5'))
-        canvas.line(17*mm, A4[1]-31*mm, A4[0]-17*mm, A4[1]-31*mm)
+        canvas.line(17*mm, A4[1]-36*mm, A4[0]-17*mm, A4[1]-36*mm)
         canvas.setFont('Helvetica', 8)
         canvas.setFillColor(colors.HexColor('#666666'))
         canvas.drawString(17*mm, 9*mm, 'Emaús · Listado de grupos y servidores')
