@@ -189,6 +189,16 @@ def grupos_servidores(request):
             integrantes_ids = request.POST.getlist('integrantes')
             grupo.integrantes.set(Perfil.objects.filter(pk__in=integrantes_ids))
             messages.success(request, f'Integrantes de «{grupo.nombre}» actualizados.')
+        elif accion == 'agregar_integrante':
+            grupo = get_object_or_404(Grupo, pk=request.POST.get('grupo_id'))
+            perfil = get_object_or_404(Perfil, pk=request.POST.get('perfil_id'))
+            grupo.integrantes.add(perfil)
+            messages.success(request, f'{perfil.nombres} fue agregado a «{grupo.nombre}».')
+        elif accion == 'quitar_integrante':
+            grupo = get_object_or_404(Grupo, pk=request.POST.get('grupo_id'))
+            perfil = get_object_or_404(Perfil, pk=request.POST.get('perfil_id'))
+            grupo.integrantes.remove(perfil)
+            messages.success(request, f'{perfil.nombres} fue retirado de «{grupo.nombre}».')
         elif accion == 'cambiar_estado':
             grupo = get_object_or_404(Grupo, pk=request.POST.get('grupo_id'))
             grupo.activo = not grupo.activo
