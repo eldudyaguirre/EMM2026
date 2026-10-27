@@ -49,8 +49,10 @@
         .calendar-note strong{color:#fff}
         .empty-state{grid-column:1/-1;text-align:center;padding:28px;color:var(--cal-muted)}
         .calendar-footer{border-top:1px solid var(--cal-line);padding:22px 0;color:#9c9da6;text-align:center;font-size:13px}
-        #menu .calendar-logout-item{border-top:1px solid rgba(255,255,255,.25);margin-top:7px;padding-top:7px}
-        @media(min-width:992px){#menu .calendar-logout-item{margin-left:10px;padding-left:10px;border-top:0;border-left:1px solid rgba(255,255,255,.35);margin-top:0;padding-top:0}}
+        #menu .calendar-logout-item{position:relative!important;border:0!important;margin-top:10px!important;padding-top:12px!important}
+#menu .calendar-logout-item::before{content:""!important;display:block!important;height:1px!important;width:100%!important;background:rgba(255,255,255,.65)!important;position:absolute!important;top:0!important;left:0!important}
+@media(min-width:992px){#menu .calendar-logout-item{margin-left:10px!important;padding-left:10px!important;margin-top:0!important;padding-top:0!important}
+#menu .calendar-logout-item::before{width:1px!important;height:24px!important;top:50%!important;left:0!important;transform:translateY(-50%)!important;background:rgba(255,255,255,.55)!important}}
         @media(max-width:767px){.calendar-hero{padding:115px 0 35px}.calendar-wrap{padding:25px 0 45px}.calendar-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.weekday{display:none}.day-card{min-height:110px;padding:12px}.day-card:before{content:attr(data-weekday);display:block;color:var(--cal-muted);font-size:10px;text-transform:uppercase;font-weight:800;margin-bottom:7px}.calendar-toolbar h2{font-size:22px}.calendar-actions{width:100%}.calendar-actions .calendar-btn{flex:1}}
         @media(min-width:500px) and (max-width:767px){.calendar-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
     </style>
