@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Categoria, Cancion, Perfil, Grupo, Servicio
+from .models import Categoria, Cancion, Perfil, Grupo, Servicio, Instrumento
 
 
 admin.site.register(Categoria)
@@ -29,3 +29,11 @@ class ServicioAdmin(admin.ModelAdmin):
     search_fields = ('titulo', 'grupo__nombre', 'lugar', 'observaciones')
     date_hierarchy = 'fecha'
     ordering = ('fecha', 'hora_inicio')
+
+
+@admin.register(Instrumento)
+class InstrumentoAdmin(admin.ModelAdmin):
+    list_display = ('nombre', 'activo')
+    list_filter = ('activo',)
+    search_fields = ('nombre',)
+    ordering = ('nombre',)
