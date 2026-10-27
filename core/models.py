@@ -75,6 +75,8 @@ class Perfil(models.Model):
 
     correo = models.EmailField()
 
+    telefono = models.CharField(max_length=20, blank=True, default='')
+
     grupo = models.IntegerField(
         choices=GRUPOS
     )
