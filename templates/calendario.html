@@ -78,7 +78,7 @@
         <div class="container">
             <span class="calendar-kicker">Ministerio de Música · Emaús</span>
             <h1>Calendario de servicios</h1>
-            <p>Organiza tus próximas fechas de servicio. Por ahora se muestran los cuatro grupos y sus servicios habituales de jueves y domingo.</p>
+            <p>Consulta los servicios programados, sus horarios y los grupos responsables. Los eventos se administran desde el panel de Emaús.</p>
         </div>
     </section>
 
@@ -96,16 +96,17 @@
                 </div>
             </div>
             <div class="calendar-legend">
-                <span><i class="legend-dot thursday"></i>Servicio habitual · Jueves</span>
-                <span><i class="legend-dot sunday"></i>Servicio habitual · Domingo</span>
+                <span><i class="legend-dot"></i>Servicio programado</span>
+                <span>Los horarios y grupos provienen de la base de datos.</span>
             </div>
             <div class="calendar-grid" id="calendar-grid" aria-live="polite"></div>
-            <div class="calendar-note"><strong>Nota:</strong> esta es la primera versión visual. Los cuatro grupos aparecen como “Grupo 1” a “Grupo 4”; luego podremos configurar sus nombres, asignar qué grupo sirve cada fecha y guardar cambios en la base de datos.</div>
+            <div class="calendar-note"><strong>Administración:</strong> crea grupos permanentes o temporales, selecciona sus integrantes y registra fecha y hora de cada servicio desde el administrador de Django.</div>
         </div>
     </main>
 
     <footer class="calendar-footer"><div class="container">Emaús © 2026 · Calendario de servicios</div></footer>
 
+    {{ servicios|json_script:"services-data" }}
     <script>
     (function(){
         const grid=document.getElementById('calendar-grid');
@@ -113,7 +114,8 @@
         const range=document.getElementById('calendar-range');
         const weekdays=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
         const months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
-        const groups=['Grupo 1','Grupo 2','Grupo 3','Grupo 4'];
+        const services=JSON.parse(document.getElementById('services-data').textContent);
+        const dateKey=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
         let currentMonth=localToday(); currentMonth.setDate(1);
         const fmt=d=>d.getDate()+' de '+months[d.getMonth()]+' de '+d.getFullYear();
         function localToday(){
@@ -135,18 +137,37 @@
                 const date=new Date(currentMonth.getFullYear(),currentMonth.getMonth(),i-offset+1);
                 const isCurrentMonth=date.getMonth()===currentMonth.getMonth();
                 const card=document.createElement('article');
-                card.className='day-card'+(!isCurrentMonth?' other-month':'')+((date.getDay()===4||date.getDay()===0)?' has-service':'')+(date.getTime()===today.getTime()?' today':'');
+                const dayServices=services.filter(s=>s.fecha===dateKey(date));
+                card.className='day-card'+(!isCurrentMonth?' other-month':'')+(dayServices.length?' has-service':'')+(date.getTime()===today.getTime()?' today':'');
                 card.dataset.weekday=weekdays[date.getDay()];
                 const num=document.createElement('div');num.className='day-number';num.textContent=date.getDate();card.appendChild(num);
                 const mon=document.createElement('div');mon.className='day-month';mon.textContent=months[date.getMonth()];card.appendChild(mon);
                 if(date.getTime()===today.getTime()){const badge=document.createElement('div');badge.className='today-label';badge.textContent='HOY';card.appendChild(badge);}
-                if(date.getDay()===4||date.getDay()===0){
-                    const thursday=date.getDay()===4;
-                    const pill=document.createElement('div');pill.className='service-pill '+(thursday?'thursday':'sunday');
-                    pill.appendChild(document.createTextNode(thursday?'Servicio habitual · Jueves':'Servicio habitual · Domingo'));
-                    const group=document.createElement('span');group.className='service-group';group.textContent='Grupos: '+groups.join(', ');pill.appendChild(group);
-                    card.appendChild(pill);
-                }else{const none=document.createElement('div');none.className='no-service';none.textContent='Sin servicio habitual';card.appendChild(none);}
+                if(dayServices.length){
+                    dayServices.forEach(service=>{
+                        const pill=document.createElement('div');
+                        pill.className='service-pill '+(service.tipo_grupo==='temporal'?'thursday':'sunday');
+                        const heading=document.createElement('strong');
+                        heading.textContent=service.hora_inicio+' · '+service.titulo;
+                        pill.appendChild(heading);
+                        const group=document.createElement('span');
+                        group.className='service-group';
+                        group.textContent=service.grupo+(service.tipo_grupo==='temporal'?' · Temporal':'');
+                        pill.appendChild(group);
+                        if(service.lugar){
+                            const place=document.createElement('span');
+                            place.className='service-group';
+                            place.textContent=service.lugar;
+                            pill.appendChild(place);
+                        }
+                        card.appendChild(pill);
+                    });
+                }else{
+                    const none=document.createElement('div');
+                    none.className='no-service';
+                    none.textContent='Sin servicio programado';
+                    card.appendChild(none);
+                }
                 grid.appendChild(card);
             }
         }
