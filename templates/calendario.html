@@ -113,15 +113,20 @@
         const weekdays=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
         const months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
         const groups=['Grupo 1','Grupo 2','Grupo 3','Grupo 4'];
-        let start=new Date(); start.setHours(0,0,0,0);
+        let start=localToday();
         const fmt=d=>d.getDate()+' de '+months[d.getMonth()]+' de '+d.getFullYear();
+        function localToday(){
+            // Usa la fecha local del navegador para evitar desfases por UTC.
+            const now=new Date();
+            return new Date(now.getFullYear(),now.getMonth(),now.getDate());
+        }
         function render(){
             grid.innerHTML='';
             const end=new Date(start); end.setDate(end.getDate()+29);
             title.textContent='Próximos 30 días';
             range.textContent=fmt(start)+' — '+fmt(end);
             weekdays.forEach(day=>{const el=document.createElement('div');el.className='weekday';el.textContent=day;grid.appendChild(el);});
-            const today=new Date();today.setHours(0,0,0,0);
+            const today=localToday();
             for(let i=0;i<30;i++){
                 const date=new Date(start);date.setDate(start.getDate()+i);
                 const card=document.createElement('article');
@@ -140,7 +145,7 @@
                 grid.appendChild(card);
             }
         }
-        document.getElementById('today-btn').addEventListener('click',()=>{start=new Date();start.setHours(0,0,0,0);render();});
+        document.getElementById('today-btn').addEventListener('click',()=>{start=localToday();render();});
         document.getElementById('back-btn').addEventListener('click',()=>{start.setDate(start.getDate()-30);render();});
         document.getElementById('forward-btn').addEventListener('click',()=>{start.setDate(start.getDate()+30);render();});
         render();
