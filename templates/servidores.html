@@ -27,7 +27,18 @@
 <div class="s-modal-actions"><button class="s-btn" type="submit">{% if perfil_editar %}Guardar cambios{% else %}Crear servidor{% endif %}</button><button class="s-btn secondary" type="button" id="cancelarServidorModal">Cancelar</button></div></form></div></div>
 <script src="{% static 'js/jquery-3.7.1.min.js' %}"></script><script src="{% static 'js/bootstrap.min.js' %}"></script><script src="{% static 'js/jquery.slicknav.js' %}"></script><script src="{% static 'js/function.js' %}"></script>
 <script>
-(function(){const modal=document.getElementById('servidorModal');const abrir=document.getElementById('btnNuevoServidor');const cerrar=document.getElementById('cerrarServidorModal');const cancelar=document.getElementById('cancelarServidorModal');function closeModal(){modal.classList.remove('open');}function openModal(){modal.classList.add('open');const first=modal.querySelector('input[name="nombres"]');if(first)first.focus();}if(abrir)abrir.addEventListener('click',openModal);if(cerrar)cerrar.addEventListener('click',closeModal);if(cancelar)cancelar.addEventListener('click',closeModal);modal.addEventListener('click',e=>{if(e.target===modal)closeModal();});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
+(function(){
+const instrumentCheckboxes = Array.from(document.querySelectorAll('input[name="instrumentos"]'));
+const ningunoCheckbox = instrumentCheckboxes.find(input => input.parentElement.textContent.trim() === 'Ninguno');
+if (ningunoCheckbox) {
+  instrumentCheckboxes.filter(input => input !== ningunoCheckbox).forEach(input => input.addEventListener('change', () => {
+    if (input.checked) ningunoCheckbox.checked = false;
+  }));
+  ningunoCheckbox.addEventListener('change', () => {
+    if (ningunoCheckbox.checked) instrumentCheckboxes.filter(input => input !== ningunoCheckbox).forEach(input => input.checked = false);
+  });
+}
+const modal=document.getElementById('servidorModal');const abrir=document.getElementById('btnNuevoServidor');const cerrar=document.getElementById('cerrarServidorModal');const cancelar=document.getElementById('cancelarServidorModal');function closeModal(){modal.classList.remove('open');}function openModal(){modal.classList.add('open');const first=modal.querySelector('input[name="nombres"]');if(first)first.focus();}if(abrir)abrir.addEventListener('click',openModal);if(cerrar)cerrar.addEventListener('click',closeModal);if(cancelar)cancelar.addEventListener('click',closeModal);modal.addEventListener('click',e=>{if(e.target===modal)closeModal();});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
 document.querySelectorAll('.s-menu-btn').forEach(btn=>btn.addEventListener('click',e=>{e.stopPropagation();const menu=btn.nextElementSibling;document.querySelectorAll('.s-menu.open').forEach(other=>{if(other!==menu)other.classList.remove('open');});menu.classList.toggle('open');btn.setAttribute('aria-expanded',menu.classList.contains('open')?'true':'false');}));
 document.addEventListener('click',()=>{document.querySelectorAll('.s-menu.open').forEach(menu=>{menu.classList.remove('open');const btn=menu.previousElementSibling;if(btn)btn.setAttribute('aria-expanded','false');});});
 document.querySelectorAll('.delete-server-form').forEach(form=>form.addEventListener('submit',e=>{if(!confirm('¿Seguro que deseas eliminar este servidor y su cuenta de acceso? Esta acción no se puede deshacer.'))e.preventDefault();}));
