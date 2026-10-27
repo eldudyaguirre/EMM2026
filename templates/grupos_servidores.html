@@ -1,0 +1,56 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Emaús | Grupos y servidores</title>
+<link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+<link href="{% static 'css/slicknav.min.css' %}" rel="stylesheet">
+<link href="{% static 'css/custom.css' %}" rel="stylesheet">
+<style>
+:root{--red:#bd0026;--bg:#101114;--panel:#191a20;--line:rgba(255,255,255,.12)}
+body{background:var(--bg);color:#f7f7f8;font-family:'Instrument Sans',sans-serif}
+.gs-hero{padding:140px 0 42px;background:linear-gradient(135deg,rgba(12,13,18,.96),rgba(76,0,19,.86)),url("{% static 'images/page-header-bg-02.jpg' %}") center/cover}
+.gs-kicker{color:#ff526f;font-weight:800;font-size:12px;letter-spacing:.18em;text-transform:uppercase}
+.gs-hero h1{font-family:'Phudu',sans-serif;font-size:clamp(34px,5vw,54px);color:#fff;text-transform:uppercase;margin:10px 0}
+.gs-main{padding:35px 0 70px}.gs-panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:24px;margin-bottom:24px}
+.gs-panel h2{font-family:'Phudu',sans-serif;color:#fff;font-size:25px;margin:0 0 20px}
+.gs-label{display:block;color:#d8d8df;font-size:13px;font-weight:700;margin-bottom:7px}
+.gs-input,.gs-select,.gs-textarea{width:100%;background:#101114;color:#fff;border:1px solid #393a43;border-radius:9px;padding:11px 12px;margin-bottom:16px}
+.gs-select option{background:#101114}.gs-btn{border:0;border-radius:9px;background:var(--red);color:#fff;padding:11px 17px;font-weight:800}.gs-btn:hover{background:#e31b3d;color:#fff}
+.gs-group{background:#202127;border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:14px}
+.gs-group h3{font-size:19px;font-weight:800;margin:0 0 6px}.gs-meta{font-size:12px;color:#b5b6c0;margin-bottom:14px}
+.gs-members{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:8px;margin:12px 0 18px}
+.gs-member{display:flex;gap:8px;align-items:center;background:#15161a;border:1px solid var(--line);border-radius:8px;padding:9px;font-size:13px}
+.gs-member input{accent-color:var(--red)}.gs-badge{display:inline-block;border-radius:20px;padding:4px 9px;font-size:11px;font-weight:800;background:#333;color:#fff}.gs-badge.temporal{background:#713047}.gs-badge.permanente{background:#293c55}
+.gs-alert{padding:12px 15px;border-radius:9px;margin-bottom:14px;background:#24252b}.gs-alert.success{border-left:4px solid #36b37e}.gs-alert.error{border-left:4px solid var(--red)}
+@media(max-width:767px){.gs-hero{padding:115px 0 32px}.gs-panel{padding:17px}}
+</style>
+</head>
+<body>
+<header class="main-header"><div class="header-sticky"><nav class="navbar navbar-expand-lg"><div class="container">
+<a class="navbar-brand" href="{% url 'loginin' %}"><img src="{% static 'images/logomio.svg' %}" alt="Emaús"></a>
+<div class="collapse navbar-collapse main-menu"><div class="nav-menu-wrapper"><ul class="navbar-nav mr-auto" id="menu">
+<li class="nav-item"><a class="nav-link" href="{% url 'loginin' %}">Inicio</a></li>
+<li class="nav-item"><a class="nav-link" href="{% url 'calendario' %}">Calendario</a></li>
+<li class="nav-item"><a class="nav-link" href="{% url 'grupos_servidores' %}">Grupos y servidores</a></li>
+<li class="nav-item"><a class="nav-link" href="{% url 'logout' %}">Cerrar sesión</a></li>
+</ul></div></div><div class="navbar-toggle"></div></div></nav><div class="responsive-menu"></div></div></header>
+<section class="gs-hero"><div class="container"><span class="gs-kicker">Ministerio de Música · Emaús</span><h1>Grupos y servidores</h1><p>Organiza los grupos, selecciona sus integrantes y conserva intacta la asignación permanente de cada persona.</p></div></section>
+<main class="gs-main"><div class="container">
+{% for message in messages %}<div class="gs-alert {{ message.tags }}">{{ message }}</div>{% endfor %}
+<section class="gs-panel"><h2>Crear grupo</h2>
+<form method="post">{% csrf_token %}<input type="hidden" name="accion" value="crear_grupo">
+<div class="row"><div class="col-md-6"><label class="gs-label" for="nombre">Nombre del grupo</label><input class="gs-input" id="nombre" name="nombre" required maxlength="100" placeholder="Ej.: Grupo Navidad"></div>
+<div class="col-md-6"><label class="gs-label" for="tipo">Tipo de grupo</label><select class="gs-select" id="tipo" name="tipo"><option value="permanente">Permanente</option><option value="temporal">Temporal</option></select></div></div>
+<label class="gs-label" for="descripcion">Descripción</label><textarea class="gs-textarea" id="descripcion" name="descripcion" rows="2" placeholder="Propósito del grupo (opcional)"></textarea>
+<label class="gs-label">Selecciona integrantes</label><div class="gs-members">{% for perfil in perfiles %}<label class="gs-member"><input type="checkbox" name="integrantes" value="{{ perfil.pk }}"> <span>{{ perfil.nombres }} <small>· Grupo {{ perfil.grupo }}</small></span></label>{% empty %}<p>No hay perfiles registrados todavía.</p>{% endfor %}</div>
+<button class="gs-btn" type="submit">Crear grupo</button></form></section>
+<section class="gs-panel"><h2>Grupos registrados</h2>
+{% for grupo in grupos %}<article class="gs-group"><div class="d-flex justify-content-between align-items-start flex-wrap gap-2"><div><h3>{{ grupo.nombre }}</h3><div class="gs-meta"><span class="gs-badge {{ grupo.tipo }}">{{ grupo.get_tipo_display }}</span> · {% if grupo.activo %}Activo{% else %}Inactivo{% endif %} · {{ grupo.integrantes.count }} integrante(s)</div></div>
+<form method="post">{% csrf_token %}<input type="hidden" name="accion" value="cambiar_estado"><input type="hidden" name="grupo_id" value="{{ grupo.pk }}"><button class="gs-btn" type="submit">{% if grupo.activo %}Desactivar{% else %}Activar{% endif %}</button></form></div>
+{% if grupo.descripcion %}<p>{{ grupo.descripcion }}</p>{% endif %}
+<form method="post">{% csrf_token %}<input type="hidden" name="accion" value="actualizar_integrantes"><input type="hidden" name="grupo_id" value="{{ grupo.pk }}"><label class="gs-label">Integrantes</label><div class="gs-members">{% for perfil in perfiles %}<label class="gs-member"><input type="checkbox" name="integrantes" value="{{ perfil.pk }}" {% if perfil in grupo.integrantes.all %}checked{% endif %}> <span>{{ perfil.nombres }} <small>· Grupo {{ perfil.grupo }}</small></span></label>{% endfor %}</div><button class="gs-btn" type="submit">Guardar integrantes</button></form></article>{% empty %}<p>Aún no hay grupos registrados.</p>{% endfor %}
+</section></div></main>
+<script src="{% static 'js/jquery-3.7.1.min.js' %}"></script><script src="{% static 'js/bootstrap.min.js' %}"></script><script src="{% static 'js/jquery.slicknav.js' %}"></script><script src="{% static 'js/function.js' %}"></script>
+</body></html>
