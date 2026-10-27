@@ -86,9 +86,23 @@ class Perfil(models.Model):
         return self.nombres
 
 class Grupo(models.Model):
-    """Grupo del Ministerio de Música de Emaús."""
+    """Grupo permanente o temporal del Ministerio de Música de Emaús."""
+    TIPO_PERMANENTE = 'permanente'
+    TIPO_TEMPORAL = 'temporal'
+    TIPOS = (
+        (TIPO_PERMANENTE, 'Permanente'),
+        (TIPO_TEMPORAL, 'Temporal'),
+    )
+
     nombre = models.CharField(max_length=100, unique=True)
+    tipo = models.CharField(max_length=12, choices=TIPOS, default=TIPO_PERMANENTE)
     descripcion = models.TextField(blank=True)
+    integrantes = models.ManyToManyField(
+        'Perfil',
+        blank=True,
+        related_name='grupos_asignados',
+        help_text='Integrantes seleccionados para este grupo o evento.'
+    )
     activo = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
@@ -99,3 +113,28 @@ class Grupo(models.Model):
 
     def __str__(self):
         return self.nombre
+
+
+class Servicio(models.Model):
+    """Servicio programado en el calendario para un grupo."""
+    titulo = models.CharField(max_length=150, help_text='Ej.: Servicio de Navidad')
+    grupo = models.ForeignKey(
+        Grupo,
+        on_delete=models.PROTECT,
+        related_name='servicios'
+    )
+    fecha = models.DateField()
+    hora_inicio = models.TimeField()
+    hora_fin = models.TimeField(null=True, blank=True)
+    lugar = models.CharField(max_length=200, blank=True)
+    observaciones = models.TextField(blank=True)
+    activo = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['fecha', 'hora_inicio', 'titulo']
+        verbose_name = 'Servicio'
+        verbose_name_plural = 'Servicios'
+
+    def __str__(self):
+        return f"{self.titulo} - {self.grupo.nombre} ({self.fecha:%d/%m/%Y})"
