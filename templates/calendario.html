@@ -49,6 +49,8 @@
         .calendar-note strong{color:#fff}
         .empty-state{grid-column:1/-1;text-align:center;padding:28px;color:var(--cal-muted)}
         .calendar-footer{border-top:1px solid var(--cal-line);padding:22px 0;color:#9c9da6;text-align:center;font-size:13px}
+        #menu .calendar-logout-item{border-top:1px solid rgba(255,255,255,.25);margin-top:7px;padding-top:7px}
+        @media(min-width:992px){#menu .calendar-logout-item{margin-left:10px;padding-left:10px;border-top:0;border-left:1px solid rgba(255,255,255,.35);margin-top:0;padding-top:0}}
         @media(max-width:767px){.calendar-hero{padding:115px 0 35px}.calendar-wrap{padding:25px 0 45px}.calendar-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.weekday{display:none}.day-card{min-height:110px;padding:12px}.day-card:before{content:attr(data-weekday);display:block;color:var(--cal-muted);font-size:10px;text-transform:uppercase;font-weight:800;margin-bottom:7px}.calendar-toolbar h2{font-size:22px}.calendar-actions{width:100%}.calendar-actions .calendar-btn{flex:1}}
         @media(min-width:500px) and (max-width:767px){.calendar-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
     </style>
@@ -67,7 +69,7 @@
                                 <li class="nav-item"><a class="nav-link" href="{% url 'loginin' %}">Inicio</a></li>
                                 {% if request.user.is_authenticated %}
                                 <li class="nav-item"><a class="nav-link" href="#" id="abrirCambioPasswordCalendario">Cambiar contraseña</a></li>
-                                <li class="nav-item"><a class="nav-link" href="{% url 'logout' %}">Cerrar sesión</a></li>
+                                <li class="nav-item calendar-logout-item"><a class="nav-link" href="{% url 'logout' %}">Cerrar sesión</a></li>
                                 {% endif %}
                             </ul>
                         </div>
