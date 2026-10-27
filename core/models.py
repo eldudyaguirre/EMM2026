@@ -83,6 +83,9 @@ class Perfil(models.Model):
 
     fecha_nacimiento = models.DateField()
 
+    es_cantante = models.BooleanField(default=False, verbose_name='Es cantante')
+    instrumentos = models.ManyToManyField('Instrumento', blank=True, related_name='servidores')
+
     def __str__(self):
 
         return self.nombres
@@ -140,3 +143,17 @@ class Servicio(models.Model):
 
     def __str__(self):
         return f"{self.titulo} - {self.grupo.nombre} ({self.fecha:%d/%m/%Y})"
+
+
+class Instrumento(models.Model):
+    """Catálogo de instrumentos musicales que pueden tocar los servidores."""
+    nombre = models.CharField(max_length=100, unique=True)
+    activo = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ['nombre']
+        verbose_name = 'Instrumento'
+        verbose_name_plural = 'Instrumentos'
+
+    def __str__(self):
+        return self.nombre
