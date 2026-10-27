@@ -400,7 +400,8 @@ def servidores(request):
                         else:
                             usuario = User.objects.create_user(username=username, password=password, email=correo, first_name=nombres, is_active=True)
                             # El grupo de perfil es un campo heredado; la asignación real se gestiona desde cada grupo.
-                            perfil = Perfil.objects.create(usuario=usuario, nombres=nombres, correo=correo, telefono=telefono, grupo=1, fecha_nacimiento=nacimiento)
+                            perfil = Perfil.objects.create(usuario=usuario, nombres=nombres, correo=correo, telefono=telefono, grupo=1, fecha_nacimiento=nacimiento, es_cantante=es_cantante)
+                            perfil.instrumentos.set(Instrumento.objects.filter(pk__in=instrumentos_ids, activo=True))
                             mensaje = f'Servidor {nombres} creado con su cuenta de acceso.'
                     messages.success(request, mensaje)
                     return redirect('servidores')
