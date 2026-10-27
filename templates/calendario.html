@@ -1,0 +1,150 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Emaús - Calendario de servicios</title>
+    <link rel="shortcut icon" type="image/x-icon" href="{% static 'images/favicon.png' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Phudu:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+    <link href="{% static 'css/all.min.css' %}" rel="stylesheet">
+    <link href="{% static 'css/custom.css' %}" rel="stylesheet">
+    <style>
+        :root{--cal-red:#bd0026;--cal-bg:#101114;--cal-panel:#191a20;--cal-line:rgba(255,255,255,.1);--cal-muted:#a9aab4}
+        body{background:var(--cal-bg);color:#fff;font-family:'Instrument Sans',sans-serif}
+        .calendar-hero{padding:65px 0 48px;background:linear-gradient(135deg,rgba(12,13,18,.95),rgba(76,0,19,.83)),url("{% static 'images/page-header-bg-02.jpg' %}") center/cover}
+        .calendar-kicker{color:#ff526f;font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
+        .calendar-hero h1{font-family:'Phudu',sans-serif;font-size:clamp(36px,5vw,58px);font-weight:700;margin:10px 0}
+        .calendar-hero p{color:rgba(255,255,255,.78);max-width:650px;margin:0}
+        .calendar-wrap{padding:36px 0 70px}
+        .calendar-toolbar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+        .calendar-toolbar h2{font:600 25px 'Phudu',sans-serif;margin:0}
+        .calendar-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+        .calendar-btn{border:1px solid var(--cal-line);background:#22232a;color:#fff;padding:10px 15px;border-radius:10px;font-weight:700;cursor:pointer}
+        .calendar-btn:hover{background:var(--cal-red);border-color:var(--cal-red);color:#fff}
+        .calendar-range{color:var(--cal-muted);font-size:13px;margin-top:5px}
+        .calendar-legend{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:18px;color:#d8d8de;font-size:13px}
+        .legend-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;background:#ff4967}
+        .legend-dot.thursday{background:#e5b64b}
+        .legend-dot.sunday{background:#5ea9ff}
+        .calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:9px}
+        .weekday{text-align:center;color:var(--cal-muted);font-size:12px;font-weight:800;text-transform:uppercase;padding:9px 2px}
+        .day-card{min-height:126px;background:var(--cal-panel);border:1px solid var(--cal-line);border-radius:13px;padding:11px;min-width:0;transition:border-color .2s,transform .2s}
+        .day-card.has-service{border-color:rgba(255,255,255,.2);background:linear-gradient(155deg,#202127,#17181d)}
+        .day-card.today{box-shadow:inset 0 0 0 1px #ff4967;border-color:#ff4967}
+        .day-number{font-size:20px;font-weight:800;line-height:1.2}
+        .day-month{color:var(--cal-muted);font-size:11px;text-transform:uppercase;margin-top:3px}
+        .today-label{display:inline-block;color:#ff8295;font-size:10px;font-weight:800;margin-top:4px}
+        .service-pill{display:block;margin-top:9px;padding:6px 7px;border-radius:7px;font-size:11px;line-height:1.35;font-weight:700;overflow-wrap:anywhere}
+        .service-pill.thursday{background:rgba(229,182,75,.13);color:#f2cb70}
+        .service-pill.sunday{background:rgba(94,169,255,.14);color:#8fc5ff}
+        .service-group{display:block;font-size:10px;font-weight:500;opacity:.85;margin-top:2px}
+        .no-service{font-size:11px;color:#666975;margin-top:14px}
+        .calendar-note{margin-top:22px;padding:15px 17px;background:rgba(255,255,255,.04);border:1px solid var(--cal-line);border-radius:12px;color:#c4c5ce;font-size:13px}
+        .calendar-note strong{color:#fff}
+        .empty-state{grid-column:1/-1;text-align:center;padding:28px;color:var(--cal-muted)}
+        .calendar-footer{border-top:1px solid var(--cal-line);padding:22px 0;color:#9c9da6;text-align:center;font-size:13px}
+        @media(max-width:767px){.calendar-hero{padding:45px 0 35px}.calendar-wrap{padding:25px 0 45px}.calendar-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.weekday{display:none}.day-card{min-height:110px;padding:12px}.day-card:before{content:attr(data-weekday);display:block;color:var(--cal-muted);font-size:10px;text-transform:uppercase;font-weight:800;margin-bottom:7px}.calendar-toolbar h2{font-size:22px}.calendar-actions{width:100%}.calendar-actions .calendar-btn{flex:1}}
+        @media(min-width:500px) and (max-width:767px){.calendar-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+    </style>
+</head>
+<body>
+    <header class="main-header">
+        <div class="header-sticky">
+            <nav class="navbar navbar-expand-lg">
+                <div class="container">
+                    <a class="navbar-brand" href="{% url 'loginin' %}"><img src="{% static 'images/logomio.svg' %}" alt="Emaús" style="max-height:58px"></a>
+                    <div class="collapse navbar-collapse main-menu">
+                        <div class="nav-menu-wrapper">
+                            <ul class="navbar-nav mr-auto">
+                                <li class="nav-item"><a class="nav-link" href="{% url 'loginin' %}">Inicio</a></li>
+                                <li class="nav-item"><a class="nav-link" href="{% url 'loginin' %}#">Categorías</a></li>
+                                <li class="nav-item"><a class="nav-link" href="{% url 'contact' %}">Contáctanos</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="navbar-toggle"></div>
+                </div>
+            </nav>
+            <div class="responsive-menu"></div>
+        </div>
+    </header>
+
+    <section class="calendar-hero">
+        <div class="container">
+            <span class="calendar-kicker">Ministerio de Música · Emaús</span>
+            <h1>Calendario de servicios</h1>
+            <p>Organiza tus próximas fechas de servicio. Por ahora se muestran los cuatro grupos y sus servicios habituales de jueves y domingo.</p>
+        </div>
+    </section>
+
+    <main class="calendar-wrap">
+        <div class="container">
+            <div class="calendar-toolbar">
+                <div>
+                    <h2 id="calendar-title">Próximos 30 días</h2>
+                    <div class="calendar-range" id="calendar-range"></div>
+                </div>
+                <div class="calendar-actions">
+                    <button class="calendar-btn" type="button" id="today-btn">Hoy</button>
+                    <button class="calendar-btn" type="button" id="back-btn" aria-label="Ver 30 días anteriores">← Anterior</button>
+                    <button class="calendar-btn" type="button" id="forward-btn" aria-label="Ver 30 días siguientes">Siguiente →</button>
+                </div>
+            </div>
+            <div class="calendar-legend">
+                <span><i class="legend-dot thursday"></i>Servicio habitual · Jueves</span>
+                <span><i class="legend-dot sunday"></i>Servicio habitual · Domingo</span>
+            </div>
+            <div class="calendar-grid" id="calendar-grid" aria-live="polite"></div>
+            <div class="calendar-note"><strong>Nota:</strong> esta es la primera versión visual. Los cuatro grupos aparecen como “Grupo 1” a “Grupo 4”; luego podremos configurar sus nombres, asignar qué grupo sirve cada fecha y guardar cambios en la base de datos.</div>
+        </div>
+    </main>
+
+    <footer class="calendar-footer"><div class="container">Emaús © 2026 · Calendario de servicios</div></footer>
+
+    <script>
+    (function(){
+        const grid=document.getElementById('calendar-grid');
+        const title=document.getElementById('calendar-title');
+        const range=document.getElementById('calendar-range');
+        const weekdays=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+        const months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+        const groups=['Grupo 1','Grupo 2','Grupo 3','Grupo 4'];
+        let start=new Date(); start.setHours(0,0,0,0);
+        const fmt=d=>d.getDate()+' de '+months[d.getMonth()]+' de '+d.getFullYear();
+        function render(){
+            grid.innerHTML='';
+            const end=new Date(start); end.setDate(end.getDate()+29);
+            title.textContent='Próximos 30 días';
+            range.textContent=fmt(start)+' — '+fmt(end);
+            weekdays.forEach(day=>{const el=document.createElement('div');el.className='weekday';el.textContent=day;grid.appendChild(el);});
+            const today=new Date();today.setHours(0,0,0,0);
+            for(let i=0;i<30;i++){
+                const date=new Date(start);date.setDate(start.getDate()+i);
+                const card=document.createElement('article');
+                card.className='day-card'+((date.getDay()===4||date.getDay()===0)?' has-service':'')+(date.getTime()===today.getTime()?' today':'');
+                card.dataset.weekday=weekdays[date.getDay()];
+                const num=document.createElement('div');num.className='day-number';num.textContent=date.getDate();card.appendChild(num);
+                const mon=document.createElement('div');mon.className='day-month';mon.textContent=months[date.getMonth()];card.appendChild(mon);
+                if(date.getTime()===today.getTime()){const badge=document.createElement('div');badge.className='today-label';badge.textContent='HOY';card.appendChild(badge);}
+                if(date.getDay()===4||date.getDay()===0){
+                    const thursday=date.getDay()===4;
+                    const pill=document.createElement('div');pill.className='service-pill '+(thursday?'thursday':'sunday');
+                    pill.appendChild(document.createTextNode(thursday?'Servicio habitual · Jueves':'Servicio habitual · Domingo'));
+                    const group=document.createElement('span');group.className='service-group';group.textContent='Grupos: '+groups.join(', ');pill.appendChild(group);
+                    card.appendChild(pill);
+                }else{const none=document.createElement('div');none.className='no-service';none.textContent='Sin servicio habitual';card.appendChild(none);}
+                grid.appendChild(card);
+            }
+        }
+        document.getElementById('today-btn').addEventListener('click',()=>{start=new Date();start.setHours(0,0,0,0);render();});
+        document.getElementById('back-btn').addEventListener('click',()=>{start.setDate(start.getDate()-30);render();});
+        document.getElementById('forward-btn').addEventListener('click',()=>{start.setDate(start.getDate()+30);render();});
+        render();
+    })();
+    </script>
+</body>
+</html>
