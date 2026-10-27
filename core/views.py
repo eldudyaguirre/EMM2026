@@ -1,5 +1,5 @@
 from django.shortcuts import render,get_object_or_404
-from .models import Categoria, Cancion, Servicio, Grupo, Perfil
+from .models import Categoria, Cancion, Servicio, Grupo, Perfil, Instrumento
 from django.contrib.auth.models import User
 from django.db import transaction
 from datetime import date
@@ -366,6 +366,8 @@ def servidores(request):
             username = request.POST.get('username', '').strip()
             password = request.POST.get('password', '')
             fecha_nacimiento = request.POST.get('fecha_nacimiento')
+            instrumentos_ids = request.POST.getlist('instrumentos')
+            es_cantante = request.POST.get('es_cantante') == 'on'
 
             if not all([nombres, correo, username, fecha_nacimiento]):
                 messages.error(request, 'Completa todos los campos obligatorios.')
@@ -391,7 +393,9 @@ def servidores(request):
                             perfil.correo = correo
                             perfil.telefono = telefono
                             perfil.fecha_nacimiento = nacimiento
+                            perfil.es_cantante = es_cantante
                             perfil.save()
+                            perfil.instrumentos.set(Instrumento.objects.filter(pk__in=instrumentos_ids, activo=True))
                             mensaje = f'Datos de {nombres} actualizados.'
                         else:
                             usuario = User.objects.create_user(username=username, password=password, email=correo, first_name=nombres, is_active=True)
@@ -422,4 +426,6 @@ def servidores(request):
     return render(request, 'servidores.html', {
         'perfiles': perfiles,
         'perfil_editar': perfil_editar,
+        'instrumentos': Instrumento.objects.filter(activo=True),
+        'instrumentos_perfil': list(perfil_editar.instrumentos.values_list('id', flat=True)) if perfil_editar else [],
     })
