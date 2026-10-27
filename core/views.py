@@ -278,6 +278,8 @@ def exportar_grupos_pdf(request):
         fontSize=8, leading=10, textColor=colors.HexColor('#626262')
     ))
 
+    styles['ListadoTitle'].alignment = TA_CENTER
+    styles['ListadoSubtitle'].alignment = TA_CENTER
     story = [
         Paragraph('LISTADO DE GRUPOS Y SERVIDORES', styles['ListadoTitle']),
         Paragraph('Ministerio de Música · Emaús', styles['ListadoSubtitle']),
