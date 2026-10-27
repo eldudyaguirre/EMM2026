@@ -83,4 +83,19 @@ class Perfil(models.Model):
 
     def __str__(self):
 
-        return self.nombres    
+        return self.nombres
+
+class Grupo(models.Model):
+    """Grupo del Ministerio de Música de Emaús."""
+    nombre = models.CharField(max_length=100, unique=True)
+    descripcion = models.TextField(blank=True)
+    activo = models.BooleanField(default=True)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['nombre']
+        verbose_name = 'Grupo'
+        verbose_name_plural = 'Grupos'
+
+    def __str__(self):
+        return self.nombre
