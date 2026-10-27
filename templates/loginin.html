@@ -59,11 +59,21 @@
                         <div class="nav-menu-wrapper">
                             <ul class="navbar-nav mr-auto" id="menu">
                                 <li class="nav-item"><a class="nav-link" href="{% url 'loginin' %}">Inicio</a></li>
-                                <li class="nav-item"><a class="nav-link" href="#">Servicios</a></li></li>
-                                {% if request.user.is_authenticated and request.user.is_staff %}<li class="nav-item"><a class="nav-link" href="{% url 'grupos_servidores' %}">Grupos</a></li><li class="nav-item"><a class="nav-link" href="{% url 'servidores' %}">Servidores</a></li>{% endif %}
+                                {% if request.user.is_authenticated and request.user.is_staff %}
+                                <li class="nav-item dropdown emaus-admin-dropdown">
+                                    <a class="nav-link dropdown-toggle" href="#" id="administracionDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Administración</a>
+                                    <ul class="dropdown-menu" aria-labelledby="administracionDropdown">
+                                        <li><a class="dropdown-item" href="#">Servicios</a></li>
+                                        <li><a class="dropdown-item" href="{% url 'grupos_servidores' %}">Grupos</a></li>
+                                        <li><a class="dropdown-item" href="{% url 'servidores' %}">Servidores</a></li>
+                                    </ul>
+                                </li>
+                                {% endif %}
                                 <li class="nav-item"><a class="nav-link" href="{% url 'calendario' %}">Calendario</a></li>
-                                <li class="nav-item"><a class="nav-link" href="{% url 'contact' %}">Contactanos</a></li>
-                                <li class="nav-item"><a class="nav-link" href="{% url 'logout' %}">Cerrar Sesión</a></li>
+                                {% if request.user.is_authenticated %}
+                                <li class="nav-item"><a class="nav-link" href="#" id="abrirCambioPassword">Cambiar contraseña</a></li>
+                                {% endif %}
+                                <li class="nav-item"><a class="nav-link" href="{% url 'logout' %}">Cerrar sesión</a></li>
                             </ul>
                         </div>
                         
@@ -402,6 +412,67 @@
     .emaus-categories-section{padding:72px 0 76px;background:#101114;color:#fff;overflow:hidden}.emaus-categories-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:24px;margin:0 0 28px}.emaus-eyebrow{display:block;color:#e31b3d;font-size:12px;font-weight:800;letter-spacing:.18em;margin-bottom:10px}.emaus-categories-heading h2{font-family:'Phudu',sans-serif;font-size:clamp(30px,4vw,48px);font-weight:700;line-height:1.1;margin:0 0 10px;color:#fff}.emaus-categories-heading p{margin:0;color:rgba(255,255,255,.72);font-size:16px}.emaus-swiper-controls{display:flex;gap:10px;flex-shrink:0}.emaus-swiper-prev,.emaus-swiper-next{width:48px;height:48px;border:1px solid rgba(255,255,255,.28);border-radius:50%;background:transparent;color:#fff;font-size:25px;line-height:1;transition:background .2s,border-color .2s}.emaus-swiper-prev:hover,.emaus-swiper-next:hover{background:#bd0026;border-color:#bd0026}.emaus-categories-swiper{padding:8px 2px 54px}.emaus-categories-swiper .swiper-slide{height:auto;min-width:0}.emaus-category-slide{position:relative;display:flex;align-items:flex-end;min-height:390px;overflow:hidden;border-radius:16px;background-image:linear-gradient(180deg,rgba(5,7,12,.08),rgba(5,7,12,.35) 38%,rgba(5,7,12,.92)),var(--category-bg);background-size:cover;background-position:center;box-shadow:0 12px 32px rgba(0,0,0,.24);transition:box-shadow .3s}.emaus-category-slide:hover{box-shadow:0 18px 38px rgba(0,0,0,.4)}.emaus-category-slide:before{content:"";position:absolute;inset:0;border:1px solid rgba(255,255,255,.14);border-radius:inherit;pointer-events:none}.emaus-category-slide .interactive-inner-process{position:relative;z-index:1;width:100%;padding:28px 24px 30px;color:#fff}.emaus-category-slide .process-content-wap,.emaus-category-slide .interactive-process-item-wap,.emaus-category-slide .interactive-process-item-body-wap{width:100%;height:auto}.emaus-category-slide .icon-box{display:flex;align-items:center;justify-content:center;width:54px;height:54px;margin:0 0 22px;border-radius:50%;background:#bd0026;box-shadow:0 6px 18px rgba(0,0,0,.2)}.emaus-category-slide .icon-box img{width:25px;height:25px;object-fit:contain}.emaus-category-slide .interactive-process-item-content-wap h3{margin:0 0 10px;font-family:'Phudu',sans-serif;font-size:21px;line-height:1.25;font-weight:700}.emaus-category-slide .interactive-process-item-content-wap h3 a{color:#fff;text-decoration:none}.emaus-category-slide .interactive-process-item-content-wap p{margin:0;color:rgba(255,255,255,.88);font-size:15px;line-height:1.55}.emaus-category-slide .interactive-process-item-btn{margin-top:20px}.emaus-category-slide .readmore-btn{display:inline-flex;align-items:center;gap:8px;color:#fff;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;text-decoration:none}.emaus-category-slide .readmore-btn:after{content:"↗";font-size:19px}.emaus-swiper-pagination{bottom:8px!important}.emaus-swiper-pagination .swiper-pagination-bullet{width:7px;height:7px;background:rgba(255,255,255,.55);opacity:1}.emaus-swiper-pagination .swiper-pagination-bullet-active{width:22px;border-radius:5px;background:#bd0026}@media(max-width:767.98px){.emaus-categories-section{padding:48px 0 55px}.emaus-categories-heading h2{font-size:32px}.emaus-categories-heading p{font-size:14px}.emaus-swiper-controls{display:none!important}.emaus-category-slide{min-height:440px}.emaus-category-slide .interactive-inner-process{padding:26px 20px}.emaus-category-slide .interactive-process-item-content-wap h3{font-size:20px}}@media(max-width:420px){.emaus-categories-heading{align-items:flex-start}.emaus-category-slide{min-height:460px}}
     </style>
     <!-- Swiper Categorías End -->
+ 
+    {% if request.user.is_authenticated %}
+    <div id="cambioPasswordModal" class="emaus-password-overlay" aria-hidden="true">
+      <div class="emaus-password-modal" role="dialog" aria-modal="true" aria-labelledby="cambioPasswordTitulo">
+        <button type="button" class="emaus-password-close" id="cerrarCambioPassword" aria-label="Cerrar">×</button>
+        <h2 id="cambioPasswordTitulo">Cambiar contraseña</h2>
+        <p>Actualiza la contraseña de tu cuenta.</p>
+        <form method="post" action="{% url 'cambiar_password' %}">
+          {% csrf_token %}
+          <label for="password_actual">Contraseña actual</label>
+          <input id="password_actual" name="password_actual" type="password" autocomplete="current-password" required>
+          <label for="password_nueva">Nueva contraseña</label>
+          <input id="password_nueva" name="password_nueva" type="password" autocomplete="new-password" minlength="8" required>
+          <label for="password_confirmacion">Confirmar nueva contraseña</label>
+          <input id="password_confirmacion" name="password_confirmacion" type="password" autocomplete="new-password" minlength="8" required>
+          <div id="passwordModalError" class="emaus-password-error" hidden></div>
+          <button type="submit" class="btn-default btn-highlighted w-100">Guardar nueva contraseña</button>
+        </form>
+      </div>
+    </div>
+    <style>
+      .emaus-admin-dropdown .dropdown-menu{background:#17171c;border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:7px;min-width:180px}
+      .emaus-admin-dropdown .dropdown-item{color:#fff;border-radius:6px;padding:9px 12px}
+      .emaus-admin-dropdown .dropdown-item:hover,.emaus-admin-dropdown .dropdown-item:focus{background:#bd0026;color:#fff}
+      .emaus-password-overlay{position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:18px}
+      .emaus-password-overlay.is-open{display:flex}
+      .emaus-password-modal{position:relative;width:min(100%,440px);background:#1b1b21;color:#fff;border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:30px;box-shadow:0 24px 80px rgba(0,0,0,.45)}
+      .emaus-password-modal h2{margin:0 30px 8px 0;color:#fff;font-size:25px}
+      .emaus-password-modal p{color:#b9b9c2;margin-bottom:22px}
+      .emaus-password-modal label{display:block;color:#eee;font-size:13px;font-weight:700;margin:13px 0 6px}
+      .emaus-password-modal input{width:100%;background:#111116;border:1px solid #45454e;color:#fff;border-radius:8px;padding:11px 12px;outline:none}
+      .emaus-password-modal input:focus{border-color:#bd0026;box-shadow:0 0 0 3px rgba(189,0,38,.18)}
+      .emaus-password-modal button[type=submit]{margin-top:20px;border:0}
+      .emaus-password-close{position:absolute;right:14px;top:10px;background:transparent;border:0;color:#fff;font-size:30px;line-height:1;cursor:pointer}
+      .emaus-password-error{color:#ffb5c2;font-size:13px;margin-top:10px}
+      @media(max-width:575px){.emaus-password-modal{padding:24px 20px}}
+    </style>
+    <script>
+    document.addEventListener('DOMContentLoaded',function(){
+      const modal=document.getElementById('cambioPasswordModal');
+      const open=document.getElementById('abrirCambioPassword');
+      const close=document.getElementById('cerrarCambioPassword');
+      if(!modal||!open)return;
+      function cerrar(){modal.classList.remove('is-open');modal.setAttribute('aria-hidden','true');}
+      open.addEventListener('click',function(e){e.preventDefault();modal.classList.add('is-open');modal.setAttribute('aria-hidden','false');const first=modal.querySelector('input');if(first)first.focus();});
+      close.addEventListener('click',cerrar);
+      modal.addEventListener('click',function(e){if(e.target===modal)cerrar();});
+      document.addEventListener('keydown',function(e){if(e.key==='Escape')cerrar();});
+      const form=modal.querySelector('form');
+      form.addEventListener('submit',function(e){
+        const nueva=document.getElementById('password_nueva').value;
+        const confirmacion=document.getElementById('password_confirmacion').value;
+        const error=document.getElementById('passwordModalError');
+        if(nueva!==confirmacion){e.preventDefault();error.textContent='La nueva contraseña y su confirmación no coinciden.';error.hidden=false;}
+        else if(nueva.length<8){e.preventDefault();error.textContent='La nueva contraseña debe tener al menos 8 caracteres.';error.hidden=false;}
+        else{error.hidden=true;}
+      });
+    });
+    </script>
+    {% endif %}
+
     <!-- Main Footer Start -->
     <footer class="main-footer bg-section dark-section">
 
