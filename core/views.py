@@ -365,11 +365,9 @@ def servidores(request):
             telefono = request.POST.get('telefono', '').strip()
             username = request.POST.get('username', '').strip()
             password = request.POST.get('password', '')
-            grupo_num = request.POST.get('grupo')
             fecha_nacimiento = request.POST.get('fecha_nacimiento')
-            grupos_ids = request.POST.getlist('grupos_servicio')
 
-            if not all([nombres, correo, username, grupo_num, fecha_nacimiento]):
+            if not all([nombres, correo, username, fecha_nacimiento]):
                 messages.error(request, 'Completa todos los campos obligatorios.')
             elif not perfil and not password:
                 messages.error(request, 'Define una contraseña para la nueva cuenta.')
@@ -392,22 +390,18 @@ def servidores(request):
                             perfil.nombres = nombres
                             perfil.correo = correo
                             perfil.telefono = telefono
-                            perfil.grupo = int(grupo_num)
                             perfil.fecha_nacimiento = nacimiento
                             perfil.save()
                             mensaje = f'Datos de {nombres} actualizados.'
                         else:
                             usuario = User.objects.create_user(username=username, password=password, email=correo, first_name=nombres, is_active=True)
-                            perfil = Perfil.objects.create(usuario=usuario, nombres=nombres, correo=correo, telefono=telefono, grupo=int(grupo_num), fecha_nacimiento=nacimiento)
+                            # El grupo de perfil es un campo heredado; la asignación real se gestiona desde cada grupo.
+                            perfil = Perfil.objects.create(usuario=usuario, nombres=nombres, correo=correo, telefono=telefono, grupo=1, fecha_nacimiento=nacimiento)
                             mensaje = f'Servidor {nombres} creado con su cuenta de acceso.'
-                        for grupo in Grupo.objects.filter(integrantes=perfil):
-                            grupo.integrantes.remove(perfil)
-                        for grupo in Grupo.objects.filter(pk__in=grupos_ids, activo=True):
-                            grupo.integrantes.add(perfil)
                     messages.success(request, mensaje)
                     return redirect('servidores')
                 except (ValueError, TypeError):
-                    messages.error(request, 'La fecha de nacimiento o el grupo no son válidos.')
+                    messages.error(request, 'La fecha de nacimiento no es válida.')
         elif accion == 'cambiar_estado_servidor':
             perfil = get_object_or_404(Perfil.objects.select_related('usuario'), pk=request.POST.get('perfil_id'))
             perfil.usuario.is_active = not perfil.usuario.is_active
@@ -427,8 +421,5 @@ def servidores(request):
     perfiles = Perfil.objects.select_related('usuario').prefetch_related('grupos_asignados').order_by('nombres')
     return render(request, 'servidores.html', {
         'perfiles': perfiles,
-        'grupos': Grupo.objects.filter(activo=True).order_by('nombre'),
-        'grupos_perfil': list(perfil_editar.grupos_asignados.values_list('id', flat=True)) if perfil_editar else [],
-        'grupos_permanentes': Perfil.GRUPOS,
         'perfil_editar': perfil_editar,
     })
