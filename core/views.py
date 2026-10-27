@@ -9,7 +9,8 @@ from django.contrib.auth import authenticate, login
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
 from django.shortcuts import render, redirect
-from django.contrib.auth import logout
+from django.contrib.auth import logout, update_session_auth_hash
+from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse
 import json
 from io import BytesIO
@@ -74,6 +75,30 @@ def contact(request):
 
 def loginin(request):
     return render(request, 'loginin.html')
+
+
+@login_required(login_url='home')
+def cambiar_password(request):
+    if request.method != 'POST':
+        return redirect('loginin')
+    password_actual = request.POST.get('password_actual', '')
+    password_nueva = request.POST.get('password_nueva', '')
+    password_confirmacion = request.POST.get('password_confirmacion', '')
+    if not request.user.check_password(password_actual):
+        messages.error(request, 'La contraseña actual es incorrecta.')
+    elif len(password_nueva) < 8:
+        messages.error(request, 'La nueva contraseña debe tener al menos 8 caracteres.')
+    elif password_nueva != password_confirmacion:
+        messages.error(request, 'La nueva contraseña y su confirmación no coinciden.')
+    elif password_actual == password_nueva:
+        messages.error(request, 'La nueva contraseña debe ser diferente de la actual.')
+    else:
+        request.user.set_password(password_nueva)
+        request.user.save(update_fields=['password'])
+        update_session_auth_hash(request, request.user)
+        messages.success(request, 'Tu contraseña fue actualizada correctamente.')
+    return redirect('loginin')
+
 
 
 def calendario(request):
