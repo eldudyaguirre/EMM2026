@@ -414,6 +414,15 @@ def servidores(request):
             perfil.usuario.save(update_fields=['is_active'])
             messages.success(request, f'Cuenta de {perfil.nombres}: ' + ('activada.' if perfil.usuario.is_active else 'desactivada.'))
             return redirect('servidores')
+        elif accion == 'eliminar_servidor':
+            perfil = get_object_or_404(Perfil.objects.select_related('usuario'), pk=request.POST.get('perfil_id'))
+            nombre_servidor = perfil.nombres
+            usuario = perfil.usuario
+            with transaction.atomic():
+                # Eliminar el usuario también elimina su perfil por la relación OneToOne.
+                usuario.delete()
+            messages.success(request, f'El servidor {nombre_servidor} y su cuenta de acceso fueron eliminados.')
+            return redirect('servidores')
 
     perfiles = Perfil.objects.select_related('usuario').prefetch_related('grupos_asignados').order_by('nombres')
     return render(request, 'servidores.html', {
