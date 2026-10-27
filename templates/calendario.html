@@ -55,6 +55,10 @@
 #menu .calendar-logout-item::before{width:1px!important;height:24px!important;top:50%!important;left:0!important;transform:translateY(-50%)!important;background:rgba(255,255,255,.55)!important}}
         @media(max-width:767px){.calendar-hero{padding:115px 0 35px}.calendar-wrap{padding:25px 0 45px}.calendar-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.weekday{display:none}.day-card{min-height:110px;padding:12px}.day-card:before{content:attr(data-weekday);display:block;color:var(--cal-muted);font-size:10px;text-transform:uppercase;font-weight:800;margin-bottom:7px}.calendar-toolbar h2{font-size:22px}.calendar-actions{width:100%}.calendar-actions .calendar-btn{flex:1}}
         @media(min-width:500px) and (max-width:767px){.calendar-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+        /* Separador corto para la copia móvil del menú (SlickNav). */
+        .slicknav_nav li.calendar-logout-item{position:relative!important;border-top:0!important;margin-top:9px!important;padding-top:8px!important}
+        .slicknav_nav li.calendar-logout-item::before{content:""!important;display:block!important;position:absolute!important;top:0!important;left:20px!important;right:20px!important;width:auto!important;height:1px!important;background:#fff!important;z-index:9999!important;pointer-events:none!important}
     </style>
 </head>
 <body>
