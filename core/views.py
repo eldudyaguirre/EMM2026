@@ -1,5 +1,5 @@
 from django.shortcuts import render,get_object_or_404
-from .models import Categoria, Cancion
+from .models import Categoria, Cancion, Servicio
 from django.utils.safestring import mark_safe
 import re
 from django.contrib.auth import authenticate, login
@@ -65,8 +65,24 @@ def loginin(request):
 
 
 def calendario(request):
-    """Muestra el calendario visual de los servicios habituales de Emaús."""
-    return render(request, 'calendario.html')
+    """Muestra los servicios activos guardados en la base de datos."""
+    servicios = [
+        {
+            'titulo': servicio.titulo,
+            'grupo': servicio.grupo.nombre,
+            'fecha': servicio.fecha.isoformat(),
+            'hora_inicio': servicio.hora_inicio.strftime('%H:%M'),
+            'hora_fin': servicio.hora_fin.strftime('%H:%M') if servicio.hora_fin else '',
+            'lugar': servicio.lugar,
+            'observaciones': servicio.observaciones,
+            'tipo_grupo': servicio.grupo.tipo,
+        }
+        for servicio in Servicio.objects.filter(
+            activo=True,
+            grupo__activo=True
+        ).select_related('grupo').order_by('fecha', 'hora_inicio')
+    ]
+    return render(request, 'calendario.html', {'servicios': servicios})
 
 
 def categoria(request,id):
