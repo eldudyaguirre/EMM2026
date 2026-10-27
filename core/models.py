@@ -108,6 +108,7 @@ class Grupo(models.Model):
         related_name='grupos_asignados',
         help_text='Integrantes seleccionados para este grupo o evento.'
     )
+    lider = models.ForeignKey('Perfil', on_delete=models.SET_NULL, null=True, blank=True, related_name='grupos_liderados', verbose_name='Líder del grupo')
     activo = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
