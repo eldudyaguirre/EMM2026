@@ -10,8 +10,15 @@ from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
 from django.shortcuts import render, redirect
 from django.contrib.auth import logout
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 import json
+from io import BytesIO
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import mm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether
 
 
 def home(request):
@@ -209,6 +216,96 @@ def grupos_servidores(request):
     grupos = Grupo.objects.prefetch_related('integrantes').order_by('tipo', 'nombre')
     perfiles = Perfil.objects.select_related('usuario').order_by('nombres')
     return render(request, 'grupos_servidores.html', {'grupos': grupos, 'perfiles': perfiles})
+
+
+@staff_member_required(login_url='home')
+def exportar_grupos_pdf(request):
+    """Exporta grupos activos y sus servidores con casillas para pasar lista."""
+    buffer = BytesIO()
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="listado_servidores_por_grupo.pdf"'
+
+    doc = SimpleDocTemplate(
+        buffer, pagesize=A4,
+        rightMargin=16*mm, leftMargin=16*mm,
+        topMargin=16*mm, bottomMargin=16*mm
+    )
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(
+        name='EmausTitle', parent=styles['Title'],
+        fontName='Helvetica-Bold', fontSize=18, leading=22,
+        textColor=colors.HexColor('#bd0026'), alignment=TA_CENTER,
+        spaceAfter=5*mm
+    ))
+    styles.add(ParagraphStyle(
+        name='GroupHeading', parent=styles['Heading2'],
+        fontName='Helvetica-Bold', fontSize=12, leading=15,
+        textColor=colors.HexColor('#222222'), spaceBefore=5*mm,
+        spaceAfter=2*mm, keepWithNext=True
+    ))
+    styles.add(ParagraphStyle(
+        name='SmallText', parent=styles['BodyText'],
+        fontName='Helvetica', fontSize=8, leading=10
+    ))
+
+    story = [
+        Paragraph('EMAÚS · LISTA DE ASISTENCIA', styles['EmausTitle']),
+        Paragraph('Listado de servidores por grupo activo para reuniones generales.', styles['BodyText']),
+        Spacer(1, 3*mm),
+        Paragraph('Fecha: ____________________________________   Reunión: ____________________________________', styles['BodyText']),
+        Spacer(1, 4*mm),
+    ]
+    grupos = Grupo.objects.filter(activo=True).prefetch_related('integrantes').order_by('tipo', 'nombre')
+    if not grupos.exists():
+        story.append(Paragraph('No hay grupos activos registrados.', styles['BodyText']))
+    else:
+        for grupo in grupos:
+            integrantes = list(grupo.integrantes.all().order_by('nombres'))
+            story.append(Paragraph(grupo.nombre, styles['GroupHeading']))
+            story.append(Paragraph('Tipo: {} · Servidores: {}'.format(
+                grupo.get_tipo_display(), len(integrantes)
+            ), styles['SmallText']))
+            rows = [['#', 'Servidor', 'Teléfono', 'Asistencia', 'Observaciones']]
+            if integrantes:
+                for numero, perfil in enumerate(integrantes, start=1):
+                    rows.append([
+                        str(numero),
+                        Paragraph(str(perfil.nombres or '').replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;'), styles['SmallText']),
+                        str(perfil.telefono or '—'),
+                        '☐',
+                        ''
+                    ])
+            else:
+                rows.append(['', Paragraph('Sin servidores asignados', styles['SmallText']), '', '', ''])
+            table = Table(rows, colWidths=[9*mm, 55*mm, 28*mm, 23*mm, 43*mm], repeatRows=1, hAlign='LEFT')
+            table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#bd0026')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, -1), 8),
+                ('LEADING', (0, 0), (-1, -1), 10),
+                ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#b8b8b8')),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+                ('ALIGN', (3, 1), (3, -1), 'CENTER'),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f5f5f5')]),
+                ('TOPPADDING', (0, 0), (-1, -1), 5),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ]))
+            story.extend([table, Spacer(1, 3*mm)])
+
+    def pie_pagina(canvas, documento):
+        canvas.saveState()
+        canvas.setFont('Helvetica', 8)
+        canvas.setFillColor(colors.HexColor('#666666'))
+        canvas.drawString(16*mm, 9*mm, 'Emaús · Control de asistencia')
+        canvas.drawRightString(A4[0] - 16*mm, 9*mm, 'Página {}'.format(documento.page))
+        canvas.restoreState()
+
+    doc.build(story, onFirstPage=pie_pagina, onLaterPages=pie_pagina)
+    response.write(buffer.getvalue())
+    buffer.close()
+    return response
 
 
 @staff_member_required(login_url='home')
