@@ -389,7 +389,7 @@ def gestion_servicios(request):
 
 @staff_member_required(login_url='home')
 def exportar_servicios_pdf(request):
-    """Exporta el calendario de servicios para el mes y año seleccionados."""
+    """Exporta el calendario mensual de servicios con la identidad visual de Emaús."""
     from django.contrib.staticfiles import finders
     from svglib.svglib import svg2rlg
     from reportlab.graphics import renderPDF
@@ -424,12 +424,13 @@ def exportar_servicios_pdf(request):
     ancho, alto = A4
     margen_lateral = 15 * mm
     ancho_util = ancho - margen_lateral * 2
+    alto_cabecera = 58 * mm
     doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
         rightMargin=margen_lateral,
         leftMargin=margen_lateral,
-        topMargin=53 * mm,
+        topMargin=63 * mm,
         bottomMargin=19 * mm,
         title=f'Calendario de servicios - {nombre_mes.capitalize()} {anio}',
         author='Fundación de Fieles Caminantes de Emaús - Cuenca',
@@ -442,7 +443,7 @@ def exportar_servicios_pdf(request):
         fontName='Helvetica',
         fontSize=7.5,
         leading=9.5,
-        textColor=colors.HexColor('#252b35'),
+        textColor=colors.HexColor('#252329'),
         spaceAfter=0,
         wordWrap='CJK',
     ))
@@ -465,32 +466,12 @@ def exportar_servicios_pdf(request):
         textColor=colors.white,
         alignment=TA_LEFT,
     ))
-    styles.add(ParagraphStyle(
-        name='CalendarioNote',
-        parent=styles['BodyText'],
-        fontName='Helvetica',
-        fontSize=8.5,
-        leading=12,
-        textColor=colors.HexColor('#555555'),
-        leftIndent=4 * mm,
-        bulletIndent=1 * mm,
-        spaceAfter=2 * mm,
-    ))
-    styles.add(ParagraphStyle(
-        name='CalendarioNotesTitle',
-        parent=styles['Heading3'],
-        fontName='Helvetica-Bold',
-        fontSize=11,
-        leading=14,
-        textColor=colors.HexColor('#1e3b60'),
-        spaceBefore=5 * mm,
-        spaceAfter=2 * mm,
-    ))
 
-    encabezados = ['#', 'FECHA', 'DÍA', 'SERVICIO / HORARIO',
-                   'RESPONSABLE', 'LÍDER DEL GRUPO', 'IGLESIA / LUGAR']
+    encabezados = [
+        '#', 'FECHA', 'DÍA', 'SERVICIO / HORARIO',
+        'RESPONSABLE', 'LÍDER DEL GRUPO', 'IGLESIA / LUGAR',
+    ]
     filas = [[Paragraph(escape(texto), styles['CalendarioHeaderCell']) for texto in encabezados]]
-    observaciones_mes = []
 
     for numero, servicio in enumerate(servicios_mes, start=1):
         dia_semana = dias_es[servicio.fecha.weekday()].capitalize()
@@ -504,7 +485,7 @@ def exportar_servicios_pdf(request):
         )
         nombre_lider = servicio.grupo.lider.nombres if servicio.grupo.lider_id else 'Sin líder asignado'
         lugar = servicio.lugar.strip() if servicio.lugar else '—'
-        fila = [
+        filas.append([
             Paragraph(str(numero), styles['CalendarioCellCenter']),
             Paragraph(escape(fecha_texto), styles['CalendarioCell']),
             Paragraph(escape(dia_semana), styles['CalendarioCell']),
@@ -512,12 +493,7 @@ def exportar_servicios_pdf(request):
             Paragraph(escape(servicio.grupo.nombre), styles['CalendarioCellBold']),
             Paragraph(escape(nombre_lider), styles['CalendarioCell']),
             Paragraph(escape(lugar), styles['CalendarioCell']),
-        ]
-        filas.append(fila)
-        if servicio.observaciones and servicio.observaciones.strip():
-            observaciones_mes.append(
-                f'{fecha_texto.capitalize()} · {servicio.titulo}: {servicio.observaciones.strip()}'
-            )
+        ])
 
     if not servicios_mes:
         filas.append([
@@ -530,46 +506,45 @@ def exportar_servicios_pdf(request):
             Paragraph('', styles['CalendarioCell']),
         ])
 
-    anchuras = [7*mm, 27*mm, 18*mm, 39*mm, 25*mm, 32*mm, ancho_util-(7+27+18+39+25+32)*mm]
+    anchuras = [
+        7 * mm, 27 * mm, 18 * mm, 39 * mm, 25 * mm, 32 * mm,
+        ancho_util - (7 + 27 + 18 + 39 + 25 + 32) * mm,
+    ]
     tabla = Table(filas, colWidths=anchuras, repeatRows=1, hAlign='LEFT')
     tabla.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e3b60')),
-        ('GRID', (0, 0), (-1, -1), 0.55, colors.HexColor('#1e3b60')),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#bd0026')),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#d9aab5')),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('ALIGN', (0, 0), (0, -1), 'CENTER'),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1),
-         [colors.HexColor('#dfe7f4'), colors.white]),
+         [colors.HexColor('#f8e9ed'), colors.white]),
         ('LEFTPADDING', (0, 0), (-1, -1), 5),
         ('RIGHTPADDING', (0, 0), (-1, -1), 5),
         ('TOPPADDING', (0, 0), (-1, -1), 7),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 7),
     ]))
-
-    story = [tabla, Spacer(1, 4 * mm), Paragraph('Notas:', styles['CalendarioNotesTitle'])]
-    if observaciones_mes:
-        for nota in observaciones_mes:
-            story.append(Paragraph('• ' + escape(nota), styles['CalendarioNote']))
-    else:
-        story.append(Paragraph(
-            'No hay observaciones registradas para los servicios de este mes.',
-            styles['CalendarioNote']
-        ))
+    story = [tabla]
 
     def dibujar_cabecera_pie(canvas, documento):
         canvas.saveState()
-        azul = colors.HexColor('#1e3b60')
-        canvas.setFillColor(azul)
-        canvas.rect(0, alto - 49 * mm, ancho, 49 * mm, fill=1, stroke=0)
+        granate_oscuro = colors.HexColor('#251016')
+        rojo_emaus = colors.HexColor('#bd0026')
 
-        # Logo blanco de Emaús centrado en la cabecera.
+        # Cabecera oscura con acento rojo, acorde a la interfaz web.
+        canvas.setFillColor(granate_oscuro)
+        canvas.rect(0, alto - alto_cabecera, ancho, alto_cabecera, fill=1, stroke=0)
+        canvas.setFillColor(rojo_emaus)
+        canvas.rect(0, alto - 2.5 * mm, ancho, 2.5 * mm, fill=1, stroke=0)
+
+        # Logo centrado en una zona propia; el texto institucional queda debajo y sin solaparse.
         logo_path = finders.find('images/logomio.svg')
         if logo_path:
             try:
                 logo = svg2rlg(logo_path)
                 if logo and logo.width and logo.height:
-                    escala = min((38 * mm) / logo.width, (10 * mm) / logo.height)
+                    escala = min((42 * mm) / logo.width, (13 * mm) / logo.height)
                     x_logo = (ancho - logo.width * escala) / 2
-                    y_logo = alto - 13 * mm - logo.height * escala
+                    y_logo = alto - 7 * mm - logo.height * escala
                     canvas.saveState()
                     canvas.translate(x_logo, y_logo)
                     canvas.scale(escala, escala)
@@ -581,17 +556,20 @@ def exportar_servicios_pdf(request):
         canvas.setFillColor(colors.white)
         canvas.setFont('Helvetica', 9)
         canvas.drawCentredString(
-            ancho / 2, alto - 21 * mm,
+            ancho / 2, alto - 29 * mm,
             'Fundación de Fieles Caminantes de Emaús — Cuenca'
         )
         canvas.setFont('Helvetica-Bold', 12)
-        canvas.drawCentredString(ancho / 2, alto - 27 * mm, 'Ministerio de Música')
+        canvas.drawCentredString(ancho / 2, alto - 36 * mm, 'Ministerio de Música')
         canvas.setFont('Helvetica-Bold', 15)
-        titulo = f'CALENDARIO DE SERVICIOS — {nombre_mes.upper()} {anio}'
-        canvas.drawCentredString(ancho / 2, alto - 39 * mm, titulo)
+        canvas.drawCentredString(
+            ancho / 2, alto - 48 * mm,
+            f'CALENDARIO DE SERVICIOS — {nombre_mes.upper()} {anio}'
+        )
 
-        canvas.setStrokeColor(colors.HexColor('#1e3b60'))
-        canvas.setLineWidth(0.65)
+        # Pie sobrio con acento rojo, sin sección de notas al final del documento.
+        canvas.setStrokeColor(rojo_emaus)
+        canvas.setLineWidth(0.8)
         canvas.line(margen_lateral, 14 * mm, ancho - margen_lateral, 14 * mm)
         canvas.setFillColor(colors.HexColor('#555555'))
         canvas.setFont('Helvetica', 8.5)
@@ -606,7 +584,6 @@ def exportar_servicios_pdf(request):
     )
     buffer.close()
     return response
-
 
 def buscar_canciones(request):
     """Busca coincidencias en todo el cancionero para el buscador lateral."""
