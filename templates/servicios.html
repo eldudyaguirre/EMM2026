@@ -117,7 +117,7 @@
         <div class="srv-stats">
             <div class="srv-stat"><strong>{{ servicios|length }}</strong><span>Servicios registrados</span></div>
             <div class="srv-stat"><strong>{{ grupos|length }}</strong><span>Grupos activos disponibles</span></div>
-            <div class="srv-stat"><strong>{% with total_activos=0 %}{% endwith %}{{ total_activos }}</strong><span>Servicios activos</span></div>
+            <div class="srv-stat"><strong>{{ total_activos }}</strong><span>Servicios activos</span></div>
         </div>
 
         <section class="srv-panel">
