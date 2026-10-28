@@ -199,6 +199,120 @@ def categoria(request,id):
         }
     )
 
+def exportar_pdf(request, id):
+    """Genera un PDF descargable con la letra de una canción del cancionero."""
+    from reportlab.platypus import Preformatted
+    from reportlab.pdfbase.pdfmetrics import stringWidth
+    from django.utils.text import slugify
+    from xml.sax.saxutils import escape as xml_escape
+    import textwrap
+
+    cancion = get_object_or_404(
+        Cancion.objects.select_related('categoria'),
+        pk=id
+    )
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=20 * mm,
+        leftMargin=20 * mm,
+        topMargin=22 * mm,
+        bottomMargin=18 * mm,
+        title=f'{cancion.numero or ""} - {cancion.titulo}',
+        author='Emaús - Cancionero Digital',
+    )
+
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(
+        name='CancionPDFTitle',
+        parent=styles['Title'],
+        fontName='Helvetica-Bold',
+        fontSize=19,
+        leading=24,
+        alignment=TA_CENTER,
+        textColor=colors.HexColor('#bd0026'),
+        spaceAfter=5 * mm,
+    ))
+    styles.add(ParagraphStyle(
+        name='CancionPDFMeta',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=10,
+        leading=14,
+        alignment=TA_CENTER,
+        textColor=colors.HexColor('#555555'),
+        spaceAfter=2 * mm,
+    ))
+    styles.add(ParagraphStyle(
+        name='CancionPDFLetra',
+        parent=styles['Code'],
+        fontName='Courier',
+        fontSize=9,
+        leading=12,
+        leftIndent=2 * mm,
+        rightIndent=2 * mm,
+        spaceAfter=0,
+        textColor=colors.HexColor('#222222'),
+    ))
+
+    story = [
+        Paragraph(
+            xml_escape(f'{cancion.numero or ""} - {cancion.titulo}'),
+            styles['CancionPDFTitle']
+        ),
+        Paragraph(
+            f'Categoría: {xml_escape(cancion.categoria.nombre)}',
+            styles['CancionPDFMeta']
+        ),
+    ]
+    if cancion.usa_capodastro and cancion.traste_capodastro:
+        story.append(Paragraph(
+            f'Capodastro: traste {cancion.traste_capodastro}',
+            styles['CancionPDFMeta']
+        ))
+    story.append(Spacer(1, 5 * mm))
+
+    letra = (cancion.letra or '').replace('\r\n', '\n').replace('\r', '\n')
+    max_chars = max(
+        45,
+        int((A4[0] - doc.leftMargin - doc.rightMargin - 4 * mm) / stringWidth('M', 'Courier', 9))
+    )
+    for linea in letra.split('\n'):
+        if not linea:
+            story.append(Spacer(1, 4))
+            continue
+        segmentos = textwrap.wrap(
+            linea,
+            width=max_chars,
+            expand_tabs=False,
+            replace_whitespace=False,
+            drop_whitespace=False,
+            break_long_words=True,
+            break_on_hyphens=False,
+        )
+        for segmento in segmentos or [' ']:
+            story.append(Preformatted(segmento or ' ', styles['CancionPDFLetra']))
+
+    def pie_pagina(canvas, documento):
+        canvas.saveState()
+        canvas.setStrokeColor(colors.HexColor('#dddddd'))
+        canvas.line(20 * mm, 14 * mm, A4[0] - 20 * mm, 14 * mm)
+        canvas.setFont('Helvetica', 8)
+        canvas.setFillColor(colors.HexColor('#666666'))
+        canvas.drawString(20 * mm, 9 * mm, 'Emaús · Cancionero Digital')
+        canvas.drawRightString(A4[0] - 20 * mm, 9 * mm, f'Página {documento.page}')
+        canvas.restoreState()
+
+    doc.build(story, onFirstPage=pie_pagina, onLaterPages=pie_pagina)
+    response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+    nombre_archivo = slugify(cancion.titulo) or f'cancion-{cancion.pk}'
+    response['Content-Disposition'] = f'attachment; filename="cancion-{cancion.pk}-{nombre_archivo}.pdf"'
+    buffer.close()
+    return response
+
+
 def cerrar_sesion(request):
 
     logout(request)
