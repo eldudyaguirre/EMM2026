@@ -109,6 +109,22 @@
         .song-form-error.show{display:block}
         .song-modal-actions{display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap;margin-top:12px}
         .song-modal-secondary{background:#eeeae5;color:#333;border:0;border-radius:8px;padding:10px 14px;font-weight:700;cursor:pointer}
+
+        /* Herramientas musicales inspiradas en los cancioneros interactivos. */
+        .song-tools{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0 15px;padding:11px 12px;background:#faf8f6;border:1px solid #e9e2dc;border-radius:10px}
+        .song-tools-group{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+        .song-tools-label{font-size:10px!important;letter-spacing:.07em;text-transform:uppercase;font-weight:800!important;color:#777!important;margin:0 3px 0 0!important}
+        .song-tool-btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;min-height:31px;padding:6px 10px;border:1px solid #ddd4cf;border-radius:7px;background:#fff;color:#262226;font-size:12px;font-weight:800;cursor:pointer}
+        .song-tool-btn:hover{border-color:#bd0026;color:#bd0026}
+        .song-tool-btn.primary{background:#bd0026;border-color:#bd0026;color:#fff}
+        .song-tool-btn.primary:hover,.song-tool-btn.primary[aria-pressed="true"]{background:#8f001d;border-color:#8f001d;color:#fff}
+        .song-tool-btn:disabled{opacity:.45;cursor:not-allowed}
+        .song-transpose-value{min-width:94px;text-align:center;font-size:11px;font-weight:800;color:#bd0026}
+        .song-scroll-speed{max-width:165px;min-height:31px;border:1px solid #ddd4cf;border-radius:7px;background:#fff;color:#262226;padding:5px 8px;font-size:11px;font-weight:700}
+        .song-tools-help{flex-basis:100%;font-size:10px;color:#888;line-height:1.35}
+        .song-modal .song-tools{position:sticky;bottom:0;z-index:2;box-shadow:0 -4px 12px rgba(255,255,255,.85)}
+        @media(max-width:767px){.song-tools{align-items:flex-start;padding:10px}.song-tools-group{width:100%}.song-scroll-speed{flex:1;min-width:120px}.song-transpose-value{min-width:85px}}
+
         @media(max-width:767px){.song-search-panel{padding:14px}.song-list-header{align-items:flex-start}.song-list-header h2{font-size:28px!important}.song-modal-backdrop{padding:10px}.song-modal{padding:17px;border-radius:12px}.song-form-grid{grid-template-columns:1fr;gap:0}.song-form-field textarea{min-height:190px}}
     </style>
 </head>
@@ -232,6 +248,30 @@
                                                 {% endif %}
                                             </div>
                                             <pre id="cancion{{cancion.id}}" class="texto-musical">{{ cancion.letra_coloreada|safe }}</pre>
+
+                                            <div class="song-tools" data-song-tools>
+                                                <div class="song-tools-group" aria-label="Cambiar tonalidad">
+                                                    <span class="song-tools-label">Tono</span>
+                                                    <button type="button" class="song-tool-btn" data-chord-shift="-1" title="Bajar un semitono" aria-label="Bajar un semitono">−</button>
+                                                    <output class="song-transpose-value" data-transpose-value>Original</output>
+                                                    <button type="button" class="song-tool-btn" data-chord-shift="1" title="Subir un semitono" aria-label="Subir un semitono">+</button>
+                                                    <button type="button" class="song-tool-btn" data-chord-reset>Restablecer</button>
+                                                </div>
+                                                <div class="song-tools-group" aria-label="Desfile automático de la canción">
+                                                    <span class="song-tools-label">Desfile</span>
+                                                    <select class="song-scroll-speed" data-scroll-speed aria-label="Velocidad del desfile automático">
+                                                        <option value="10">1 · Muy lento</option>
+                                                        <option value="15">2 · Lento</option>
+                                                        <option value="20" selected>3 · Normal</option>
+                                                        <option value="27">4 · Medio</option>
+                                                        <option value="35">5 · Rápido</option>
+                                                        <option value="45">6 · Más rápido</option>
+                                                        <option value="58">7 · Muy rápido</option>
+                                                        <option value="72">8 · Máximo</option>
+                                                    </select>
+                                                    <button type="button" class="song-tool-btn primary" data-auto-scroll aria-pressed="false"><i class="fa fa-play" aria-hidden="true"></i> Desfile automático</button>
+                                                </div>
+                                            </div>
                                             <div class="acciones-cancion">
                                                 <button onclick="editarCancion({{cancion.id}})" class="btn-accion"><i class="fa fa-pen"></i> Editar</button>
                                                 <button onclick="guardarCancion({{cancion.id}})" class="btn-accion"><i class="fa fa-save"></i> Guardar</button>
@@ -260,6 +300,30 @@
             <p class="song-modal-meta" id="songDetailMeta"></p>
             <div id="songDetailCapo"></div>
             <pre class="song-modal-lyrics" id="songDetailLyrics"></pre>
+
+                                            <div class="song-tools" data-song-tools>
+                                                <div class="song-tools-group" aria-label="Cambiar tonalidad">
+                                                    <span class="song-tools-label">Tono</span>
+                                                    <button type="button" class="song-tool-btn" data-chord-shift="-1" title="Bajar un semitono" aria-label="Bajar un semitono">−</button>
+                                                    <output class="song-transpose-value" data-transpose-value>Original</output>
+                                                    <button type="button" class="song-tool-btn" data-chord-shift="1" title="Subir un semitono" aria-label="Subir un semitono">+</button>
+                                                    <button type="button" class="song-tool-btn" data-chord-reset>Restablecer</button>
+                                                </div>
+                                                <div class="song-tools-group" aria-label="Desfile automático de la canción">
+                                                    <span class="song-tools-label">Desfile</span>
+                                                    <select class="song-scroll-speed" data-scroll-speed aria-label="Velocidad del desfile automático">
+                                                        <option value="10">1 · Muy lento</option>
+                                                        <option value="15">2 · Lento</option>
+                                                        <option value="20" selected>3 · Normal</option>
+                                                        <option value="27">4 · Medio</option>
+                                                        <option value="35">5 · Rápido</option>
+                                                        <option value="45">6 · Más rápido</option>
+                                                        <option value="58">7 · Muy rápido</option>
+                                                        <option value="72">8 · Máximo</option>
+                                                    </select>
+                                                    <button type="button" class="song-tool-btn primary" data-auto-scroll aria-pressed="false"><i class="fa fa-play" aria-hidden="true"></i> Desfile automático</button>
+                                                </div>
+                                            </div>
         </div>
     </div>
 
