@@ -175,31 +175,28 @@ def calendario(request):
 
 @staff_member_required(login_url='home')
 def gestion_servicios(request):
-    """Lista los servicios y permite crear o actualizar su estado."""
+    """Lista los servicios y permite crear, editar y eliminar servicios."""
     valores_formulario = {}
     abrir_modal = False
+    modo_edicion = False
+    servicio_id_form = ''
 
     if request.method == 'POST':
         accion = request.POST.get('accion', '')
 
-        if accion == 'cambiar_estado':
+        if accion == 'eliminar_servicio':
             servicio = get_object_or_404(Servicio, pk=request.POST.get('servicio_id'))
-            nuevo_estado = request.POST.get('estado', '').strip()
-            estados_validos = dict(Servicio.ESTADOS)
-            if nuevo_estado not in estados_validos:
-                messages.error(request, 'Selecciona un estado válido para el servicio.')
-            else:
-                servicio.estado = nuevo_estado
-                servicio.save(update_fields=['estado'])
-                messages.success(
-                    request,
-                    f'El servicio «{servicio.titulo}» ahora está: '
-                    f'{estados_validos[nuevo_estado]}.'
-                )
+            titulo_eliminado = servicio.titulo
+            servicio.delete()
+            messages.success(request, f'El servicio «{titulo_eliminado}» fue eliminado.')
             return redirect('servicios')
 
-        if accion == 'crear_servicio':
+        if accion in ('crear_servicio', 'editar_servicio'):
             abrir_modal = True
+            modo_edicion = accion == 'editar_servicio'
+            servicio_id_form = request.POST.get('servicio_id', '').strip() if modo_edicion else ''
+            servicio_editar = get_object_or_404(Servicio, pk=servicio_id_form) if modo_edicion else None
+
             campos = (
                 'titulo', 'grupo_id', 'fecha', 'hora_inicio',
                 'hora_fin', 'lugar', 'observaciones', 'estado',
@@ -259,23 +256,56 @@ def gestion_servicios(request):
                 for error in errores:
                     messages.error(request, error)
             else:
-                servicio = Servicio.objects.create(
-                    titulo=titulo,
-                    grupo=grupo,
-                    fecha=fecha_servicio,
-                    hora_inicio=hora_inicio,
-                    hora_fin=hora_fin,
-                    lugar=lugar,
-                    observaciones=observaciones,
-                    estado=estado,
-                    # Se conserva activo para mantener compatibilidad con el calendario existente.
-                    activo=True,
-                )
-                messages.success(
-                    request,
-                    f'Servicio «{servicio.titulo}» creado correctamente con el ID #{servicio.pk}.'
-                )
+                if modo_edicion:
+                    servicio = servicio_editar
+                    servicio.titulo = titulo
+                    servicio.grupo = grupo
+                    servicio.fecha = fecha_servicio
+                    servicio.hora_inicio = hora_inicio
+                    servicio.hora_fin = hora_fin
+                    servicio.lugar = lugar
+                    servicio.observaciones = observaciones
+                    servicio.estado = estado
+                    # Mantener visible el servicio en el calendario, que usa el campo heredado activo.
+                    servicio.activo = True
+                    servicio.save()
+                    messages.success(request, f'El servicio «{servicio.titulo}» fue actualizado.')
+                else:
+                    servicio = Servicio.objects.create(
+                        titulo=titulo,
+                        grupo=grupo,
+                        fecha=fecha_servicio,
+                        hora_inicio=hora_inicio,
+                        hora_fin=hora_fin,
+                        lugar=lugar,
+                        observaciones=observaciones,
+                        estado=estado,
+                        activo=True,
+                    )
+                    messages.success(
+                        request,
+                        f'Servicio «{servicio.titulo}» creado correctamente con el ID #{servicio.pk}.'
+                    )
                 return redirect('servicios')
+
+    elif request.method == 'GET' and request.GET.get('editar'):
+        servicio_editar = get_object_or_404(
+            Servicio.objects.select_related('grupo'),
+            pk=request.GET.get('editar'),
+        )
+        abrir_modal = True
+        modo_edicion = True
+        servicio_id_form = str(servicio_editar.pk)
+        valores_formulario = {
+            'titulo': servicio_editar.titulo,
+            'grupo_id': str(servicio_editar.grupo_id),
+            'fecha': servicio_editar.fecha.isoformat(),
+            'hora_inicio': servicio_editar.hora_inicio.strftime('%H:%M') if servicio_editar.hora_inicio else '',
+            'hora_fin': servicio_editar.hora_fin.strftime('%H:%M') if servicio_editar.hora_fin else '',
+            'lugar': servicio_editar.lugar or '',
+            'observaciones': servicio_editar.observaciones or '',
+            'estado': servicio_editar.estado,
+        }
 
     servicios = Servicio.objects.select_related('grupo').order_by(
         '-fecha', '-hora_inicio', '-pk'
@@ -300,6 +330,8 @@ def gestion_servicios(request):
         'fecha_hoy': date.today().isoformat(),
         'valores_formulario': valores_formulario,
         'abrir_modal': abrir_modal,
+        'modo_edicion': modo_edicion,
+        'servicio_id_form': servicio_id_form,
     })
 
 
