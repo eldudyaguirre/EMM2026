@@ -8,6 +8,7 @@ urlpatterns = [
     path('trazabilidad-preloader/', views.trazabilidad_preloader, name='trazabilidad_preloader'),
     path('cambiar-password/', views.cambiar_password, name='cambiar_password'),
     path('calendario/', views.calendario, name='calendario'),
+    path('servicios/', views.gestion_servicios, name='servicios'),
     path('grupos-servidores/', views.grupos_servidores, name='grupos_servidores'),
     path('grupos-servidores/exportar-pdf/', views.exportar_grupos_pdf, name='exportar_grupos_pdf'),
     path('servidores/', views.servidores, name='servidores'),
