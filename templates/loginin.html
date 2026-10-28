@@ -86,22 +86,31 @@
     <!-- Fallback: evitar que el preloader bloquee la página si falla alguna librería JS. -->
     <script>
     (function () {
-        function ocultarPreloader() {
-            var preloader = document.querySelector('.preloader');
-            if (preloader) {
-                preloader.style.opacity = '0';
-                preloader.style.visibility = 'hidden';
-                preloader.style.pointerEvents = 'none';
-                window.setTimeout(function () {
-                    preloader.style.display = 'none';
-                }, 650);
-            }
+        var traceUrl = "{% url 'trazabilidad_preloader' %}";
+        function trace(eventName, detail) {
+            var payload = JSON.stringify({event:eventName, detail:String(detail || ''),
+                path:location.pathname, readyState:document.readyState, jquery:typeof window.jQuery,
+                preloaderFound:!!document.querySelector('.preloader')});
+            try {
+                if (navigator.sendBeacon) navigator.sendBeacon(traceUrl, new Blob([payload], {type:'application/json'}));
+                else fetch(traceUrl, {method:'POST', headers:{'Content-Type':'application/json'}, body:payload, keepalive:true});
+            } catch (err) { console.error('[EMAUS-TRACE] envío fallido', err); }
+            console.info('[EMAUS-TRACE]', eventName, detail || '');
         }
-        if (document.readyState === 'complete') {
-            ocultarPreloader();
-        } else {
-            window.addEventListener('load', ocultarPreloader, { once: true });
-            window.setTimeout(ocultarPreloader, 3000);
+        function hide(source) {
+            var el=document.querySelector('.preloader');
+            trace('hide_called', source + '; found=' + !!el);
+            if (!el) return;
+            el.style.opacity='0'; el.style.visibility='hidden'; el.style.pointerEvents='none';
+            setTimeout(function(){el.style.display='none';trace('hidden',source);},650);
+        }
+        trace('script_started','fallback');
+        window.addEventListener('error',function(e){trace('javascript_error',(e.message||'error')+' '+(e.filename||'')+':'+(e.lineno||''));});
+        window.addEventListener('unhandledrejection',function(e){trace('promise_rejection',e.reason&&e.reason.message?e.reason.message:e.reason);});
+        if(document.readyState==='complete') hide('document_complete');
+        else {
+            window.addEventListener('load',function(){hide('window_load');},{once:true});
+            setTimeout(function(){hide('timeout_3000ms');},3000);
         }
     })();
     </script>
