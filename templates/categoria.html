@@ -431,6 +431,278 @@
 
     function agregarServicio(id){alert("Lo conectaremos luego");}
 
+    // Herramientas musicales: transposición de acordes y desfile automático.
+    (function(){
+        const tonosEspanol = {
+            sharp: ['DO','DO#','RE','RE#','MI','FA','FA#','SOL','SOL#','LA','LA#','SI'],
+            flat:  ['DO','REB','RE','MIB','MI','FA','SOLB','SOL','LAB','LA','SIB','SI']
+        };
+        const tonosIngles = {
+            sharp: ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'],
+            flat:  ['C','Db','D','Eb','E','F','Gb','G','Ab','A','Bb','B']
+        };
+        const semitonosEspanol = {DO:0,RE:2,MI:4,FA:5,SOL:7,LA:9,SI:11};
+        const semitonosIngles = {C:0,D:2,E:4,F:5,G:7,A:9,B:11};
+        const sufijosPermitidos = new Set([
+            '', 'm','maj','min','7','m7','maj7','mmaj7','M7',
+            'sus2','sus4','dim','dim7','aug','add9','add2','add4',
+            '6','m6','9','m9','11','m11','13','m13','5',
+            '7sus4','7sus2','7b5','7#5','7-5','m7b5','-5','+5',
+            '6/9','maj9','madd9','maj7#11'
+        ]);
+
+        function parseChordPart(token){
+            let match = token.match(/^(SOL|DO|RE|MI|FA|LA|SI)([#bB]?)(.*)$/i);
+            let spanish = true;
+            if(!match){
+                match = token.match(/^([A-G])([#b]?)(.*)$/i);
+                spanish = false;
+            }
+            if(!match) return null;
+            const rootText = match[1];
+            const accidental = match[2] || '';
+            const suffix = match[3] || '';
+            const normalizedSuffix = suffix.toLowerCase();
+            const suffixIsValid = sufijosPermitidos.has(normalizedSuffix) ||
+                /^(?:m|maj|sus|add|dim|aug)\d*(?:b\d+|#\d+)?$/i.test(suffix) ||
+                /^\d+(?:b\d+|#\d+|sus[24]?|add\d+|m|maj\d*)*$/i.test(suffix);
+            if(!suffixIsValid) return null;
+
+            const rootKey = rootText.toUpperCase();
+            let base = spanish ? semitonosEspanol[rootKey] : semitonosIngles[rootKey];
+            if(base === undefined) return null;
+            if(accidental === '#') base += 1;
+            else if(accidental.toLowerCase() === 'b') base -= 1;
+            base = (base + 12) % 12;
+            return {
+                spanish: spanish,
+                rootText: rootText,
+                accidental: accidental,
+                suffix: suffix,
+                base: base,
+                flat: /b/i.test(accidental)
+            };
+        }
+
+        function parseChordToken(token){
+            const slashMatch = token.match(/^(.+?)\/((?:SOL|DO|RE|MI|FA|LA|SI)(?:[#bB]?)|[A-G](?:[#b]?))$/i);
+            if(slashMatch){
+                const left = parseChordPart(slashMatch[1]);
+                const right = parseChordPart(slashMatch[2]);
+                if(left && right && right.suffix === '') return {slash:true,left:left,right:right};
+            }
+            const part = parseChordPart(token);
+            return part ? {slash:false,part:part} : null;
+        }
+
+        function formatRoot(root, parsed){
+            if(parsed.spanish){
+                if(parsed.rootText === parsed.rootText.toUpperCase()) return root;
+                if(parsed.rootText === parsed.rootText.toLowerCase()) return root.toLowerCase();
+                return root.charAt(0) + root.slice(1).toLowerCase();
+            }
+            return parsed.rootText === parsed.rootText.toLowerCase() ? root.toLowerCase() : root;
+        }
+
+        function shiftPart(parsed, amount){
+            const index = (parsed.base + amount % 12 + 12) % 12;
+            const table = parsed.spanish
+                ? (parsed.flat ? tonosEspanol.flat : tonosEspanol.sharp)
+                : (parsed.flat ? tonosIngles.flat : tonosIngles.sharp);
+            return formatRoot(table[index], parsed) + parsed.suffix;
+        }
+
+        function transposeChord(token, amount){
+            const parsed = parseChordToken(token);
+            if(!parsed || !amount) return token;
+            if(parsed.slash) return shiftPart(parsed.left, amount) + '/' + shiftPart(parsed.right, amount);
+            return shiftPart(parsed.part, amount);
+        }
+
+        function isChordLine(line){
+            const words = line.trim().split(/\s+/).filter(Boolean);
+            return words.length > 0 && words.every(function(word){return !!parseChordToken(word);});
+        }
+
+        function chordSpans(pre){
+            return Array.from(pre.querySelectorAll('.acorde'));
+        }
+
+        function isChordSpanOnChordLine(pre, span){
+            const fullText = pre.textContent || '';
+            const range = document.createRange();
+            range.selectNodeContents(pre);
+            range.setEndBefore(span);
+            const offset = range.toString().length;
+            const lineStart = fullText.lastIndexOf('\n', Math.max(0, offset - 1)) + 1;
+            let lineEnd = fullText.indexOf('\n', offset);
+            if(lineEnd < 0) lineEnd = fullText.length;
+            return isChordLine(fullText.slice(lineStart, lineEnd));
+        }
+
+        function decorateChordLines(pre){
+            if(!pre || pre.querySelector('.acorde')) return;
+            const lines = (pre.textContent || '').split('\n');
+            const fragment = document.createDocumentFragment();
+            lines.forEach(function(line, lineIndex){
+                if(isChordLine(line)){
+                    const pieces = line.match(/\s+|\S+/g) || [];
+                    pieces.forEach(function(piece){
+                        if(/^\s+$/.test(piece)){
+                            fragment.appendChild(document.createTextNode(piece));
+                        }else{
+                            const span = document.createElement('span');
+                            span.className = 'acorde';
+                            span.textContent = piece;
+                            fragment.appendChild(span);
+                        }
+                    });
+                }else{
+                    fragment.appendChild(document.createTextNode(line));
+                }
+                if(lineIndex < lines.length - 1) fragment.appendChild(document.createTextNode('\n'));
+            });
+            pre.replaceChildren(fragment);
+        }
+
+        function applyTranspose(pre, amount){
+            if(!pre) return;
+            const spans = chordSpans(pre);
+            spans.forEach(function(span){
+                if(!span.dataset.originalChord) span.dataset.originalChord = span.textContent;
+            });
+            spans.forEach(function(span){
+                const original = span.dataset.originalChord || span.textContent;
+                if(!isChordSpanOnChordLine(pre, span)){
+                    span.textContent = original;
+                    return;
+                }
+                span.textContent = transposeChord(original, amount);
+            });
+            pre.dataset.transposeSemitones = String(amount);
+        }
+
+        function findPre(toolbar){
+            if(!toolbar) return null;
+            const previous = toolbar.previousElementSibling;
+            return previous && previous.matches('pre.texto-musical, pre.song-modal-lyrics') ? previous : null;
+        }
+
+        function updateTransposeLabel(toolbar, amount){
+            const output = toolbar.querySelector('[data-transpose-value]');
+            if(!output) return;
+            if(amount === 0) output.textContent = 'Original';
+            else output.textContent = (amount > 0 ? '+' : '') + amount + (Math.abs(amount) === 1 ? ' semitono' : ' semitonos');
+        }
+
+        function resetPre(pre){
+            if(!pre) return;
+            chordSpans(pre).forEach(function(span){
+                if(span.dataset.originalChord) span.textContent = span.dataset.originalChord;
+            });
+            pre.dataset.transposeSemitones = '0';
+            const toolbar = pre.nextElementSibling && pre.nextElementSibling.matches('[data-song-tools]') ? pre.nextElementSibling : null;
+            if(toolbar) updateTransposeLabel(toolbar, 0);
+        }
+
+        function createToolbar(){
+            const template = document.querySelector('[data-song-tools]');
+            return template ? template.cloneNode(true) : null;
+        }
+
+        window.EmausSongTools = {
+            decorate: decorateChordLines,
+            createToolbar: createToolbar,
+            reset: resetPre
+        };
+
+        const scrollState = {frame:null, button:null, target:null, lastTime:null, speed:20};
+
+        function stopAutoScroll(){
+            if(scrollState.frame !== null) cancelAnimationFrame(scrollState.frame);
+            if(scrollState.button){
+                scrollState.button.setAttribute('aria-pressed','false');
+                scrollState.button.innerHTML = '<i class="fa fa-play" aria-hidden="true"></i> Desfile automático';
+            }
+            scrollState.frame = null;
+            scrollState.button = null;
+            scrollState.target = null;
+            scrollState.lastTime = null;
+        }
+
+        function scrollFrame(timestamp){
+            if(!scrollState.button) return;
+            if(scrollState.lastTime !== null){
+                const elapsed = Math.min(timestamp - scrollState.lastTime, 80);
+                if(scrollState.target === window){
+                    window.scrollBy(0, scrollState.speed * elapsed / 1000);
+                }else if(scrollState.target){
+                    scrollState.target.scrollTop += scrollState.speed * elapsed / 1000;
+                }
+            }
+            scrollState.lastTime = timestamp;
+            const atEnd = scrollState.target === window
+                ? window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 2
+                : !scrollState.target || scrollState.target.scrollTop + scrollState.target.clientHeight >= scrollState.target.scrollHeight - 2;
+            if(atEnd){
+                stopAutoScroll();
+                return;
+            }
+            scrollState.frame = requestAnimationFrame(scrollFrame);
+        }
+
+        function startAutoScroll(button){
+            if(scrollState.button === button){
+                stopAutoScroll();
+                return;
+            }
+            stopAutoScroll();
+            const toolbar = button.closest('[data-song-tools]');
+            const modal = button.closest('.song-modal');
+            const speedInput = toolbar ? toolbar.querySelector('[data-scroll-speed]') : null;
+            scrollState.speed = speedInput ? Number(speedInput.value) : 20;
+            scrollState.target = modal || window;
+            scrollState.button = button;
+            button.setAttribute('aria-pressed','true');
+            button.innerHTML = '<i class="fa fa-stop" aria-hidden="true"></i> Detener desfile';
+            scrollState.lastTime = null;
+            scrollState.frame = requestAnimationFrame(scrollFrame);
+        }
+
+        document.addEventListener('click',function(event){
+            const shiftButton = event.target.closest('[data-chord-shift]');
+            const resetButton = event.target.closest('[data-chord-reset]');
+            const scrollButton = event.target.closest('[data-auto-scroll]');
+            if(shiftButton){
+                const toolbar = shiftButton.closest('[data-song-tools]');
+                const pre = findPre(toolbar);
+                if(pre && !pre.isContentEditable){
+                    const current = Number(pre.dataset.transposeSemitones || 0);
+                    const next = Math.max(-11, Math.min(11, current + Number(shiftButton.dataset.chordShift || 0)));
+                    applyTranspose(pre, next);
+                    updateTransposeLabel(toolbar, next);
+                }
+            }else if(resetButton){
+                const toolbar = resetButton.closest('[data-song-tools]');
+                const pre = findPre(toolbar);
+                if(pre){
+                    resetPre(pre);
+                    updateTransposeLabel(toolbar, 0);
+                }
+            }else if(scrollButton){
+                startAutoScroll(scrollButton);
+            }else if(scrollState.button && !event.target.closest('[data-song-tools]')){
+                stopAutoScroll();
+            }
+        });
+
+        window.addEventListener('wheel',stopAutoScroll,{passive:true});
+        window.addEventListener('touchstart',stopAutoScroll,{passive:true});
+        document.addEventListener('keydown',function(event){
+            if(['ArrowUp','ArrowDown','PageUp','PageDown',' '].includes(event.key)) stopAutoScroll();
+        });
+    })();
+
     // Buscador global: las coincidencias provienen de todas las categorías.
     (function(){
         const input=document.getElementById('buscarCancionGlobal');
