@@ -598,6 +598,18 @@ header.main-header .header-sticky.active{
 	color: var(--accent-color);
 }
 
+/* Mantener en rojo la opción activa en todas las páginas del sitio. */
+.main-menu ul li a.active,
+.main-menu ul li a.active:hover,
+.main-menu ul li a.active:focus,
+.main-menu ul li.current-menu-item > a{
+	color: #bd0026 !important;
+}
+.slicknav_nav li.active > a,
+.slicknav_nav a.active{
+	color: #ff526f !important;
+}
+
 .main-menu ul ul{
 	visibility: hidden;
 	opacity: 0;
