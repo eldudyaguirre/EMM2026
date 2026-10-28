@@ -415,6 +415,7 @@
     }
     function editarCancion(id){
         let editor = document.getElementById("cancion"+id);
+        if(window.EmausSongTools) window.EmausSongTools.reset(editor);
         editor.contentEditable=true;
         editor.classList.add("modo-edicion");
         editor.focus();
@@ -812,6 +813,10 @@
                     detailCapo.appendChild(badge);
                 }
                 detailLyrics.textContent=song.letra||'Esta canción no tiene letra registrada.';
+                if(window.EmausSongTools){
+                    window.EmausSongTools.decorate(detailLyrics);
+                    window.EmausSongTools.reset(detailLyrics);
+                }
             }catch(error){
                 detailTitle.textContent='No se pudo abrir la canción';
                 detailLyrics.textContent='Ocurrió un error al cargar esta canción. Inténtalo nuevamente.';
@@ -903,6 +908,11 @@
                 lyrics.className='texto-musical';
                 lyrics.textContent=song.letra||'';
                 body.appendChild(lyrics);
+                if(window.EmausSongTools){
+                    window.EmausSongTools.decorate(lyrics);
+                    const songTools=window.EmausSongTools.createToolbar();
+                    if(songTools)body.appendChild(songTools);
+                }
 
                 const actions=document.createElement('div');
                 actions.className='acciones-cancion';
