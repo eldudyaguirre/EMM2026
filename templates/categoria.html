@@ -699,6 +699,15 @@
 
         window.addEventListener('wheel',stopAutoScroll,{passive:true});
         window.addEventListener('touchstart',stopAutoScroll,{passive:true});
+        document.addEventListener('change',function(event){
+            if(event.target.matches('[data-scroll-speed]') && scrollState.button){
+                const activeToolbar = scrollState.button.closest('[data-song-tools]');
+                const changedToolbar = event.target.closest('[data-song-tools]');
+                if(activeToolbar && activeToolbar === changedToolbar){
+                    scrollState.speed = Number(event.target.value) || 20;
+                }
+            }
+        });
         document.addEventListener('keydown',function(event){
             if(['ArrowUp','ArrowDown','PageUp','PageDown',' '].includes(event.key)) stopAutoScroll();
         });
