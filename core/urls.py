@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from .repertorio_views import repertorio_servicio
 
 urlpatterns = [
     path('', views.home, name='home'),
@@ -8,6 +9,7 @@ urlpatterns = [
     path('trazabilidad-preloader/', views.trazabilidad_preloader, name='trazabilidad_preloader'),
     path('cambiar-password/', views.cambiar_password, name='cambiar_password'),
     path('calendario/', views.calendario, name='calendario'),
+    path('servicios/<int:servicio_id>/repertorio/', repertorio_servicio, name='repertorio_servicio'),
     path('servicios/cancion/<int:cancion_id>/programados/', views.servicios_programados_para_cancion, name='servicios_programados_para_cancion'),
     path('servicios/cancion/<int:cancion_id>/agregar/', views.agregar_cancion_a_servicio, name='agregar_cancion_a_servicio'),
     path('servicios/', views.gestion_servicios, name='servicios'),
