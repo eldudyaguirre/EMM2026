@@ -78,6 +78,16 @@
         .srv-modal-actions{display:flex;gap:9px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px}
         .srv-note{color:#a9aab4;font-size:11px;margin-top:6px}
         @media(max-width:767px){.srv-hero{padding:115px 0 30px}.srv-main{padding:24px 0 45px}.srv-panel{padding:15px}.srv-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.srv-form-grid{grid-template-columns:1fr}.srv-field.full{grid-column:auto}.srv-modal{padding:17px}.srv-toolbar h2{font-size:21px}}
+        /* Resaltar en rojo la sección actual del menú. */
+        .main-header .navbar-nav .nav-link.active,
+        .main-header .navbar-nav .nav-link.active:hover,
+        .main-header .navbar-nav .nav-link.active:focus {
+            color: #bd0026 !important;
+        }
+        .slicknav_nav .active > a,
+        .slicknav_nav a.active {
+            color: #ff526f !important;
+        }
     </style>
 </head>
 <body>
