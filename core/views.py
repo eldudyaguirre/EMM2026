@@ -5,6 +5,7 @@ from django.db import transaction
 from datetime import date
 from django.utils.safestring import mark_safe
 import re
+import logging
 from django.contrib.auth import authenticate, login
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
@@ -12,6 +13,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth import logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse
+from django.views.decorators.csrf import csrf_exempt
 import json
 from io import BytesIO
 from reportlab.lib import colors
@@ -22,13 +24,17 @@ from reportlab.lib.units import mm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether
 
 
-def home(request):
+logger = logging.getLogger('emaus.trazabilidad')
 
+
+def home(request):
+    logger.info('HOME_REQUEST method=%s path=%s ip=%s', request.method, request.path, request.META.get('REMOTE_ADDR'))
     if request.method == 'POST':
 
         username = request.POST.get('username')
         password = request.POST.get('password')
 
+        logger.info('LOGIN_ATTEMPT username=%r', username)
         user = authenticate(
             request,
             username=username,
@@ -36,7 +42,7 @@ def home(request):
         )
 
         if user is not None:
-
+            logger.info('LOGIN_AUTHENTICATED username=%s active=%s staff=%s superuser=%s', user.get_username(), user.is_active, user.is_staff, user.is_superuser)
             # Verificar si está activo
             if user.is_active:
 
@@ -45,6 +51,7 @@ def home(request):
                     user
                 )
 
+                logger.info('LOGIN_SUCCESS username=%s session_key_present=%s', user.get_username(), bool(request.session.session_key))
                 return redirect(
                     'loginin'
                 )
@@ -74,7 +81,33 @@ def contact(request):
     return render(request, 'contact.html')
 
 def loginin(request):
-    return render(request, 'loginin.html')
+    user = request.user
+    logger.info('LOGININ_REQUEST authenticated=%s username=%s staff=%s superuser=%s active=%s session_key_present=%s',
+        user.is_authenticated, user.get_username() if user.is_authenticated else 'anonymous',
+        getattr(user, 'is_staff', False), getattr(user, 'is_superuser', False),
+        getattr(user, 'is_active', False), bool(request.session.session_key))
+    response = render(request, 'loginin.html')
+    logger.info('LOGININ_RESPONSE status=%s content_type=%s', response.status_code, response.get('Content-Type'))
+    return response
+
+
+@csrf_exempt
+def trazabilidad_preloader(request):
+    if request.method != 'POST':
+        return JsonResponse({'ok': False}, status=405)
+    try:
+        data = json.loads(request.body.decode('utf-8') or '{}')
+    except (ValueError, UnicodeDecodeError):
+        return JsonResponse({'ok': False}, status=400)
+    user = request.user
+    logger.warning('BROWSER_PRELOADER event=%s detail=%r path=%s readyState=%s jquery=%s preloaderFound=%s user=%s authenticated=%s staff=%s superuser=%s ua=%r',
+        str(data.get('event', 'unknown'))[:80], str(data.get('detail', ''))[:300],
+        str(data.get('path', ''))[:150], str(data.get('readyState', ''))[:30],
+        str(data.get('jquery', ''))[:30], str(data.get('preloaderFound', ''))[:10],
+        user.get_username() if user.is_authenticated else 'anonymous', user.is_authenticated,
+        getattr(user, 'is_staff', False), getattr(user, 'is_superuser', False),
+        request.META.get('HTTP_USER_AGENT', '')[:180])
+    return JsonResponse({'ok': True})
 
 
 @login_required(login_url='home')
