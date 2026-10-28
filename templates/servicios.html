@@ -71,6 +71,8 @@
         .srv-field label{display:block;font-size:12px;font-weight:800;color:#dedee4;margin-bottom:7px}
         .srv-input,.srv-select,.srv-textarea{display:block;width:100%;background:#101114;color:#fff;border:1px solid #3b3c44;border-radius:9px;padding:11px 12px;outline:none}
         .srv-input:focus,.srv-select:focus,.srv-textarea:focus{border-color:#bd0026;box-shadow:0 0 0 3px rgba(189,0,38,.14)}
+        .srv-date-input{cursor:pointer;color-scheme:dark}
+        .srv-date-input::-webkit-calendar-picker-indicator{cursor:pointer;opacity:1;filter:brightness(0) invert(1);padding:3px}
         .srv-input option,.srv-select option{background:#101114;color:#fff}
         .srv-textarea{min-height:86px;resize:vertical}
         .srv-modal-actions{display:flex;gap:9px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px}
@@ -210,7 +212,7 @@
                 </div>
                 <div class="srv-field">
                     <label for="srvFecha">Fecha *</label>
-                    <input class="srv-input" id="srvFecha" type="date" name="fecha" required value="{{ valores_formulario.fecha|default:fecha_hoy }}">
+                    <input class="srv-input srv-date-input" id="srvFecha" type="date" name="fecha" required value="{{ valores_formulario.fecha|default:fecha_hoy }}" aria-label="Seleccionar fecha del servicio" onclick="if (this.showPicker) this.showPicker()">
                 </div>
                 <div class="srv-field">
                     <label for="srvEstado">Estado *</label>
