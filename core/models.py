@@ -123,6 +123,15 @@ class Grupo(models.Model):
 
 class Servicio(models.Model):
     """Servicio programado en el calendario para un grupo."""
+    ESTADO_PROGRAMADO = 'programado'
+    ESTADO_EN_EJECUCION = 'en_ejecucion'
+    ESTADO_TERMINADO = 'terminado'
+    ESTADOS = (
+        (ESTADO_PROGRAMADO, 'Programado'),
+        (ESTADO_EN_EJECUCION, 'En ejecución'),
+        (ESTADO_TERMINADO, 'Terminado'),
+    )
+
     titulo = models.CharField(max_length=150, help_text='Ej.: Servicio de Navidad')
     grupo = models.ForeignKey(
         Grupo,
@@ -134,6 +143,12 @@ class Servicio(models.Model):
     hora_fin = models.TimeField(null=True, blank=True)
     lugar = models.CharField(max_length=200, blank=True)
     observaciones = models.TextField(blank=True)
+    estado = models.CharField(
+        max_length=20,
+        choices=ESTADOS,
+        default=ESTADO_PROGRAMADO,
+    )
+    # Campo heredado para compatibilidad con el calendario y registros anteriores.
     activo = models.BooleanField(default=True)
     fecha_creacion = models.DateTimeField(auto_now_add=True)
 
