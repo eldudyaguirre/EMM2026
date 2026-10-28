@@ -139,6 +139,7 @@ def calendario(request):
     """Muestra los servicios y los cumpleaños de los servidores activos."""
     servicios = [
         {
+            'id': servicio.pk,
             'titulo': servicio.titulo,
             'grupo': servicio.grupo.nombre,
             'fecha': servicio.fecha.isoformat(),
