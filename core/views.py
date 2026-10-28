@@ -182,14 +182,24 @@ def gestion_servicios(request):
     servicio_id_form = ''
 
     hoy = date.today()
-    mes_solicitado = (request.POST.get('mes', '') if request.method == 'POST' else request.GET.get('mes', '')).strip()
+    if request.method == 'POST':
+        mes_solicitado = request.POST.get('mes', '').strip()
+        anio_solicitado = request.POST.get('anio', '').strip()
+    else:
+        mes_solicitado = request.GET.get('mes', '').strip()
+        anio_solicitado = request.GET.get('anio', '').strip()
+
     try:
-        if not re.fullmatch(r'\d{4}-\d{2}', mes_solicitado):
+        mes_numero = int(mes_solicitado)
+        anio_numero = int(anio_solicitado)
+        if not 1 <= mes_numero <= 12 or not 1900 <= anio_numero <= 2200:
             raise ValueError
-        mes_seleccionado_fecha = date.fromisoformat(f'{mes_solicitado}-01')
+        mes_seleccionado_fecha = date(anio_numero, mes_numero, 1)
     except (ValueError, TypeError):
         mes_seleccionado_fecha = hoy.replace(day=1)
-    mes_seleccionado = mes_seleccionado_fecha.strftime('%Y-%m')
+
+    mes_seleccionado = f'{mes_seleccionado_fecha.month:02d}'
+    anio_seleccionado = str(mes_seleccionado_fecha.year)
 
     if request.method == 'POST':
         accion = request.POST.get('accion', '')
@@ -199,7 +209,7 @@ def gestion_servicios(request):
             titulo_eliminado = servicio.titulo
             servicio.delete()
             messages.success(request, f'El servicio «{titulo_eliminado}» fue eliminado.')
-            return redirect("/servicios/?mes=" + mes_seleccionado)
+            return redirect("/servicios/?mes=" + mes_seleccionado + "&anio=" + anio_seleccionado)
 
         if accion in ('crear_servicio', 'editar_servicio'):
             abrir_modal = True
@@ -296,7 +306,7 @@ def gestion_servicios(request):
                         request,
                         f'Servicio «{servicio.titulo}» creado correctamente con el ID #{servicio.pk}.'
                     )
-                return redirect("/servicios/?mes=" + mes_seleccionado)
+                return redirect("/servicios/?mes=" + mes_seleccionado + "&anio=" + anio_seleccionado)
 
     elif request.method == 'GET' and request.GET.get('editar'):
         servicio_editar = get_object_or_404(
@@ -317,7 +327,7 @@ def gestion_servicios(request):
             'estado': servicio_editar.estado,
         }
 
-    # El listado se limita al mes seleccionado; los contadores corresponden al año en curso.
+    # El listado se filtra por mes y año seleccionados; los contadores siempre usan el año actual.
     servicios = Servicio.objects.select_related('grupo').filter(
         fecha__year=mes_seleccionado_fecha.year,
         fecha__month=mes_seleccionado_fecha.month,
@@ -334,31 +344,25 @@ def gestion_servicios(request):
     for grupo in grupos:
         grupo.form_selected = str(grupo.pk) == grupo_seleccionado
 
-    # Meses anteriores y futuros, además de todos los meses con servicios registrados.
-    meses_opciones = set()
-    indice_mes_actual = hoy.year * 12 + hoy.month - 1
-    for desplazamiento in range(-36, 37):
-        indice = indice_mes_actual + desplazamiento
-        anio = indice // 12
-        mes = (indice % 12) + 1
-        meses_opciones.add(date(anio, mes, 1))
-    for fecha_mes in Servicio.objects.dates('fecha', 'month', order='ASC'):
-        meses_opciones.add(fecha_mes.replace(day=1))
-    meses_opciones.add(mes_seleccionado_fecha)
-
     nombres_meses = [
         'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
         'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
     ]
     meses_disponibles = [
-        {
-            'valor': fecha_mes.strftime('%Y-%m'),
-            'etiqueta': f'{nombres_meses[fecha_mes.month - 1].capitalize()} de {fecha_mes.year}',
-        }
-        for fecha_mes in sorted(meses_opciones, reverse=True)
+        {'valor': f'{numero:02d}', 'etiqueta': nombre.capitalize()}
+        for numero, nombre in enumerate(nombres_meses, start=1)
     ]
+
+    # Solo años con servicios, los años cercanos y el año seleccionado aparecen en el combo.
+    anios_opciones = set(range(hoy.year - 5, hoy.year + 6))
+    anios_opciones.update(
+        fecha_anio.year for fecha_anio in Servicio.objects.dates('fecha', 'year', order='ASC')
+    )
+    anios_opciones.add(mes_seleccionado_fecha.year)
+    anios_disponibles = sorted(anios_opciones, reverse=True)
+
     mes_label = f'{nombres_meses[mes_seleccionado_fecha.month - 1].capitalize()} de {mes_seleccionado_fecha.year}'
-    fecha_formulario_default = hoy.isoformat() if mes_seleccionado_fecha == hoy.replace(day=1) else mes_seleccionado_fecha.isoformat()
+    fecha_formulario_default = hoy.isoformat() if mes_seleccionado_fecha.year == hoy.year and mes_seleccionado_fecha.month == hoy.month else mes_seleccionado_fecha.isoformat()
 
     return render(request, 'servicios.html', {
         'servicios': servicios,
@@ -376,6 +380,8 @@ def gestion_servicios(request):
         'servicio_id_form': servicio_id_form,
         'meses_disponibles': meses_disponibles,
         'mes_seleccionado': mes_seleccionado,
+        'anios_disponibles': anios_disponibles,
+        'anio_seleccionado': anio_seleccionado,
         'mes_label': mes_label,
     })
 
