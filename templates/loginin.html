@@ -90,27 +90,46 @@
         function trace(eventName, detail) {
             var payload = JSON.stringify({event:eventName, detail:String(detail || ''),
                 path:location.pathname, readyState:document.readyState, jquery:typeof window.jQuery,
-                preloaderFound:!!document.querySelector('.preloader')});
-            try {
-                if (navigator.sendBeacon) navigator.sendBeacon(traceUrl, new Blob([payload], {type:'application/json'}));
-                else fetch(traceUrl, {method:'POST', headers:{'Content-Type':'application/json'}, body:payload, keepalive:true});
-            } catch (err) { console.error('[EMAUS-TRACE] envío fallido', err); }
+                preloaderFound:!!document.querySelector('.preloader'), timestamp:new Date().toISOString()});
             console.info('[EMAUS-TRACE]', eventName, detail || '');
+            try {
+                if (navigator.sendBeacon) {
+                    var sent = navigator.sendBeacon(traceUrl, new Blob([payload], {type:'application/json'}));
+                    console.info('[EMAUS-TRACE] sendBeacon=', sent);
+                } else {
+                    fetch(traceUrl, {method:'POST', headers:{'Content-Type':'application/json'}, body:payload, keepalive:true})
+                        .then(function(r){console.info('[EMAUS-TRACE] respuesta servidor=',r.status);})
+                        .catch(function(e){console.error('[EMAUS-TRACE] fetch falló',e);});
+                }
+            } catch (err) { console.error('[EMAUS-TRACE] envío fallido', err); }
         }
         function hide(source) {
-            var el=document.querySelector('.preloader');
-            trace('hide_called', source + '; found=' + !!el);
-            if (!el) return;
-            el.style.opacity='0'; el.style.visibility='hidden'; el.style.pointerEvents='none';
-            setTimeout(function(){el.style.display='none';trace('hidden',source);},650);
+            try {
+                var el=document.querySelector('.preloader');
+                trace('hide_called', source + '; found=' + !!el);
+                if (!el) return;
+                el.style.opacity='0';
+                el.style.visibility='hidden';
+                el.style.pointerEvents='none';
+                setTimeout(function(){
+                    el.style.display='none';
+                    trace('hidden',source+'; display='+getComputedStyle(el).display+'; visibility='+getComputedStyle(el).visibility);
+                },650);
+            } catch (err) {
+                trace('hide_exception',err && err.stack ? err.stack : err);
+            }
         }
-        trace('script_started','fallback');
-        window.addEventListener('error',function(e){trace('javascript_error',(e.message||'error')+' '+(e.filename||'')+':'+(e.lineno||''));});
+        trace('script_started','fallback; readyState='+document.readyState);
+        window.addEventListener('error',function(e){trace('javascript_error',(e.message||'error')+' @ '+(e.filename||'')+':'+(e.lineno||''));});
         window.addEventListener('unhandledrejection',function(e){trace('promise_rejection',e.reason&&e.reason.message?e.reason.message:e.reason);});
-        if(document.readyState==='complete') hide('document_complete');
-        else {
-            window.addEventListener('load',function(){hide('window_load');},{once:true});
-            setTimeout(function(){hide('timeout_3000ms');},3000);
+        if(document.readyState==='complete') {
+            trace('load_already_complete','invoking hide immediately');
+            hide('document_complete');
+        } else {
+            trace('load_listener_registered','waiting for window.load');
+            window.addEventListener('load',function(){trace('window_load_fired','');hide('window_load');},{once:true});
+            trace('timeout_registered','3000ms');
+            setTimeout(function(){trace('timeout_fired','3000ms');hide('timeout_3000ms');},3000);
         }
     })();
     </script>
