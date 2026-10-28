@@ -643,6 +643,9 @@ def exportar_servidores_pdf(request):
     from reportlab.lib.styles import ParagraphStyle
     from reportlab.platypus import Paragraph
     from xml.sax.saxutils import escape
+    from django.contrib.staticfiles import finders
+    from svglib.svglib import svg2rlg
+    from reportlab.graphics import renderPDF
 
     perfiles = list(
         Perfil.objects.select_related('usuario')
@@ -767,6 +770,27 @@ def exportar_servidores_pdf(request):
         canvas.saveState()
         canvas.setFillColor(colors.HexColor('#bd0026'))
         canvas.rect(0, page_size[1] - 5 * mm, page_size[0], 5 * mm, fill=1, stroke=0)
+
+        # Logo oficial de Emaús centrado en el encabezado de cada página.
+        logo_path = finders.find('images/logomio_negro.svg')
+        if logo_path:
+            try:
+                logo_drawing = svg2rlg(logo_path)
+                if logo_drawing:
+                    scale = min(
+                        (48 * mm) / max(logo_drawing.width, 1),
+                        (14 * mm) / max(logo_drawing.height, 1),
+                    )
+                    logo_drawing.width *= scale
+                    logo_drawing.height *= scale
+                    logo_drawing.scale(scale, scale)
+                    logo_x = (page_size[0] - logo_drawing.width) / 2
+                    logo_y = page_size[1] - 22 * mm
+                    renderPDF.draw(logo_drawing, canvas, logo_x, logo_y)
+            except Exception:
+                # El informe seguirá generándose aunque el SVG no se pueda renderizar.
+                pass
+
         canvas.setStrokeColor(colors.HexColor('#dddddd'))
         canvas.line(12 * mm, 12 * mm, page_size[0] - 12 * mm, 12 * mm)
         canvas.setFont('Helvetica', 8)
