@@ -1,0 +1,279 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Emaús | Servicios</title>
+    <link rel="shortcut icon" type="image/x-icon" href="{% static 'images/favicon.png' %}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Phudu:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+    <link href="{% static 'css/slicknav.min.css' %}" rel="stylesheet">
+    <link href="{% static 'css/custom.css' %}" rel="stylesheet">
+    <style>
+        :root{--srv-red:#bd0026;--srv-bg:#101114;--srv-panel:#191a20;--srv-line:rgba(255,255,255,.12);--srv-muted:#b8b9c3}
+        body{background:var(--srv-bg);color:#f7f7f8;font-family:'Instrument Sans',sans-serif}
+        .srv-hero{padding:140px 0 42px;background:linear-gradient(135deg,rgba(12,13,18,.96),rgba(76,0,19,.86)),url("{% static 'images/page-header-bg-02.jpg' %}") center/cover}
+        .srv-kicker{color:#ff526f;font-size:12px;font-weight:800;letter-spacing:.18em;text-transform:uppercase}
+        .srv-hero h1{font-family:'Phudu',sans-serif;font-size:clamp(34px,5vw,54px);color:#fff;text-transform:uppercase;margin:10px 0}
+        .srv-hero p{color:#ddd;max-width:720px;margin:0}
+        .srv-main{padding:34px 0 70px}
+        .srv-panel{background:var(--srv-panel);border:1px solid var(--srv-line);border-radius:15px;padding:23px;margin-bottom:24px}
+        .srv-toolbar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+        .srv-toolbar h2{font-family:'Phudu',sans-serif;font-size:24px;color:#fff;margin:0}
+        .srv-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+        .srv-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--srv-red);color:#fff;border:0;border-radius:8px;padding:10px 15px;font-weight:800;text-decoration:none;cursor:pointer;white-space:nowrap}
+        .srv-btn:hover{background:#e31b3d;color:#fff}
+        .srv-btn.secondary{background:#35363d;color:#fff}
+        .srv-btn.secondary:hover{background:#454650}
+        .srv-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:20px}
+        .srv-stat{background:#202127;border:1px solid var(--srv-line);border-radius:11px;padding:15px}
+        .srv-stat strong{display:block;font:700 24px 'Phudu',sans-serif;color:#fff}
+        .srv-stat span{display:block;color:var(--srv-muted);font-size:12px;margin-top:3px}
+        .srv-table-wrap{overflow-x:auto;border:1px solid var(--srv-line);border-radius:11px}
+        .srv-table{width:100%;border-collapse:collapse;min-width:850px;margin:0;color:#f7f7f8}
+        .srv-table th{background:#25252b;color:#bfc0c8;text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;padding:13px 14px;white-space:nowrap}
+        .srv-table td{padding:14px;border-top:1px solid var(--srv-line);font-size:13px;vertical-align:middle}
+        .srv-table tbody tr:hover{background:rgba(255,255,255,.025)}
+        .srv-id{display:inline-flex;align-items:center;justify-content:center;min-width:46px;padding:5px 8px;border-radius:7px;background:#292a31;color:#d7d8df;font-weight:800;font-size:12px}
+        .srv-title{display:block;font-weight:800;color:#fff}
+        .srv-observations{display:block;color:#a9aab4;font-size:11px;margin-top:4px;max-width:240px;white-space:normal}
+        .srv-muted{color:#b8b9c3}
+        .srv-status{display:inline-flex;align-items:center;gap:6px;border-radius:30px;padding:5px 10px;font-size:11px;font-weight:800;white-space:nowrap}
+        .srv-status.active{background:#174d37;color:#bff3d9}
+        .srv-status.inactive{background:#713047;color:#ffd4df}
+        .srv-status:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+        .srv-toggle{background:transparent;border:1px solid #4a4b55;color:#e6e6eb;padding:7px 9px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
+        .srv-toggle:hover{border-color:var(--srv-red);color:#fff;background:rgba(189,0,38,.2)}
+        .srv-empty{text-align:center;padding:42px 20px;color:var(--srv-muted)}
+        .srv-empty i{font-size:32px;color:#bd0026;margin-bottom:12px}
+        .srv-empty strong{display:block;color:#fff;font-size:16px;margin-bottom:6px}
+        .srv-empty p{margin:0}
+        .srv-info{display:flex;gap:10px;align-items:flex-start;border:1px solid rgba(189,0,38,.25);background:rgba(189,0,38,.08);padding:13px 15px;border-radius:10px;color:#dedee4;font-size:12px;margin-top:18px}
+        .srv-info i{color:#ff526f;margin-top:2px}
+        .srv-alert{padding:12px 15px;background:#24252b;border-radius:8px;margin-bottom:12px}
+        .srv-alert.success{border-left:4px solid #36b37e}
+        .srv-alert.error{border-left:4px solid var(--srv-red)}
+        .srv-modal-backdrop{display:none;position:fixed;inset:0;z-index:3000;background:rgba(0,0,0,.78);padding:20px;overflow:auto;align-items:center;justify-content:center}
+        .srv-modal-backdrop.open{display:flex}
+        .srv-modal{width:min(760px,100%);background:#191a20;border:1px solid #44454f;border-radius:16px;padding:24px;box-shadow:0 25px 70px #000b;max-height:calc(100vh - 40px);overflow:auto}
+        .srv-modal-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:18px;border-bottom:1px solid var(--srv-line);padding-bottom:14px}
+        .srv-modal-head h2{margin:0;font-family:'Phudu',sans-serif;font-size:25px;color:#fff}
+        .srv-modal-close{background:#35363d;color:white;border:0;border-radius:8px;width:38px;height:38px;font-size:23px;cursor:pointer}
+        .srv-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
+        .srv-field{margin-bottom:14px;min-width:0}
+        .srv-field.full{grid-column:1/-1}
+        .srv-field label{display:block;font-size:12px;font-weight:800;color:#dedee4;margin-bottom:7px}
+        .srv-input,.srv-select,.srv-textarea{display:block;width:100%;background:#101114;color:#fff;border:1px solid #3b3c44;border-radius:9px;padding:11px 12px;outline:none}
+        .srv-input:focus,.srv-select:focus,.srv-textarea:focus{border-color:#bd0026;box-shadow:0 0 0 3px rgba(189,0,38,.14)}
+        .srv-input option,.srv-select option{background:#101114;color:#fff}
+        .srv-textarea{min-height:86px;resize:vertical}
+        .srv-modal-actions{display:flex;gap:9px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px}
+        .srv-note{color:#a9aab4;font-size:11px;margin-top:6px}
+        @media(max-width:767px){.srv-hero{padding:115px 0 30px}.srv-main{padding:24px 0 45px}.srv-panel{padding:15px}.srv-stats{grid-template-columns:1fr 1fr}.srv-stat:last-child{grid-column:1/-1}.srv-form-grid{grid-template-columns:1fr}.srv-field.full{grid-column:auto}.srv-modal{padding:17px}.srv-toolbar h2{font-size:21px}}
+    </style>
+</head>
+<body>
+<header class="main-header">
+    <div class="header-sticky">
+        <nav class="navbar navbar-expand-lg">
+            <div class="container">
+                <a class="navbar-brand" href="{% url 'loginin' %}"><img src="{% static 'images/logomio.svg' %}" alt="Emaús"></a>
+                <div class="collapse navbar-collapse main-menu">
+                    <div class="nav-menu-wrapper">
+                        <ul class="navbar-nav mr-auto" id="menu">
+                            <li class="nav-item"><a class="nav-link" href="{% url 'loginin' %}">Inicio</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{% url 'calendario' %}">Calendario</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{% url 'grupos_servidores' %}">Grupos</a></li>
+                            <li class="nav-item"><a class="nav-link active" href="{% url 'servicios' %}">Servicios</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{% url 'servidores' %}">Servidores</a></li>
+                            <li class="nav-item"><a class="nav-link" href="{% url 'logout' %}">Cerrar sesión</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="navbar-toggle"></div>
+            </div>
+        </nav>
+        <div class="responsive-menu"></div>
+    </div>
+</header>
+
+<section class="srv-hero">
+    <div class="container">
+        <span class="srv-kicker">MINISTERIO DE MÚSICA · EMAÚS</span>
+        <h1>Servicios</h1>
+        <p>Programa y consulta los servicios del ministerio. Cada servicio tendrá un identificador propio para asociar las canciones en el siguiente módulo.</p>
+    </div>
+</section>
+
+<main class="srv-main">
+    <div class="container">
+        {% for message in messages %}
+            <div class="srv-alert {{ message.tags }}">{{ message }}</div>
+        {% endfor %}
+
+        <div class="srv-stats">
+            <div class="srv-stat"><strong>{{ servicios|length }}</strong><span>Servicios registrados</span></div>
+            <div class="srv-stat"><strong>{{ grupos|length }}</strong><span>Grupos activos disponibles</span></div>
+            <div class="srv-stat"><strong>{% with total_activos=0 %}{% endwith %}{{ total_activos }}</strong><span>Servicios activos</span></div>
+        </div>
+
+        <section class="srv-panel">
+            <div class="srv-toolbar">
+                <h2>Listado de servicios</h2>
+                <div class="srv-actions">
+                    <button type="button" class="srv-btn" id="btnNuevoServicio"><i class="fa fa-plus" aria-hidden="true"></i> Nuevo servicio</button>
+                </div>
+            </div>
+
+            {% if servicios %}
+            <div class="srv-table-wrap">
+                <table class="srv-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Servicio</th>
+                            <th>Fecha</th>
+                            <th>Grupo responsable</th>
+                            <th>Horario</th>
+                            <th>Iglesia / lugar</th>
+                            <th>Estado</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for servicio in servicios %}
+                        <tr>
+                            <td><span class="srv-id">#{{ servicio.pk }}</span></td>
+                            <td>
+                                <span class="srv-title">{{ servicio.titulo }}</span>
+                                {% if servicio.observaciones %}<span class="srv-observations">{{ servicio.observaciones }}</span>{% endif %}
+                            </td>
+                            <td style="white-space:nowrap">{{ servicio.fecha|date:"d/m/Y" }}</td>
+                            <td>{{ servicio.grupo.nombre }}</td>
+                            <td style="white-space:nowrap">{{ servicio.hora_inicio|time:"H:i" }}{% if servicio.hora_fin %}<br><span class="srv-muted">a {{ servicio.hora_fin|time:"H:i" }}</span>{% endif %}</td>
+                            <td>{{ servicio.lugar|default:"Sin especificar" }}</td>
+                            <td><span class="srv-status {% if servicio.activo %}active{% else %}inactive{% endif %}">{% if servicio.activo %}Activo{% else %}Inactivo{% endif %}</span></td>
+                            <td>
+                                <form method="post" style="margin:0">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="accion" value="cambiar_estado">
+                                    <input type="hidden" name="servicio_id" value="{{ servicio.pk }}">
+                                    <button type="submit" class="srv-toggle">{% if servicio.activo %}Desactivar{% else %}Activar{% endif %}</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="srv-empty">
+                <i class="fa fa-calendar-plus" aria-hidden="true"></i>
+                <strong>Aún no hay servicios registrados</strong>
+                <p>Usa el botón «Nuevo servicio» para programar el primero.</p>
+            </div>
+            {% endif %}
+
+            <div class="srv-info"><i class="fa fa-info-circle" aria-hidden="true"></i><div>El ID de cada servicio se conservará para relacionarlo con las canciones que se tocarán en ese evento. En este paso solo se gestiona el servicio; el repertorio se configurará en el siguiente módulo.</div></div>
+        </section>
+    </div>
+</main>
+
+<div class="srv-modal-backdrop {% if abrir_modal %}open{% endif %}" id="nuevoServicioModal" role="dialog" aria-modal="true" aria-labelledby="nuevoServicioModalTitle">
+    <div class="srv-modal">
+        <div class="srv-modal-head">
+            <h2 id="nuevoServicioModalTitle">Crear nuevo servicio</h2>
+            <button type="button" class="srv-modal-close" id="cerrarNuevoServicio" aria-label="Cerrar">×</button>
+        </div>
+        {% if not grupos %}
+            <div class="srv-alert error">No hay grupos activos registrados. Primero crea o activa un grupo responsable.</div>
+        {% endif %}
+        <form method="post" id="nuevoServicioForm">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="crear_servicio">
+            <div class="srv-form-grid">
+                <div class="srv-field full">
+                    <label for="srvTitulo">Nombre del servicio *</label>
+                    <input class="srv-input" id="srvTitulo" name="titulo" maxlength="150" required value="{{ valores_formulario.titulo|default:'' }}" placeholder="Ej. Misa dominical, ensayo general, vigilia…">
+                </div>
+                <div class="srv-field">
+                    <label for="srvFecha">Fecha *</label>
+                    <input class="srv-input" id="srvFecha" type="date" name="fecha" required value="{{ valores_formulario.fecha|default:fecha_hoy }}">
+                </div>
+                <div class="srv-field">
+                    <label for="srvEstado">Estado *</label>
+                    <select class="srv-select" id="srvEstado" name="estado" required>
+                        <option value="activo" {% if valores_formulario.estado != 'inactivo' %}selected{% endif %}>Activo</option>
+                        <option value="inactivo" {% if valores_formulario.estado == 'inactivo' %}selected{% endif %}>Inactivo</option>
+                    </select>
+                </div>
+                <div class="srv-field full">
+                    <label for="srvGrupo">Grupo encargado *</label>
+                    <select class="srv-select" id="srvGrupo" name="grupo_id" required {% if not grupos %}disabled{% endif %}>
+                        <option value="">Selecciona el grupo responsable</option>
+                        {% for grupo in grupos %}
+                        <option value="{{ grupo.pk }}" {% if grupo.form_selected %}selected{% endif %}>{{ grupo.nombre }} · {{ grupo.get_tipo_display }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="srv-field">
+                    <label for="srvHoraInicio">Hora de inicio *</label>
+                    <input class="srv-input" id="srvHoraInicio" type="time" name="hora_inicio" required value="{{ valores_formulario.hora_inicio|default:'' }}">
+                </div>
+                <div class="srv-field">
+                    <label for="srvHoraFin">Hora de finalización</label>
+                    <input class="srv-input" id="srvHoraFin" type="time" name="hora_fin" value="{{ valores_formulario.hora_fin|default:'' }}">
+                </div>
+                <div class="srv-field full">
+                    <label for="srvLugar">Iglesia o lugar del servicio</label>
+                    <input class="srv-input" id="srvLugar" name="lugar" maxlength="200" value="{{ valores_formulario.lugar|default:'' }}" placeholder="Ej. Iglesia principal, capilla, salón parroquial…">
+                </div>
+                <div class="srv-field full">
+                    <label for="srvObservaciones">Observaciones (opcional)</label>
+                    <textarea class="srv-textarea" id="srvObservaciones" name="observaciones" placeholder="Detalles adicionales del servicio">{{ valores_formulario.observaciones|default:'' }}</textarea>
+                </div>
+            </div>
+            <div class="srv-modal-actions">
+                <button type="button" class="srv-btn secondary" id="cancelarNuevoServicio">Cancelar</button>
+                <button type="submit" class="srv-btn" {% if not grupos %}disabled style="opacity:.5;cursor:not-allowed"{% endif %}><i class="fa fa-save" aria-hidden="true"></i> Guardar servicio</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script src="{% static 'js/jquery-3.7.1.min.js' %}"></script>
+<script src="{% static 'js/bootstrap.min.js' %}"></script>
+<script src="{% static 'js/jquery.slicknav.js' %}"></script>
+<script src="{% static 'js/function.js' %}"></script>
+<script>
+(function(){
+    const modal=document.getElementById('nuevoServicioModal');
+    const openButton=document.getElementById('btnNuevoServicio');
+    const closeButton=document.getElementById('cerrarNuevoServicio');
+    const cancelButton=document.getElementById('cancelarNuevoServicio');
+    function openModal(){
+        modal.classList.add('open');
+        const first=modal.querySelector('input[name="titulo"]');
+        if(first)first.focus();
+    }
+    function closeModal(){modal.classList.remove('open');}
+    if(openButton)openButton.addEventListener('click',openModal);
+    if(closeButton)closeButton.addEventListener('click',closeModal);
+    if(cancelButton)cancelButton.addEventListener('click',closeModal);
+    modal.addEventListener('click',event=>{if(event.target===modal)closeModal();});
+    document.addEventListener('keydown',event=>{if(event.key==='Escape')closeModal();});
+    document.getElementById('nuevoServicioForm').addEventListener('submit',function(event){
+        const start=document.getElementById('srvHoraInicio').value;
+        const end=document.getElementById('srvHoraFin').value;
+        if(start&&end&&end<=start){
+            event.preventDefault();
+            alert('La hora de finalización debe ser posterior a la hora de inicio.');
+        }
+    });
+})();
+</script>
+</body>
+</html>
