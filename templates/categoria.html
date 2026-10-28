@@ -114,6 +114,15 @@
         #songServiceModal{z-index:6000}
         .song-service-note{font-size:12px;color:#69646a;line-height:1.5;margin:-3px 0 15px}
         .song-service-current-song{font-size:13px;font-weight:800;color:#bd0026;margin:0 0 10px}
+        .song-service-capo-panel{margin:0 0 14px;padding:13px;border:1px solid #e5dce0;border-radius:10px;background:#faf7f8}
+        .song-service-capo-check{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:800;color:#292329;cursor:pointer;margin:0}
+        .song-service-capo-check input{width:16px;height:16px;accent-color:#bd0026}
+        .song-service-capo-fret{display:none;grid-template-columns:105px minmax(100px,160px);align-items:center;gap:10px;margin-top:12px}
+        .song-service-capo-fret.open{display:grid}
+        .song-service-capo-fret label{font-size:11px;font-weight:800;color:#555;margin:0}
+        .song-service-capo-fret select{width:100%;border:1px solid #d8cdd1;border-radius:8px;background:#fff;color:#222;padding:8px 10px;font-size:12px}
+        .song-service-capo-help{font-size:10px;line-height:1.4;color:#80767b;margin:8px 0 0}
+        @media(max-width:767px){.song-service-capo-fret{grid-template-columns:1fr;gap:6px}}
         .song-service-list{display:grid;gap:9px;max-height:42vh;overflow:auto;padding:1px 3px 2px 1px}
         .song-service-option{display:flex;align-items:flex-start;gap:11px;padding:12px;border:1px solid #e3dce0;border-radius:10px;background:#fff;cursor:pointer;transition:border-color .15s,background .15s}
         .song-service-option:hover{border-color:#bd0026;background:#fff8f9}
@@ -284,7 +293,7 @@
                                                 <span class="badge bg-warning">🎸 Capo: {{cancion.traste_capodastro}}</span>
                                                 {% endif %}
                                             </div>
-                                            <pre id="cancion{{cancion.id}}" class="texto-musical">{{ cancion.letra_coloreada|safe }}</pre>
+                                            <pre id="cancion{{cancion.id}}" class="texto-musical" data-capo-enabled="{{ cancion.usa_capodastro|yesno:'true,false' }}" data-capo-fret="{{ cancion.traste_capodastro|default_if_none:'' }}">{{ cancion.letra_coloreada|safe }}</pre>
 
                                             <div class="song-tools" data-song-tools>
                                                 <div class="song-tools-group" aria-label="Cambiar tonalidad">
@@ -439,7 +448,30 @@
                 <button type="button" class="song-modal-close" data-close-song-service aria-label="Cerrar">×</button>
             </div>
             <p class="song-service-current-song" id="songServiceCurrentSong">Canción seleccionada</p>
-            <p class="song-service-note">Se muestran solo los servicios futuros que estén en estado <strong>Programado</strong>, del más cercano al más lejano. Se guardará una copia de los acordes tal como aparecen ahora, sin cambiar la canción original.</p>
+            <div class="song-service-capo-panel">
+                <label class="song-service-capo-check" for="songServiceUsesCapo">
+                    <input type="checkbox" id="songServiceUsesCapo">
+                    Usar capodastro en este servicio
+                </label>
+                <div class="song-service-capo-fret" id="songServiceCapoFretPanel">
+                    <label for="songServiceCapoFret">Traste del capo</label>
+                    <select id="songServiceCapoFret">
+                        <option value="">Selecciona traste</option>
+                        <option value="1">Traste 1</option>
+                        <option value="2">Traste 2</option>
+                        <option value="3">Traste 3</option>
+                        <option value="4">Traste 4</option>
+                        <option value="5">Traste 5</option>
+                        <option value="6">Traste 6</option>
+                        <option value="7">Traste 7</option>
+                        <option value="8">Traste 8</option>
+                        <option value="9">Traste 9</option>
+                        <option value="10">Traste 10</option>
+                        <option value="11">Traste 11</option>
+                        <option value="12">Traste 12</option>
+                    </select>
+                </div>
+            </div>
             <div class="song-service-message" id="songServiceMessage" role="status" aria-live="polite"></div>
             <div class="song-service-loading" id="songServiceLoading">Buscando servicios programados…</div>
             <div class="song-service-empty" id="songServiceEmpty" hidden>No hay servicios futuros en estado Programado. Programa uno desde Administración → Servicios para poder asignar canciones.</div>
@@ -1287,6 +1319,8 @@
                 const lyrics=document.createElement('pre');
                 lyrics.id='cancion'+song.id;
                 lyrics.className='texto-musical';
+                lyrics.dataset.capoEnabled=song.usa_capodastro?'true':'false';
+                lyrics.dataset.capoFret=song.traste_capodastro || '';
                 lyrics.textContent=song.letra||'';
                 body.appendChild(lyrics);
                 if(window.EmausSongTools){
