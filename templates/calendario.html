@@ -59,7 +59,24 @@
 #menu .calendar-logout-item::before{content:""!important;display:block!important;height:1px!important;width:100%!important;background:rgba(255,255,255,.65)!important;position:absolute!important;top:0!important;left:0!important}
 @media(min-width:992px){#menu .calendar-logout-item{margin-left:10px!important;padding-left:10px!important;margin-top:0!important;padding-top:0!important}
 #menu .calendar-logout-item::before{width:1px!important;height:24px!important;top:50%!important;left:0!important;transform:translateY(-50%)!important;background:rgba(255,255,255,.55)!important}}
-        @media(max-width:767px){.calendar-hero{padding:115px 0 35px}.calendar-wrap{padding:25px 0 45px}.calendar-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.weekday{display:none}.day-card{min-height:110px;padding:12px}.day-card:before{content:attr(data-weekday);display:block;color:var(--cal-muted);font-size:10px;text-transform:uppercase;font-weight:800;margin-bottom:7px}.calendar-toolbar h2{font-size:22px}.calendar-actions{width:100%}.calendar-actions .calendar-btn{flex:1}}
+        @media(max-width:767px){
+            .calendar-hero{padding:115px 0 35px}
+            .calendar-wrap{padding:25px 0 45px}
+            .calendar-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+            .weekday{display:none}
+            .day-card{min-height:110px;padding:12px}
+            .day-card:before{content:attr(data-weekday);display:block;color:var(--cal-muted);font-size:10px;text-transform:uppercase;font-weight:800;margin-bottom:7px}
+            .calendar-toolbar{align-items:flex-start;gap:14px}
+            .calendar-toolbar>div:first-child{width:100%;min-width:0}
+            .calendar-toolbar h2{font-size:22px}
+            .calendar-actions{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+            .calendar-actions .calendar-btn{width:100%;min-width:0;min-height:58px;padding:9px 6px;display:flex;align-items:center;justify-content:center;text-align:center;white-space:normal;overflow-wrap:normal;line-height:1.15;font-size:clamp(12px,3.5vw,16px)}
+        }
+        @media(max-width:390px){
+            .calendar-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+            .calendar-actions #today-btn{grid-column:1/-1}
+            .calendar-actions .calendar-btn{min-height:48px;font-size:14px}
+        }
         @media(min-width:500px) and (max-width:767px){.calendar-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 
         /* Separador corto para la copia móvil del menú (SlickNav). */
