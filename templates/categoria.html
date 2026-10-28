@@ -621,6 +621,13 @@
             reset: resetPre
         };
 
+        // Procesar también las canciones que ya estaban renderizadas al abrir la categoría.
+        // El servidor puede haber coloreado solo los acordes en mayúscula; esta pasada
+        // completa la detección de acordes en minúscula sin marcar líneas de letra.
+        document.querySelectorAll('pre.texto-musical').forEach(function(pre){
+            decorateChordLines(pre);
+        });
+
         const scrollState = {frame:null, button:null, target:null, lastTime:null, speed:20};
 
         function stopAutoScroll(){
