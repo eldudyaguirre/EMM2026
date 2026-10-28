@@ -640,6 +640,10 @@ def servicios_programados_para_cancion(request, cancion_id):
                     'numero_snapshot': entrada.numero_snapshot,
                     'titulo_snapshot': entrada.titulo_snapshot,
                     'orden': entrada.orden,
+                    'usa_capodastro': entrada.usa_capodastro,
+                    'traste_capodastro': entrada.traste_capodastro,
+                    'semitonos_transpuestos': entrada.semitonos_transpuestos,
+                    'notacion_acordes': entrada.notacion_acordes,
                 }
                 for entrada in servicio.repertorio.all()
             ],
@@ -651,6 +655,8 @@ def servicios_programados_para_cancion(request, cancion_id):
             'id': cancion.pk,
             'numero': cancion.numero,
             'titulo': cancion.titulo,
+            'usa_capodastro': cancion.usa_capodastro,
+            'traste_capodastro': cancion.traste_capodastro,
         },
         'servicios': resultados,
     })
@@ -702,6 +708,22 @@ def agregar_cancion_a_servicio(request, cancion_id):
     if notacion not in dict(RepertorioServicio.NOTACIONES):
         notacion = RepertorioServicio.NOTACION_ORIGINAL
 
+    usa_capodastro = data.get('usa_capodastro') is True
+    traste_capodastro = None
+    if usa_capodastro:
+        try:
+            traste_capodastro = int(data.get('traste_capodastro'))
+        except (ValueError, TypeError):
+            return JsonResponse({
+                'ok': False,
+                'error': 'Indica en qué traste se colocará el capodastro.',
+            }, status=400)
+        if not 1 <= traste_capodastro <= 12:
+            return JsonResponse({
+                'ok': False,
+                'error': 'El traste del capodastro debe estar entre 1 y 12.',
+            }, status=400)
+
     with transaction.atomic():
         orden_nuevo = servicio.repertorio.count() + 1
         entrada, creada = RepertorioServicio.objects.get_or_create(
@@ -711,6 +733,8 @@ def agregar_cancion_a_servicio(request, cancion_id):
                 'numero_snapshot': cancion.numero,
                 'titulo_snapshot': cancion.titulo,
                 'letra_snapshot': letra_snapshot,
+                'usa_capodastro': usa_capodastro,
+                'traste_capodastro': traste_capodastro,
                 'semitonos_transpuestos': semitonos,
                 'notacion_acordes': notacion,
                 'orden': orden_nuevo,
@@ -723,11 +747,14 @@ def agregar_cancion_a_servicio(request, cancion_id):
             entrada.numero_snapshot = cancion.numero
             entrada.titulo_snapshot = cancion.titulo
             entrada.letra_snapshot = letra_snapshot
+            entrada.usa_capodastro = usa_capodastro
+            entrada.traste_capodastro = traste_capodastro
             entrada.semitonos_transpuestos = semitonos
             entrada.notacion_acordes = notacion
             entrada.agregado_por = request.user
             entrada.save(update_fields=[
                 'numero_snapshot', 'titulo_snapshot', 'letra_snapshot',
+                'usa_capodastro', 'traste_capodastro',
                 'semitonos_transpuestos', 'notacion_acordes', 'agregado_por',
             ])
 
@@ -744,6 +771,8 @@ def agregar_cancion_a_servicio(request, cancion_id):
         'servicio': servicio.titulo,
         'fecha_servicio': servicio.fecha.strftime('%d/%m/%Y'),
         'cancion': entrada.titulo_snapshot,
+        'usa_capodastro': entrada.usa_capodastro,
+        'traste_capodastro': entrada.traste_capodastro,
         'semitonos_transpuestos': entrada.semitonos_transpuestos,
         'notacion_acordes': entrada.notacion_acordes,
     })
