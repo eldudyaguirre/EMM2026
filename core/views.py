@@ -600,10 +600,12 @@ def servicios_visibles_para_usuario(user):
     except (Perfil.DoesNotExist, AttributeError):
         return base.none()
 
-    # Los servidores solo ven servicios del grupo permanente indicado en su perfil.
-    # No combinar con grupos_asignados: esa relación puede incluir grupos temporales
-    # u otros grupos a los que el servidor presta apoyo.
-    return base.filter(grupo__nombre__iexact=f'Grupo {perfil.grupo}').distinct()
+    # La asignación real se administra en Grupo.integrantes.
+    # No confiar en Perfil.grupo, que puede estar desactualizado.
+    return base.filter(
+        grupo__tipo=Grupo.TIPO_PERMANENTE,
+        grupo__integrantes=perfil,
+    ).distinct()
 
 
 @login_required(login_url='home')
