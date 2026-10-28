@@ -187,6 +187,15 @@ class RepertorioServicio(models.Model):
     letra_snapshot = models.TextField(
         help_text='Copia de la letra y acordes como se prepararon para este servicio.'
     )
+    usa_capodastro = models.BooleanField(
+        default=False,
+        help_text='Indica si esta versión del repertorio usa capodastro.'
+    )
+    traste_capodastro = models.IntegerField(
+        null=True,
+        blank=True,
+        help_text='Traste del capodastro para este servicio, independiente de la canción original.'
+    )
     semitonos_transpuestos = models.IntegerField(default=0)
     notacion_acordes = models.CharField(
         max_length=10,
