@@ -181,6 +181,16 @@ def gestion_servicios(request):
     modo_edicion = False
     servicio_id_form = ''
 
+    hoy = date.today()
+    mes_solicitado = (request.POST.get('mes') if request.method == 'POST' else request.GET.get('mes', '')).strip()
+    try:
+        if not re.fullmatch(r'\d{4}-\d{2}', mes_solicitado):
+            raise ValueError
+        mes_seleccionado_fecha = date.fromisoformat(f'{mes_solicitado}-01')
+    except (ValueError, TypeError):
+        mes_seleccionado_fecha = hoy.replace(day=1)
+    mes_seleccionado = mes_seleccionado_fecha.strftime('%Y-%m')
+
     if request.method == 'POST':
         accion = request.POST.get('accion', '')
 
@@ -189,7 +199,7 @@ def gestion_servicios(request):
             titulo_eliminado = servicio.titulo
             servicio.delete()
             messages.success(request, f'El servicio «{titulo_eliminado}» fue eliminado.')
-            return redirect('servicios')
+            return redirect("/servicios/?mes=" + mes_seleccionado)
 
         if accion in ('crear_servicio', 'editar_servicio'):
             abrir_modal = True
@@ -286,7 +296,7 @@ def gestion_servicios(request):
                         request,
                         f'Servicio «{servicio.titulo}» creado correctamente con el ID #{servicio.pk}.'
                     )
-                return redirect('servicios')
+                return redirect("/servicios/?mes=" + mes_seleccionado)
 
     elif request.method == 'GET' and request.GET.get('editar'):
         servicio_editar = get_object_or_404(
@@ -307,31 +317,66 @@ def gestion_servicios(request):
             'estado': servicio_editar.estado,
         }
 
-    servicios = Servicio.objects.select_related('grupo').order_by(
-        '-fecha', '-hora_inicio', '-pk'
-    )
+    # El listado se limita al mes seleccionado; los contadores corresponden al año en curso.
+    servicios = Servicio.objects.select_related('grupo').filter(
+        fecha__year=mes_seleccionado_fecha.year,
+        fecha__month=mes_seleccionado_fecha.month,
+    ).order_by('-fecha', '-hora_inicio', '-pk')
+
+    servicios_anio = Servicio.objects.filter(fecha__year=hoy.year)
+    totales_estado = {
+        estado: servicios_anio.filter(estado=estado).count()
+        for estado, etiqueta in Servicio.ESTADOS
+    }
+
     grupos = list(Grupo.objects.filter(activo=True).order_by('nombre'))
     grupo_seleccionado = valores_formulario.get('grupo_id', '')
     for grupo in grupos:
         grupo.form_selected = str(grupo.pk) == grupo_seleccionado
 
-    totales_estado = {
-        estado: servicios.filter(estado=estado).count()
-        for estado, etiqueta in Servicio.ESTADOS
-    }
+    # Meses anteriores y futuros, además de todos los meses con servicios registrados.
+    meses_opciones = set()
+    indice_mes_actual = hoy.year * 12 + hoy.month - 1
+    for desplazamiento in range(-36, 37):
+        indice = indice_mes_actual + desplazamiento
+        anio = indice // 12
+        mes = (indice % 12) + 1
+        meses_opciones.add(date(anio, mes, 1))
+    for fecha_mes in Servicio.objects.dates('fecha', 'month', order='ASC'):
+        meses_opciones.add(fecha_mes.replace(day=1))
+    meses_opciones.add(mes_seleccionado_fecha)
+
+    nombres_meses = [
+        'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+        'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+    ]
+    meses_disponibles = [
+        {
+            'valor': fecha_mes.strftime('%Y-%m'),
+            'etiqueta': f'{nombres_meses[fecha_mes.month - 1].capitalize()} de {fecha_mes.year}',
+        }
+        for fecha_mes in sorted(meses_opciones, reverse=True)
+    ]
+    mes_label = f'{nombres_meses[mes_seleccionado_fecha.month - 1].capitalize()} de {mes_seleccionado_fecha.year}'
+    fecha_formulario_default = hoy.isoformat() if mes_seleccionado_fecha == hoy.replace(day=1) else mes_seleccionado_fecha.isoformat()
+
     return render(request, 'servicios.html', {
         'servicios': servicios,
         'grupos': grupos,
         'total_programados': totales_estado[Servicio.ESTADO_PROGRAMADO],
         'total_en_ejecucion': totales_estado[Servicio.ESTADO_EN_EJECUCION],
         'total_terminados': totales_estado[Servicio.ESTADO_TERMINADO],
-        'total_servicios': servicios.count(),
+        'total_servicios': servicios_anio.count(),
+        'anio_actual': hoy.year,
         'estados_servicio': Servicio.ESTADOS,
-        'fecha_hoy': date.today().isoformat(),
+        'fecha_hoy': fecha_formulario_default,
         'valores_formulario': valores_formulario,
         'abrir_modal': abrir_modal,
         'modo_edicion': modo_edicion,
         'servicio_id_form': servicio_id_form,
+        'meses_disponibles': meses_disponibles,
+        'mes_seleccionado': mes_seleccionado,
+        'mes_label': mes_label,
     })
 
 
