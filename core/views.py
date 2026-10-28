@@ -599,6 +599,7 @@ def servicios_programados_para_cancion(request, cancion_id):
             grupo__activo=True,
         )
         .select_related('grupo')
+        .prefetch_related('repertorio')
         .annotate(total_canciones=Count('repertorio'))
         .order_by('fecha', 'hora_inicio', 'pk')
     )
@@ -634,6 +635,16 @@ def servicios_programados_para_cancion(request, cancion_id):
             'lugar': servicio.lugar or 'Lugar por confirmar',
             'repertorio_count': servicio.total_canciones,
             'ya_agregada': servicio.pk in ya_agregados,
+            'repertorio': [
+                {
+                    'id': entrada.pk,
+                    'cancion_id': entrada.cancion_id,
+                    'numero_snapshot': entrada.numero_snapshot,
+                    'titulo_snapshot': entrada.titulo_snapshot,
+                    'orden': entrada.orden,
+                }
+                for entrada in servicio.repertorio.all()
+            ],
         })
 
     return JsonResponse({
