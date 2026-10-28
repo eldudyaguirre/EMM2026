@@ -46,10 +46,15 @@
         .srv-status.en-ejecucion{background:rgba(229,182,75,.13);color:#f2cb70}
         .srv-status.terminado{background:#174d37;color:#bff3d9}
         .srv-status:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
-        .srv-toggle{background:transparent;border:1px solid #4a4b55;color:#e6e6eb;padding:7px 9px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
-        .srv-toggle:hover{border-color:var(--srv-red);color:#fff;background:rgba(189,0,38,.2)}
-        .srv-state-select{min-width:142px;background:#101114;color:#fff;border:1px solid #4a4b55;padding:7px 8px;border-radius:7px;font-size:11px;font-weight:700}
-        .srv-state-select option{background:#191a20;color:#fff}
+        .srv-kebab{display:inline-flex;align-items:center;justify-content:center;width:38px;height:36px;border:1px solid #454650;background:#24252b;color:#fff;border-radius:9px;font-size:25px;line-height:1;cursor:pointer;letter-spacing:1px}
+        .srv-kebab:hover,.srv-kebab[aria-expanded="true"]{background:var(--srv-red);border-color:var(--srv-red)}
+        .srv-action-menu{display:none;position:fixed;z-index:5000;min-width:166px;padding:6px;background:#202127;border:1px solid #4b4c55;border-radius:11px;box-shadow:0 16px 42px rgba(0,0,0,.45)}
+        .srv-action-menu.open{display:block}
+        .srv-action-item{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border:0;border-radius:7px;background:transparent;color:#f2f2f5;text-decoration:none;text-align:left;font-size:13px;font-weight:700;cursor:pointer}
+        .srv-action-item:hover{background:#34353d;color:#fff}
+        .srv-action-item.danger{color:#ff7185}
+        .srv-action-item.danger:hover{background:rgba(189,0,38,.18);color:#ff9aaa}
+        .srv-action-divider{height:1px;background:rgba(255,255,255,.1);margin:5px 4px}
         .srv-empty{text-align:center;padding:42px 20px;color:var(--srv-muted)}
         .srv-empty i{font-size:32px;color:#bd0026;margin-bottom:12px}
         .srv-empty strong{display:block;color:#fff;font-size:16px;margin-bottom:6px}
@@ -156,7 +161,7 @@
                             <th>Horario</th>
                             <th>Iglesia / lugar</th>
                             <th>Estado actual</th>
-                            <th>Actualizar estado</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -173,17 +178,7 @@
                             <td>{{ servicio.lugar|default:"Sin especificar" }}</td>
                             <td><span class="srv-status {% if servicio.estado == 'programado' %}programado{% elif servicio.estado == 'en_ejecucion' %}en-ejecucion{% else %}terminado{% endif %}">{{ servicio.get_estado_display }}</span></td>
                             <td>
-                                <form method="post" style="margin:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="accion" value="cambiar_estado">
-                                    <input type="hidden" name="servicio_id" value="{{ servicio.pk }}">
-                                    <select name="estado" class="srv-state-select" aria-label="Estado para {{ servicio.titulo }}">
-                                        {% for estado_valor, estado_etiqueta in estados_servicio %}
-                                        <option value="{{ estado_valor }}" {% if servicio.estado == estado_valor %}selected{% endif %}>{{ estado_etiqueta }}</option>
-                                        {% endfor %}
-                                    </select>
-                                    <button type="submit" class="srv-toggle">Guardar</button>
-                                </form>
+                                <button type="button" class="srv-kebab" data-service-id="{{ servicio.pk }}" data-service-title="{{ servicio.titulo }}" aria-haspopup="true" aria-expanded="false" aria-label="Acciones para {{ servicio.titulo }}">⋯</button>
                             </td>
                         </tr>
                         {% endfor %}
@@ -203,10 +198,21 @@
     </div>
 </main>
 
+<div class="srv-action-menu" id="srvServiceActionMenu" role="menu" aria-hidden="true">
+    <a href="#" class="srv-action-item" id="srvEditAction" role="menuitem"><span aria-hidden="true">✎</span> Editar</a>
+    <div class="srv-action-divider"></div>
+    <form method="post" id="srvDeleteServiceForm" style="margin:0">
+        {% csrf_token %}
+        <input type="hidden" name="accion" value="eliminar_servicio">
+        <input type="hidden" name="servicio_id" id="srvDeleteServiceId" value="">
+        <button type="submit" class="srv-action-item danger" role="menuitem"><span aria-hidden="true">⌫</span> Eliminar</button>
+    </form>
+</div>
+
 <div class="srv-modal-backdrop {% if abrir_modal %}open{% endif %}" id="nuevoServicioModal" role="dialog" aria-modal="true" aria-labelledby="nuevoServicioModalTitle">
     <div class="srv-modal">
         <div class="srv-modal-head">
-            <h2 id="nuevoServicioModalTitle">Crear nuevo servicio</h2>
+            <h2 id="nuevoServicioModalTitle">{% if modo_edicion %}Editar servicio #{{ servicio_id_form }}{% else %}Crear nuevo servicio{% endif %}</h2>
             <button type="button" class="srv-modal-close" id="cerrarNuevoServicio" aria-label="Cerrar">×</button>
         </div>
         {% if not grupos %}
@@ -214,7 +220,8 @@
         {% endif %}
         <form method="post" id="nuevoServicioForm">
             {% csrf_token %}
-            <input type="hidden" name="accion" value="crear_servicio">
+            <input type="hidden" name="accion" id="srvAction" value="{% if modo_edicion %}editar_servicio{% else %}crear_servicio{% endif %}">
+            <input type="hidden" name="servicio_id" id="srvServicioId" value="{{ servicio_id_form }}">
             <div class="srv-form-grid">
                 <div class="srv-field full">
                     <label for="srvTitulo">Nombre del servicio *</label>
@@ -260,7 +267,7 @@
             </div>
             <div class="srv-modal-actions">
                 <button type="button" class="srv-btn secondary" id="cancelarNuevoServicio">Cancelar</button>
-                <button type="submit" class="srv-btn" {% if not grupos %}disabled style="opacity:.5;cursor:not-allowed"{% endif %}><i class="fa fa-save" aria-hidden="true"></i> Guardar servicio</button>
+                <button type="submit" class="srv-btn" {% if not grupos %}disabled style="opacity:.5;cursor:not-allowed"{% endif %}><i class="fa fa-save" aria-hidden="true"></i> {% if modo_edicion %}Guardar cambios{% else %}Guardar servicio{% endif %}</button>
             </div>
         </form>
     </div>
@@ -276,23 +283,105 @@
     const openButton=document.getElementById('btnNuevoServicio');
     const closeButton=document.getElementById('cerrarNuevoServicio');
     const cancelButton=document.getElementById('cancelarNuevoServicio');
+    const serviceForm=document.getElementById('nuevoServicioForm');
+    const actionInput=document.getElementById('srvAction');
+    const serviceIdInput=document.getElementById('srvServicioId');
+    const modalTitle=document.getElementById('nuevoServicioModalTitle');
+    const submitButton=serviceForm.querySelector('button[type="submit"]');
+    const dateInput=document.getElementById('srvFecha');
+    const stateInput=document.getElementById('srvEstado');
+    const groupInput=document.getElementById('srvGrupo');
+
     function openModal(){
         modal.classList.add('open');
         const first=modal.querySelector('input[name="titulo"]');
         if(first)first.focus();
     }
     function closeModal(){modal.classList.remove('open');}
-    if(openButton)openButton.addEventListener('click',openModal);
+    function prepareNewService(){
+        serviceForm.reset();
+        actionInput.value='crear_servicio';
+        serviceIdInput.value='';
+        modalTitle.textContent='Crear nuevo servicio';
+        submitButton.innerHTML='<i class="fa fa-save" aria-hidden="true"></i> Guardar servicio';
+        dateInput.value="{{ fecha_hoy|escapejs }}";
+        stateInput.value='programado';
+        if(groupInput)groupInput.selectedIndex=0;
+        openModal();
+    }
+    if(openButton)openButton.addEventListener('click',prepareNewService);
     if(closeButton)closeButton.addEventListener('click',closeModal);
     if(cancelButton)cancelButton.addEventListener('click',closeModal);
     modal.addEventListener('click',event=>{if(event.target===modal)closeModal();});
-    document.addEventListener('keydown',event=>{if(event.key==='Escape')closeModal();});
-    document.getElementById('nuevoServicioForm').addEventListener('submit',function(event){
+    serviceForm.addEventListener('submit',function(event){
         const start=document.getElementById('srvHoraInicio').value;
         const end=document.getElementById('srvHoraFin').value;
         if(start&&end&&end<=start){
             event.preventDefault();
             alert('La hora de finalización debe ser posterior a la hora de inicio.');
+        }
+    });
+
+    // Menú contextual compartido: queda fuera de la tabla para que no lo recorte el scroll horizontal.
+    const actionMenu=document.getElementById('srvServiceActionMenu');
+    const editAction=document.getElementById('srvEditAction');
+    const deleteForm=document.getElementById('srvDeleteServiceForm');
+    const deleteId=document.getElementById('srvDeleteServiceId');
+    let activeActionButton=null;
+
+    function closeActionMenu(){
+        actionMenu.classList.remove('open');
+        actionMenu.setAttribute('aria-hidden','true');
+        if(activeActionButton)activeActionButton.setAttribute('aria-expanded','false');
+        activeActionButton=null;
+    }
+    function openActionMenu(button){
+        const id=button.dataset.serviceId;
+        closeActionMenu();
+        activeActionButton=button;
+        button.setAttribute('aria-expanded','true');
+        editAction.href='?editar='+encodeURIComponent(id);
+        deleteId.value=id;
+        actionMenu.classList.add('open');
+        actionMenu.setAttribute('aria-hidden','false');
+        const rect=button.getBoundingClientRect();
+        const menuWidth=actionMenu.offsetWidth;
+        const menuHeight=actionMenu.offsetHeight;
+        let left=rect.right-menuWidth;
+        left=Math.max(8,Math.min(left,window.innerWidth-menuWidth-8));
+        let top=rect.bottom+5;
+        if(top+menuHeight>window.innerHeight-8)top=rect.top-menuHeight-5;
+        top=Math.max(8,Math.min(top,window.innerHeight-menuHeight-8));
+        actionMenu.style.left=left+'px';
+        actionMenu.style.top=top+'px';
+    }
+    document.querySelectorAll('.srv-kebab').forEach(button=>{
+        button.addEventListener('click',event=>{
+            event.preventDefault();
+            event.stopPropagation();
+            if(activeActionButton===button&&actionMenu.classList.contains('open')){
+                closeActionMenu();
+            }else{
+                openActionMenu(button);
+            }
+        });
+    });
+    document.addEventListener('click',event=>{
+        if(!actionMenu.contains(event.target)&&!event.target.closest('.srv-kebab'))closeActionMenu();
+    });
+    document.addEventListener('keydown',event=>{
+        if(event.key==='Escape'){
+            closeActionMenu();
+            closeModal();
+        }
+    });
+    window.addEventListener('resize',closeActionMenu);
+    window.addEventListener('scroll',closeActionMenu,true);
+    deleteForm.addEventListener('submit',event=>{
+        const title=activeActionButton?activeActionButton.dataset.serviceTitle:'este servicio';
+        if(!window.confirm('¿Seguro que deseas eliminar «'+title+'»? Esta acción no se puede deshacer.')){
+            event.preventDefault();
+            return;
         }
     });
 })();
