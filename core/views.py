@@ -1108,12 +1108,28 @@ def guardar_cancion(request, id):
             request.body
         )
 
-        cancion.letra = data["letra"]
+        cancion.letra = data.get("letra", cancion.letra)
+        if "usa_capodastro" in data:
+            usa_capo = bool(data["usa_capodastro"])
+            traste = data.get("traste_capodastro")
+            if usa_capo and traste in (None, ""):
+                return JsonResponse({"ok": False, "error": "Indica el número de traste del capodastro."}, status=400)
+            if usa_capo:
+                try:
+                    traste = int(traste)
+                except (TypeError, ValueError):
+                    return JsonResponse({"ok": False, "error": "El traste debe ser un número entre 1 y 12."}, status=400)
+                if not 1 <= traste <= 12:
+                    return JsonResponse({"ok": False, "error": "El traste debe estar entre 1 y 12."}, status=400)
+            cancion.usa_capodastro = usa_capo
+            cancion.traste_capodastro = traste if usa_capo else None
 
         cancion.save()
 
         return JsonResponse({
-            "ok": True
+            "ok": True,
+            "usa_capodastro": cancion.usa_capodastro,
+            "traste_capodastro": cancion.traste_capodastro,
         })
 
     return JsonResponse({
