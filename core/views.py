@@ -463,7 +463,7 @@ def exportar_servicios_pdf(request):
         fontName='Helvetica-Bold',
         fontSize=7.5,
         leading=9,
-        textColor=colors.white,
+        textColor=colors.HexColor('#000000'),
         alignment=TA_LEFT,
     ))
 
@@ -512,8 +512,8 @@ def exportar_servicios_pdf(request):
     ]
     tabla = Table(filas, colWidths=anchuras, repeatRows=1, hAlign='LEFT')
     tabla.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#bd0026')),
-        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#d9aab5')),
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#f0f0f0')),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor('#b8b8b8')),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
         ('ALIGN', (0, 0), (0, -1), 'CENTER'),
         ('ROWBACKGROUNDS', (0, 1), (-1, -1),
