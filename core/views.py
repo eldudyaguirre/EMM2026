@@ -174,7 +174,7 @@ def calendario(request):
 
 @staff_member_required(login_url='home')
 def gestion_servicios(request):
-    """Lista los servicios y permite crear o cambiar su estado."""
+    """Lista los servicios y permite crear o actualizar su estado."""
     valores_formulario = {}
     abrir_modal = False
 
@@ -183,13 +183,18 @@ def gestion_servicios(request):
 
         if accion == 'cambiar_estado':
             servicio = get_object_or_404(Servicio, pk=request.POST.get('servicio_id'))
-            servicio.activo = not servicio.activo
-            servicio.save(update_fields=['activo'])
-            messages.success(
-                request,
-                f'Estado del servicio «{servicio.titulo}» actualizado a '
-                f'{"Activo" if servicio.activo else "Inactivo"}.'
-            )
+            nuevo_estado = request.POST.get('estado', '').strip()
+            estados_validos = dict(Servicio.ESTADOS)
+            if nuevo_estado not in estados_validos:
+                messages.error(request, 'Selecciona un estado válido para el servicio.')
+            else:
+                servicio.estado = nuevo_estado
+                servicio.save(update_fields=['estado'])
+                messages.success(
+                    request,
+                    f'El servicio «{servicio.titulo}» ahora está: '
+                    f'{estados_validos[nuevo_estado]}.'
+                )
             return redirect('servicios')
 
         if accion == 'crear_servicio':
@@ -198,7 +203,10 @@ def gestion_servicios(request):
                 'titulo', 'grupo_id', 'fecha', 'hora_inicio',
                 'hora_fin', 'lugar', 'observaciones', 'estado',
             )
-            valores_formulario = {campo: request.POST.get(campo, '').strip() for campo in campos}
+            valores_formulario = {
+                campo: request.POST.get(campo, '').strip()
+                for campo in campos
+            }
 
             titulo = valores_formulario['titulo']
             grupo = Grupo.objects.filter(
@@ -210,7 +218,7 @@ def gestion_servicios(request):
             hora_fin_texto = valores_formulario['hora_fin']
             lugar = valores_formulario['lugar']
             observaciones = valores_formulario['observaciones']
-            estado = valores_formulario['estado'] or 'activo'
+            estado = valores_formulario['estado'] or Servicio.ESTADO_PROGRAMADO
 
             errores = []
             if not titulo:
@@ -230,7 +238,7 @@ def gestion_servicios(request):
             try:
                 hora_inicio = datetime_time.fromisoformat(hora_inicio_texto)
             except (ValueError, TypeError):
-                errores.append('Selecciona una hora de inicio válida.')
+                errores.append('La hora de inicio es obligatoria y debe ser válida.')
 
             hora_fin = None
             if hora_fin_texto:
@@ -241,7 +249,7 @@ def gestion_servicios(request):
 
             if hora_inicio and hora_fin and hora_fin <= hora_inicio:
                 errores.append('La hora de finalización debe ser posterior a la hora de inicio.')
-            if estado not in ('activo', 'inactivo'):
+            if estado not in dict(Servicio.ESTADOS):
                 errores.append('Selecciona un estado válido.')
             if len(lugar) > 200:
                 errores.append('El lugar no puede superar 200 caracteres.')
@@ -258,7 +266,9 @@ def gestion_servicios(request):
                     hora_fin=hora_fin,
                     lugar=lugar,
                     observaciones=observaciones,
-                    activo=(estado == 'activo'),
+                    estado=estado,
+                    # Se conserva activo para mantener compatibilidad con el calendario existente.
+                    activo=True,
                 )
                 messages.success(
                     request,
@@ -274,11 +284,18 @@ def gestion_servicios(request):
     for grupo in grupos:
         grupo.form_selected = str(grupo.pk) == grupo_seleccionado
 
-    total_activos = servicios.filter(activo=True).count()
+    totales_estado = {
+        estado: servicios.filter(estado=estado).count()
+        for estado, etiqueta in Servicio.ESTADOS
+    }
     return render(request, 'servicios.html', {
         'servicios': servicios,
         'grupos': grupos,
-        'total_activos': total_activos,
+        'total_programados': totales_estado[Servicio.ESTADO_PROGRAMADO],
+        'total_en_ejecucion': totales_estado[Servicio.ESTADO_EN_EJECUCION],
+        'total_terminados': totales_estado[Servicio.ESTADO_TERMINADO],
+        'total_servicios': servicios.count(),
+        'estados_servicio': Servicio.ESTADOS,
         'fecha_hoy': date.today().isoformat(),
         'valores_formulario': valores_formulario,
         'abrir_modal': abrir_modal,
