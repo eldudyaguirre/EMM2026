@@ -585,18 +585,41 @@ def exportar_servicios_pdf(request):
 
 
 @staff_member_required(login_url='home')
+def servicios_visibles_para_usuario(user):
+    """Staff puede gestionar todos los grupos; servidores solo su(s) grupo(s)."""
+    base = Servicio.objects.filter(
+        estado=Servicio.ESTADO_PROGRAMADO,
+        fecha__gte=date.today(),
+        activo=True,
+        grupo__activo=True,
+    )
+    if user.is_staff or user.is_superuser:
+        return base
+
+    try:
+        perfil = user.perfil
+    except (Perfil.DoesNotExist, AttributeError):
+        return base.none()
+
+    # La relación explícita de integrantes es la fuente preferida.
+    por_integrantes = Q(grupo__integrantes=perfil)
+    # Compatibilidad con el grupo numérico del perfil (p. ej. grupo 3 -> "Grupo 3").
+    por_grupo_perfil = Q(grupo__nombre__iexact=f'Grupo {perfil.grupo}')
+    return base.filter(por_integrantes | por_grupo_perfil).distinct()
+
+
+@login_required(login_url='home')
 def servicios_programados_para_cancion(request, cancion_id):
     """Lista solo los servicios programados próximos para añadir una canción al repertorio."""
     if request.method != 'GET':
         return JsonResponse({'ok': False, 'error': 'Método no permitido.'}, status=405)
 
+    if not request.user.is_authenticated:
+        return JsonResponse({'ok': False, 'error': 'Inicia sesión para consultar servicios.'}, status=401)
+
     cancion = get_object_or_404(Cancion, pk=cancion_id)
-    hoy = date.today()
     servicios = list(
-        Servicio.objects.filter(
-            estado=Servicio.ESTADO_PROGRAMADO,
-            fecha__gte=hoy,
-        )
+        servicios_visibles_para_usuario(request.user)
         .select_related('grupo')
         .prefetch_related('repertorio')
         .annotate(total_canciones=Count('repertorio'))
@@ -663,7 +686,7 @@ def servicios_programados_para_cancion(request, cancion_id):
     })
 
 
-@staff_member_required(login_url='home')
+@login_required(login_url='home')
 def agregar_cancion_a_servicio(request, cancion_id):
     """Guarda en un servicio una copia independiente de la versión visible de la canción."""
     if request.method != 'POST':
@@ -680,10 +703,8 @@ def agregar_cancion_a_servicio(request, cancion_id):
     except (ValueError, TypeError):
         return JsonResponse({'ok': False, 'error': 'Selecciona un servicio.'}, status=400)
 
-    servicio = Servicio.objects.filter(
+    servicio = servicios_visibles_para_usuario(request.user).filter(
         pk=servicio_id,
-        estado=Servicio.ESTADO_PROGRAMADO,
-        fecha__gte=date.today(),
     ).select_related('grupo').first()
     if not servicio:
         return JsonResponse({
