@@ -322,7 +322,7 @@
                                                 <button onclick="editarCancion({{cancion.id}})" class="btn-accion"><i class="fa fa-pen"></i> Editar</button>
                                                 <button onclick="guardarCancion({{cancion.id}})" class="btn-accion"><i class="fa fa-save"></i> Guardar</button>
                                                 <button onclick="exportarPDF({{cancion.id}})" class="btn-accion"><i class="fa fa-file-pdf"></i> PDF</button>
-                                                {% if request.user.is_authenticated and request.user.is_staff %}
+                                                {% if request.user.is_authenticated %}
                                                 <button type="button" onclick="agregarServicio({{cancion.id}})" class="btn-accion"><i class="fa fa-plus"></i> Servicio</button>
                                                 {% endif %}
                                             </div>
@@ -439,7 +439,7 @@
     <script src="{% static 'js/SplitText.min.js' %}"></script>
     <script src="{% static 'js/ScrollTrigger.min.js' %}"></script>
     <script src="{% static 'js/function.js' %}"></script>
-    {% if request.user.is_authenticated and request.user.is_staff %}
+    {% if request.user.is_authenticated %}
     <!-- Modal para guardar una copia independiente de la canción en el repertorio del servicio. -->
     <div class="song-modal-backdrop" id="songServiceModal" role="dialog" aria-modal="true" aria-labelledby="songServiceModalTitle">
         <div class="song-modal">
