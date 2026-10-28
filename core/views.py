@@ -1,8 +1,8 @@
 from django.shortcuts import render,get_object_or_404
-from .models import Categoria, Cancion, Servicio, Grupo, Perfil, Instrumento
+from .models import Categoria, Cancion, Servicio, Grupo, Perfil, Instrumento, RepertorioServicio
 from django.contrib.auth.models import User
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Count
 from datetime import date, time as datetime_time
 from django.utils.safestring import mark_safe
 import re
@@ -581,6 +581,167 @@ def exportar_servicios_pdf(request):
     )
     buffer.close()
     return response
+
+
+@staff_member_required(login_url='home')
+def servicios_programados_para_cancion(request, cancion_id):
+    """Lista solo los servicios programados próximos para añadir una canción al repertorio."""
+    if request.method != 'GET':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido.'}, status=405)
+
+    cancion = get_object_or_404(Cancion, pk=cancion_id)
+    hoy = date.today()
+    servicios = list(
+        Servicio.objects.filter(
+            estado=Servicio.ESTADO_PROGRAMADO,
+            fecha__gte=hoy,
+            activo=True,
+            grupo__activo=True,
+        )
+        .select_related('grupo')
+        .annotate(total_canciones=Count('repertorio'))
+        .order_by('fecha', 'hora_inicio', 'pk')
+    )
+
+    ya_agregados = set(
+        RepertorioServicio.objects.filter(
+            cancion=cancion,
+            servicio__in=servicios,
+        ).values_list('servicio_id', flat=True)
+    )
+    dias_es = [
+        'lunes', 'martes', 'miércoles', 'jueves',
+        'viernes', 'sábado', 'domingo',
+    ]
+    meses_es = [
+        'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+        'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+    ]
+
+    resultados = []
+    for servicio in servicios:
+        resultados.append({
+            'id': servicio.pk,
+            'titulo': servicio.titulo,
+            'fecha': servicio.fecha.isoformat(),
+            'fecha_label': (
+                f'{dias_es[servicio.fecha.weekday()].capitalize()} '
+                f'{servicio.fecha.day} de {meses_es[servicio.fecha.month - 1]} de {servicio.fecha.year}'
+            ),
+            'hora_inicio': servicio.hora_inicio.strftime('%H:%M') if servicio.hora_inicio else '',
+            'hora_fin': servicio.hora_fin.strftime('%H:%M') if servicio.hora_fin else '',
+            'grupo': servicio.grupo.nombre,
+            'lugar': servicio.lugar or 'Lugar por confirmar',
+            'repertorio_count': servicio.total_canciones,
+            'ya_agregada': servicio.pk in ya_agregados,
+        })
+
+    return JsonResponse({
+        'ok': True,
+        'cancion': {
+            'id': cancion.pk,
+            'numero': cancion.numero,
+            'titulo': cancion.titulo,
+        },
+        'servicios': resultados,
+    })
+
+
+@staff_member_required(login_url='home')
+def agregar_cancion_a_servicio(request, cancion_id):
+    """Guarda en un servicio una copia independiente de la versión visible de la canción."""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido.'}, status=405)
+
+    try:
+        data = json.loads(request.body.decode('utf-8') or '{}')
+    except (ValueError, UnicodeDecodeError):
+        return JsonResponse({'ok': False, 'error': 'La solicitud no contiene datos válidos.'}, status=400)
+
+    cancion = get_object_or_404(Cancion, pk=cancion_id)
+    try:
+        servicio_id = int(data.get('servicio_id'))
+    except (ValueError, TypeError):
+        return JsonResponse({'ok': False, 'error': 'Selecciona un servicio.'}, status=400)
+
+    servicio = Servicio.objects.filter(
+        pk=servicio_id,
+        estado=Servicio.ESTADO_PROGRAMADO,
+        fecha__gte=date.today(),
+        activo=True,
+        grupo__activo=True,
+    ).select_related('grupo').first()
+    if not servicio:
+        return JsonResponse({
+            'ok': False,
+            'error': 'Ese servicio ya no está programado o no es una fecha futura disponible.',
+        }, status=400)
+
+    letra_snapshot = data.get('letra_snapshot')
+    if not isinstance(letra_snapshot, str) or not letra_snapshot.strip():
+        return JsonResponse({
+            'ok': False,
+            'error': 'La canción no tiene letra o acordes para guardar.',
+        }, status=400)
+
+    try:
+        semitonos = int(data.get('semitonos_transpuestos', 0))
+    except (ValueError, TypeError):
+        semitonos = 0
+    if not -24 <= semitonos <= 24:
+        return JsonResponse({'ok': False, 'error': 'La transposición indicada no es válida.'}, status=400)
+
+    notacion = str(data.get('notacion_acordes', 'original'))
+    if notacion not in dict(RepertorioServicio.NOTACIONES):
+        notacion = RepertorioServicio.NOTACION_ORIGINAL
+
+    with transaction.atomic():
+        orden_nuevo = servicio.repertorio.count() + 1
+        entrada, creada = RepertorioServicio.objects.get_or_create(
+            servicio=servicio,
+            cancion=cancion,
+            defaults={
+                'numero_snapshot': cancion.numero,
+                'titulo_snapshot': cancion.titulo,
+                'letra_snapshot': letra_snapshot,
+                'semitonos_transpuestos': semitonos,
+                'notacion_acordes': notacion,
+                'orden': orden_nuevo,
+                'agregado_por': request.user,
+            },
+        )
+        if not creada:
+            # Una canción aparece una sola vez por servicio; al volver a guardarla,
+            # se actualiza su copia dentro de ese repertorio, no la canción original.
+            entrada.numero_snapshot = cancion.numero
+            entrada.titulo_snapshot = cancion.titulo
+            entrada.letra_snapshot = letra_snapshot
+            entrada.semitonos_transpuestos = semitonos
+            entrada.notacion_acordes = notacion
+            entrada.agregado_por = request.user
+            entrada.save(update_fields=[
+                'numero_snapshot', 'titulo_snapshot', 'letra_snapshot',
+                'semitonos_transpuestos', 'notacion_acordes', 'agregado_por',
+            ])
+
+    return JsonResponse({
+        'ok': True,
+        'created': creada,
+        'message': (
+            'Canción agregada al repertorio del servicio.'
+            if creada else
+            'La canción ya estaba en este repertorio; se actualizó la versión guardada.'
+        ),
+        'repertorio_id': entrada.pk,
+        'repertorio_count': servicio.repertorio.count(),
+        'servicio': servicio.titulo,
+        'fecha_servicio': servicio.fecha.strftime('%d/%m/%Y'),
+        'cancion': entrada.titulo_snapshot,
+        'semitonos_transpuestos': entrada.semitonos_transpuestos,
+        'notacion_acordes': entrada.notacion_acordes,
+    })
+
+
 
 def buscar_canciones(request):
     """Busca coincidencias en todo el cancionero para el buscador lateral."""
