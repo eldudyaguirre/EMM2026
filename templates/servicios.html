@@ -157,6 +157,12 @@
                             <option value="{{ mes.valor }}" {% if mes.valor == mes_seleccionado %}selected{% endif %}>{{ mes.etiqueta }}</option>
                             {% endfor %}
                         </select>
+                        <label for="srvYearFilter">Año</label>
+                        <select id="srvYearFilter" name="anio" class="srv-month-select srv-year-select" onchange="this.form.submit()" aria-label="Filtrar servicios por año">
+                            {% for anio in anios_disponibles %}
+                            <option value="{{ anio }}" {% if anio == anio_seleccionado %}selected{% endif %}>{{ anio }}</option>
+                            {% endfor %}
+                        </select>
                     </form>
                     <button type="button" class="srv-btn" id="btnNuevoServicio"><i class="fa fa-plus" aria-hidden="true"></i> Nuevo servicio</button>
                 </div>
@@ -219,6 +225,7 @@
         <input type="hidden" name="accion" value="eliminar_servicio">
         <input type="hidden" name="servicio_id" id="srvDeleteServiceId" value="">
         <input type="hidden" name="mes" id="srvDeleteMonth" value="{{ mes_seleccionado }}">
+        <input type="hidden" name="anio" id="srvDeleteYear" value="{{ anio_seleccionado }}">
         <button type="submit" class="srv-action-item danger" role="menuitem"><span aria-hidden="true">⌫</span> Eliminar</button>
     </form>
 </div>
@@ -235,6 +242,7 @@
         <form method="post" id="nuevoServicioForm">
             {% csrf_token %}
             <input type="hidden" name="mes" value="{{ mes_seleccionado }}">
+            <input type="hidden" name="anio" value="{{ anio_seleccionado }}">
             <input type="hidden" name="accion" id="srvAction" value="{% if modo_edicion %}editar_servicio{% else %}crear_servicio{% endif %}">
             <input type="hidden" name="servicio_id" id="srvServicioId" value="{{ servicio_id_form }}">
             <div class="srv-form-grid">
@@ -343,7 +351,9 @@
     const deleteForm=document.getElementById('srvDeleteServiceForm');
     const deleteId=document.getElementById('srvDeleteServiceId');
     const deleteMonth=document.getElementById('srvDeleteMonth');
+    const deleteYear=document.getElementById('srvDeleteYear');
     const monthFilter=document.getElementById('srvMonthFilter');
+    const yearFilter=document.getElementById('srvYearFilter');
     let activeActionButton=null;
 
     function closeActionMenu(){
@@ -358,9 +368,11 @@
         activeActionButton=button;
         button.setAttribute('aria-expanded','true');
         const selectedMonth=monthFilter?monthFilter.value:'{{ mes_seleccionado|escapejs }}';
-        editAction.href='?editar='+encodeURIComponent(id)+'&mes='+encodeURIComponent(selectedMonth);
+        const selectedYear=yearFilter?yearFilter.value:'{{ anio_seleccionado|escapejs }}';
+        editAction.href='?editar='+encodeURIComponent(id)+'&mes='+encodeURIComponent(selectedMonth)+'&anio='+encodeURIComponent(selectedYear);
         deleteId.value=id;
         deleteMonth.value=selectedMonth;
+        deleteYear.value=selectedYear;
         actionMenu.classList.add('open');
         actionMenu.setAttribute('aria-hidden','false');
         const rect=button.getBoundingClientRect();
