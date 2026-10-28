@@ -28,7 +28,7 @@
         .srv-btn:hover{background:#e31b3d;color:#fff}
         .srv-btn.secondary{background:#35363d;color:#fff}
         .srv-btn.secondary:hover{background:#454650}
-        .srv-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:20px}
+        .srv-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px}
         .srv-stat{background:#202127;border:1px solid var(--srv-line);border-radius:11px;padding:15px}
         .srv-stat strong{display:block;font:700 24px 'Phudu',sans-serif;color:#fff}
         .srv-stat span{display:block;color:var(--srv-muted);font-size:12px;margin-top:3px}
@@ -42,11 +42,14 @@
         .srv-observations{display:block;color:#a9aab4;font-size:11px;margin-top:4px;max-width:240px;white-space:normal}
         .srv-muted{color:#b8b9c3}
         .srv-status{display:inline-flex;align-items:center;gap:6px;border-radius:30px;padding:5px 10px;font-size:11px;font-weight:800;white-space:nowrap}
-        .srv-status.active{background:#174d37;color:#bff3d9}
-        .srv-status.inactive{background:#713047;color:#ffd4df}
+        .srv-status.programado{background:rgba(94,169,255,.14);color:#8fc5ff}
+        .srv-status.en-ejecucion{background:rgba(229,182,75,.13);color:#f2cb70}
+        .srv-status.terminado{background:#174d37;color:#bff3d9}
         .srv-status:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
         .srv-toggle{background:transparent;border:1px solid #4a4b55;color:#e6e6eb;padding:7px 9px;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
         .srv-toggle:hover{border-color:var(--srv-red);color:#fff;background:rgba(189,0,38,.2)}
+        .srv-state-select{min-width:142px;background:#101114;color:#fff;border:1px solid #4a4b55;padding:7px 8px;border-radius:7px;font-size:11px;font-weight:700}
+        .srv-state-select option{background:#191a20;color:#fff}
         .srv-empty{text-align:center;padding:42px 20px;color:var(--srv-muted)}
         .srv-empty i{font-size:32px;color:#bd0026;margin-bottom:12px}
         .srv-empty strong{display:block;color:#fff;font-size:16px;margin-bottom:6px}
@@ -72,7 +75,7 @@
         .srv-textarea{min-height:86px;resize:vertical}
         .srv-modal-actions{display:flex;gap:9px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px}
         .srv-note{color:#a9aab4;font-size:11px;margin-top:6px}
-        @media(max-width:767px){.srv-hero{padding:115px 0 30px}.srv-main{padding:24px 0 45px}.srv-panel{padding:15px}.srv-stats{grid-template-columns:1fr 1fr}.srv-stat:last-child{grid-column:1/-1}.srv-form-grid{grid-template-columns:1fr}.srv-field.full{grid-column:auto}.srv-modal{padding:17px}.srv-toolbar h2{font-size:21px}}
+        @media(max-width:767px){.srv-hero{padding:115px 0 30px}.srv-main{padding:24px 0 45px}.srv-panel{padding:15px}.srv-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.srv-form-grid{grid-template-columns:1fr}.srv-field.full{grid-column:auto}.srv-modal{padding:17px}.srv-toolbar h2{font-size:21px}}
     </style>
 </head>
 <body>
@@ -104,7 +107,7 @@
     <div class="container">
         <span class="srv-kicker">MINISTERIO DE MÚSICA · EMAÚS</span>
         <h1>Servicios</h1>
-        <p>Programa y consulta los servicios del ministerio. Cada servicio tendrá un identificador propio para asociar las canciones en el siguiente módulo.</p>
+        <p>Programa y consulta los servicios del ministerio, sus horarios y el estado de cada celebración o ensayo. Cada servicio tiene un ID propio para asociar sus canciones en el módulo de repertorio.</p>
     </div>
 </section>
 
@@ -115,9 +118,10 @@
         {% endfor %}
 
         <div class="srv-stats">
-            <div class="srv-stat"><strong>{{ servicios|length }}</strong><span>Servicios registrados</span></div>
-            <div class="srv-stat"><strong>{{ grupos|length }}</strong><span>Grupos activos disponibles</span></div>
-            <div class="srv-stat"><strong>{{ total_activos }}</strong><span>Servicios activos</span></div>
+            <div class="srv-stat"><strong>{{ total_servicios }}</strong><span>Servicios registrados</span></div>
+            <div class="srv-stat"><strong>{{ total_programados }}</strong><span>Programados</span></div>
+            <div class="srv-stat"><strong>{{ total_en_ejecucion }}</strong><span>En ejecución</span></div>
+            <div class="srv-stat"><strong>{{ total_terminados }}</strong><span>Terminados</span></div>
         </div>
 
         <section class="srv-panel">
@@ -139,8 +143,8 @@
                             <th>Grupo responsable</th>
                             <th>Horario</th>
                             <th>Iglesia / lugar</th>
-                            <th>Estado</th>
-                            <th>Acción</th>
+                            <th>Estado actual</th>
+                            <th>Actualizar estado</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -155,13 +159,18 @@
                             <td>{{ servicio.grupo.nombre }}</td>
                             <td style="white-space:nowrap">{{ servicio.hora_inicio|time:"H:i" }}{% if servicio.hora_fin %}<br><span class="srv-muted">a {{ servicio.hora_fin|time:"H:i" }}</span>{% endif %}</td>
                             <td>{{ servicio.lugar|default:"Sin especificar" }}</td>
-                            <td><span class="srv-status {% if servicio.activo %}active{% else %}inactive{% endif %}">{% if servicio.activo %}Activo{% else %}Inactivo{% endif %}</span></td>
+                            <td><span class="srv-status {% if servicio.estado == 'programado' %}programado{% elif servicio.estado == 'en_ejecucion' %}en-ejecucion{% else %}terminado{% endif %}">{{ servicio.get_estado_display }}</span></td>
                             <td>
-                                <form method="post" style="margin:0">
+                                <form method="post" style="margin:0;display:flex;align-items:center;gap:6px;flex-wrap:wrap">
                                     {% csrf_token %}
                                     <input type="hidden" name="accion" value="cambiar_estado">
                                     <input type="hidden" name="servicio_id" value="{{ servicio.pk }}">
-                                    <button type="submit" class="srv-toggle">{% if servicio.activo %}Desactivar{% else %}Activar{% endif %}</button>
+                                    <select name="estado" class="srv-state-select" aria-label="Estado para {{ servicio.titulo }}">
+                                        {% for estado_valor, estado_etiqueta in estados_servicio %}
+                                        <option value="{{ estado_valor }}" {% if servicio.estado == estado_valor %}selected{% endif %}>{{ estado_etiqueta }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <button type="submit" class="srv-toggle">Guardar</button>
                                 </form>
                             </td>
                         </tr>
@@ -206,8 +215,9 @@
                 <div class="srv-field">
                     <label for="srvEstado">Estado *</label>
                     <select class="srv-select" id="srvEstado" name="estado" required>
-                        <option value="activo" {% if valores_formulario.estado != 'inactivo' %}selected{% endif %}>Activo</option>
-                        <option value="inactivo" {% if valores_formulario.estado == 'inactivo' %}selected{% endif %}>Inactivo</option>
+                        <option value="programado" {% if not valores_formulario.estado or valores_formulario.estado == 'programado' %}selected{% endif %}>Programado</option>
+                        <option value="en_ejecucion" {% if valores_formulario.estado == 'en_ejecucion' %}selected{% endif %}>En ejecución</option>
+                        <option value="terminado" {% if valores_formulario.estado == 'terminado' %}selected{% endif %}>Terminado</option>
                     </select>
                 </div>
                 <div class="srv-field full">
