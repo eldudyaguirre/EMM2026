@@ -70,7 +70,30 @@
                 padding: 10px 12px !important;
             }
         }
-    </style>
+            /* Desplegable de Administración en escritorio: independiente de Popper/Bootstrap JS. */
+        @media (min-width: 992px) {
+            .main-header {
+                z-index: 1050;
+            }
+            .main-header .header-sticky {
+                overflow: visible;
+            }
+            #menu > li.emaus-admin-dropdown {
+                position: relative;
+            }
+            #menu > li.emaus-admin-dropdown > .dropdown-menu {
+                display: none;
+                position: absolute;
+                top: 100%;
+                left: 0;
+                z-index: 1100;
+                margin-top: 0;
+            }
+            #menu > li.emaus-admin-dropdown > .dropdown-menu.show {
+                display: block;
+            }
+        }
+</style>
 </head>
 <body>
 
@@ -152,7 +175,7 @@
                                 <li class="nav-item"><a class="nav-link" href="{% url 'loginin' %}">Inicio</a></li>
                                 {% if request.user.is_authenticated and request.user.is_staff %}
                                 <li class="nav-item dropdown emaus-admin-dropdown">
-                                    <a class="nav-link dropdown-toggle" href="#" id="administracionDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Administración</a>
+                                    <a class="nav-link dropdown-toggle" href="#" id="administracionDropdown" role="button" aria-haspopup="true" aria-expanded="false">Administración</a>
                                     <ul class="dropdown-menu" aria-labelledby="administracionDropdown">
                                         <li><a class="dropdown-item" href="#">Servicios</a></li>
                                         <li><a class="dropdown-item" href="{% url 'grupos_servidores' %}">Grupos</a></li>
@@ -611,6 +634,47 @@
                 }
                 arrow.style.transform = 'none';
             }
+            // En escritorio, gestionar el submenú sin depender del plugin Dropdown de Bootstrap.
+            function closeDesktopAdminMenu() {
+                document.querySelectorAll('#menu > li.emaus-admin-dropdown').forEach(function (item) {
+                    item.classList.remove('show');
+                    const link = item.querySelector(':scope > a');
+                    const menu = item.querySelector(':scope > .dropdown-menu');
+                    if (link) {
+                        link.classList.remove('show');
+                        link.setAttribute('aria-expanded', 'false');
+                    }
+                    if (menu) menu.classList.remove('show');
+                });
+            }
+
+            document.addEventListener('click', function (event) {
+                const desktopLink = event.target.closest('#menu > li.emaus-admin-dropdown > a');
+                const isDesktop = window.matchMedia('(min-width: 992px)').matches;
+                if (desktopLink && isDesktop) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    const item = desktopLink.closest('li.emaus-admin-dropdown');
+                    const menu = item.querySelector(':scope > .dropdown-menu');
+                    const shouldOpen = !!menu && !menu.classList.contains('show');
+                    closeDesktopAdminMenu();
+                    if (shouldOpen) {
+                        item.classList.add('show');
+                        desktopLink.classList.add('show');
+                        desktopLink.setAttribute('aria-expanded', 'true');
+                        menu.classList.add('show');
+                    }
+                    return;
+                }
+                if (isDesktop && !event.target.closest('#menu > li.emaus-admin-dropdown')) {
+                    closeDesktopAdminMenu();
+                }
+            }, true);
+
+            document.addEventListener('keydown', function (event) {
+                if (event.key === 'Escape') closeDesktopAdminMenu();
+            });
+
             document.addEventListener('click', function (event) {
                 const link = event.target.closest('.slicknav_nav li.emaus-admin-dropdown > a');
                 if (!link || window.matchMedia('(min-width: 992px)').matches) return;
