@@ -269,10 +269,16 @@ def gestion_servicios(request):
     servicios = Servicio.objects.select_related('grupo').order_by(
         '-fecha', '-hora_inicio', '-pk'
     )
-    grupos = Grupo.objects.filter(activo=True).order_by('nombre')
+    grupos = list(Grupo.objects.filter(activo=True).order_by('nombre'))
+    grupo_seleccionado = valores_formulario.get('grupo_id', '')
+    for grupo in grupos:
+        grupo.form_selected = str(grupo.pk) == grupo_seleccionado
+
+    total_activos = servicios.filter(activo=True).count()
     return render(request, 'servicios.html', {
         'servicios': servicios,
         'grupos': grupos,
+        'total_activos': total_activos,
         'fecha_hoy': date.today().isoformat(),
         'valores_formulario': valores_formulario,
         'abrir_modal': abrir_modal,
