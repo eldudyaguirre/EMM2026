@@ -1591,12 +1591,12 @@
                 });
                 const data = await response.json();
                 if(!response.ok || !data.ok) throw new Error(data.error || 'No se pudo guardar la canción.');
-                showMessage(data.message + ' · ' + data.servicio + ' (' + data.fecha_servicio + ').', 'success');
                 await loadServices(service.id);
                 const saved = findSelectedService();
                 if(saved) saved.ya_agregada = true;
                 renderCurrentRepertoire(saved);
                 updateSaveButton();
+                showMessage(data.message + ' · ' + data.servicio + ' (' + data.fecha_servicio + ').', 'success');
             }catch(error){
                 showMessage(error.message || 'Ocurrió un error al guardar en el repertorio.', 'error');
                 updateSaveButton();
