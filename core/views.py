@@ -584,7 +584,6 @@ def exportar_servicios_pdf(request):
     return response
 
 
-@staff_member_required(login_url='home')
 def servicios_visibles_para_usuario(user):
     """Staff puede gestionar todos los grupos; servidores solo su(s) grupo(s)."""
     base = Servicio.objects.filter(
