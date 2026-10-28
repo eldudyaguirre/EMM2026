@@ -1,0 +1,72 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ servicio.titulo }} · Repertorio Emaús</title>
+<link rel="shortcut icon" href="{% static 'images/favicon.png' %}">
+<link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
+<link href="{% static 'css/all.min.css' %}" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700;800&family=Phudu:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--red:#bd0026;--bg:#101114;--panel:#191a20;--line:rgba(255,255,255,.11);--muted:#a9aab4}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:#f7f7f9;font-family:'Instrument Sans',sans-serif}
+.top{padding:25px 0;border-bottom:1px solid var(--line);background:linear-gradient(120deg,#191a20,#30000d)}
+.wrap{max-width:1100px;margin:auto;padding:0 20px}.back{display:inline-flex;gap:8px;align-items:center;color:#ff9aaa;text-decoration:none;font-weight:700;margin-bottom:18px}.back:hover{color:white}
+.kicker{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#ff7188;font-weight:800}
+h1{font:700 clamp(28px,4vw,42px) 'Phudu',sans-serif;margin:7px 0 12px;text-transform:uppercase}
+.meta{display:flex;gap:10px 20px;flex-wrap:wrap;color:#d0d0d7;font-size:14px}.meta span{display:inline-flex;align-items:center;gap:7px}
+.toolbar{position:sticky;top:0;z-index:5;background:rgba(16,17,20,.95);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);padding:12px 0}
+.tools{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}.tool-group{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btnx{border:1px solid var(--line);border-radius:9px;background:#25262d;color:#fff;padding:9px 12px;font-weight:700;cursor:pointer}.btnx:hover,.btnx.active{background:var(--red);border-color:var(--red)}.counter{color:var(--muted);font-weight:700;font-size:13px}
+main{padding:26px 0 70px}.empty{padding:40px 20px;text-align:center;background:var(--panel);border:1px solid var(--line);border-radius:16px;color:var(--muted)}
+.song{background:var(--panel);border:1px solid var(--line);border-radius:15px;margin-bottom:15px;overflow:hidden;scroll-margin-top:95px}.song.current{border-color:#ff4967;box-shadow:0 0 0 1px rgba(255,73,103,.2)}
+.song-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:15px 18px;background:rgba(255,255,255,.025);border-bottom:1px solid var(--line)}.song-title{font-size:18px;font-weight:800}.song-num{color:#ff8295;margin-right:9px}.song-meta{font-size:12px;color:var(--muted);margin-top:5px}
+.lyrics{padding:20px;white-space:pre-wrap;overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:16px;line-height:1.8;color:#f0f0f4;transition:font-size .15s}.lyric-wrap{overflow:auto}
+.song-actions{display:flex;gap:7px;flex-wrap:wrap}.song-actions button{font-size:12px;padding:7px 9px}
+.progress{height:5px;background:#2a2b32;border-radius:10px;overflow:hidden;margin-top:12px}.progress>div{height:100%;background:#ff4967;width:0;transition:width .2s}
+@media(max-width:600px){.wrap{padding:0 13px}.song-head{align-items:flex-start;flex-direction:column}.lyrics{padding:14px;font-size:15px}.tools{align-items:flex-start}.tool-group{width:100%}.tool-group .btnx{flex:1}}
+</style>
+</head>
+<body>
+<header class="top"><div class="wrap">
+<a class="back" href="{% url 'calendario' %}"><i class="fa-solid fa-arrow-left"></i> Volver al calendario</a>
+<div class="kicker">Ministerio de Música · Emaús</div><h1>{{ servicio.titulo }}</h1>
+<div class="meta"><span><i class="fa-regular fa-calendar"></i>{{ servicio.fecha|date:"l, d \d\e F \d\e Y" }}</span><span><i class="fa-regular fa-clock"></i>{{ servicio.hora_inicio|time:"H:i" }}{% if servicio.hora_fin %} – {{ servicio.hora_fin|time:"H:i" }}{% endif %}</span><span><i class="fa-solid fa-users"></i>{{ servicio.grupo.nombre }}</span>{% if servicio.lugar %}<span><i class="fa-solid fa-location-dot"></i>{{ servicio.lugar }}</span>{% endif %}</div>
+<div class="progress"><div id="progressBar"></div></div>
+</div></header>
+<div class="toolbar"><div class="wrap tools">
+<div class="tool-group"><span class="counter" id="counter">0 de {{ total_canciones }} canciones</span><button class="btnx" id="prevBtn" type="button"><i class="fa-solid fa-chevron-up"></i> Anterior</button><button class="btnx" id="nextBtn" type="button">Siguiente <i class="fa-solid fa-chevron-down"></i></button></div>
+<div class="tool-group"><button class="btnx" id="smaller" type="button" aria-label="Reducir letra">A−</button><button class="btnx" id="larger" type="button" aria-label="Aumentar letra">A+</button><button class="btnx" id="fullscreen" type="button"><i class="fa-solid fa-expand"></i> Pantalla completa</button></div>
+</div></div>
+<main class="wrap">
+{% if canciones %}
+<div id="songList">
+{% for item in canciones %}
+<section class="song" id="song-{{ forloop.counter }}" data-index="{{ forloop.counter0 }}">
+<div class="song-head"><div><div class="song-title"><span class="song-num">{{ forloop.counter }}.</span>{{ item.titulo_snapshot }}</div>
+<div class="song-meta">{% if item.usa_capodastro and item.traste_capodastro %}<i class="fa-solid fa-guitar"></i> Capodastro · traste {{ item.traste_capodastro }} &nbsp;·&nbsp;{% else %}Sin capodastro &nbsp;·&nbsp;{% endif %}Tonalidad: {% if item.semitonos_transpuestos > 0 %}+{% endif %}{{ item.semitonos_transpuestos }} semitono(s) · Notación: {{ item.get_notacion_acordes_display }}</div></div>
+<div class="song-actions"><button class="btnx" type="button" data-go="{{ forloop.counter0 }}">Abrir canción</button></div></div>
+<div class="lyric-wrap"><div class="lyrics">{{ item.letra_snapshot }}</div></div>
+</section>
+{% endfor %}
+</div>
+{% else %}
+<div class="empty"><i class="fa-solid fa-music" style="font-size:32px;color:#ff7188"></i><h2 style="color:white;margin-top:16px">Todavía no hay canciones en este repertorio</h2><p>Abre el cancionero, selecciona las canciones y agrégalas a este servicio. Luego podrás volver aquí para recorrer el repertorio completo.</p><a class="btnx" href="{% url 'calendario' %}">Volver al calendario</a></div>
+{% endif %}
+</main>
+<script>
+(function(){
+ const songs=Array.from(document.querySelectorAll('.song'));let current=0;let fontSize=16;
+ const counter=document.getElementById('counter'),bar=document.getElementById('progressBar');
+ function go(index){if(!songs.length)return;current=Math.max(0,Math.min(index,songs.length-1));songs.forEach((s,i)=>s.classList.toggle('current',i===current));songs[current].scrollIntoView({behavior:'smooth',block:'start'});counter.textContent=(current+1)+' de '+songs.length+' canciones';bar.style.width=((current+1)/songs.length*100)+'%';}
+ document.getElementById('prevBtn').addEventListener('click',()=>go(current-1));document.getElementById('nextBtn').addEventListener('click',()=>go(current+1));
+ document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>go(Number(b.dataset.go))));
+ document.getElementById('smaller').addEventListener('click',()=>{fontSize=Math.max(11,fontSize-1);document.querySelectorAll('.lyrics').forEach(e=>e.style.fontSize=fontSize+'px')});
+ document.getElementById('larger').addEventListener('click',()=>{fontSize=Math.min(30,fontSize+1);document.querySelectorAll('.lyrics').forEach(e=>e.style.fontSize=fontSize+'px')});
+ document.getElementById('fullscreen').addEventListener('click',async()=>{try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen();else await document.exitFullscreen()}catch(e){}});
+ document.addEventListener('keydown',e=>{if(e.key==='ArrowDown'||e.key==='PageDown'){e.preventDefault();go(current+1)}if(e.key==='ArrowUp'||e.key==='PageUp'){e.preventDefault();go(current-1)}});
+ if(songs.length)go(0);
+})();
+</script>
+</body></html>
