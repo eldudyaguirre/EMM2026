@@ -2,6 +2,7 @@ from django.shortcuts import render,get_object_or_404
 from .models import Categoria, Cancion, Servicio, Grupo, Perfil, Instrumento
 from django.contrib.auth.models import User
 from django.db import transaction
+from django.db.models import Q
 from datetime import date
 from django.utils.safestring import mark_safe
 import re
@@ -168,6 +169,137 @@ def calendario(request):
         'servicios': servicios,
         'cumpleanos': cumpleanos,
     })
+
+
+def buscar_canciones(request):
+    """Busca coincidencias en todo el cancionero para el buscador lateral."""
+    if request.method != 'GET':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido.'}, status=405)
+
+    termino = request.GET.get('q', '').strip()[:100]
+    if len(termino) < 2:
+        return JsonResponse({'ok': True, 'results': []})
+
+    coincidencias = Q(titulo__icontains=termino) | Q(letra__icontains=termino) | Q(categoria__nombre__icontains=termino)
+    if termino.isdigit():
+        coincidencias |= Q(numero=int(termino))
+
+    canciones = Cancion.objects.select_related('categoria').filter(
+        coincidencias
+    ).order_by('numero', 'titulo')[:20]
+
+    resultados = []
+    for cancion in canciones:
+        texto = (cancion.letra or '').replace('\r', ' ').replace('\n', ' ').strip()
+        resultados.append({
+            'id': cancion.pk,
+            'numero': cancion.numero,
+            'titulo': cancion.titulo,
+            'categoria': cancion.categoria.nombre,
+            'preview': texto[:140] + ('…' if len(texto) > 140 else ''),
+        })
+
+    return JsonResponse({'ok': True, 'results': resultados})
+
+
+def detalle_cancion(request, id):
+    """Devuelve los datos de una canción para mostrarla en el popup del buscador."""
+    if request.method != 'GET':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido.'}, status=405)
+
+    cancion = get_object_or_404(Cancion.objects.select_related('categoria'), pk=id)
+    return JsonResponse({
+        'ok': True,
+        'song': {
+            'id': cancion.pk,
+            'numero': cancion.numero,
+            'titulo': cancion.titulo,
+            'categoria': cancion.categoria.nombre,
+            'categoria_id': cancion.categoria_id,
+            'letra': cancion.letra or '',
+            'usa_capodastro': cancion.usa_capodastro,
+            'traste_capodastro': cancion.traste_capodastro,
+        }
+    })
+
+
+@staff_member_required(login_url='home')
+def crear_cancion(request, id):
+    """Crea una canción nueva dentro de la categoría que se está visitando."""
+    if request.method != 'POST':
+        return JsonResponse({'ok': False, 'error': 'Método no permitido.'}, status=405)
+
+    categoria = get_object_or_404(Categoria, pk=id)
+    titulo = request.POST.get('titulo', '').strip()
+    letra = request.POST.get('letra', '').strip()
+    numero_texto = request.POST.get('numero', '').strip()
+    usa_capodastro = request.POST.get('usa_capodastro') == 'on'
+    traste_texto = request.POST.get('traste_capodastro', '').strip()
+
+    if not titulo or not letra:
+        return JsonResponse({
+            'ok': False,
+            'error': 'El título y la letra son obligatorios.'
+        }, status=400)
+
+    numero = None
+    if numero_texto:
+        try:
+            numero = int(numero_texto)
+            if numero < 1:
+                raise ValueError
+        except (ValueError, TypeError):
+            return JsonResponse({
+                'ok': False,
+                'error': 'El número debe ser un entero mayor que cero.'
+            }, status=400)
+        if Cancion.objects.filter(numero=numero).exists():
+            return JsonResponse({
+                'ok': False,
+                'error': f'Ya existe una canción con el número {numero}.'
+            }, status=400)
+
+    traste = None
+    if usa_capodastro:
+        if traste_texto:
+            try:
+                traste = int(traste_texto)
+                if traste < 1:
+                    raise ValueError
+            except (ValueError, TypeError):
+                return JsonResponse({
+                    'ok': False,
+                    'error': 'El traste del capodastro debe ser un entero mayor que cero.'
+                }, status=400)
+        else:
+            return JsonResponse({
+                'ok': False,
+                'error': 'Indica el traste del capodastro.'
+            }, status=400)
+
+    cancion = Cancion.objects.create(
+        numero=numero,
+        categoria=categoria,
+        titulo=titulo,
+        letra=letra,
+        usa_capodastro=usa_capodastro,
+        traste_capodastro=traste if usa_capodastro else None,
+    )
+
+    return JsonResponse({
+        'ok': True,
+        'message': 'La canción se creó correctamente.',
+        'song': {
+            'id': cancion.pk,
+            'numero': cancion.numero,
+            'titulo': cancion.titulo,
+            'categoria': categoria.nombre,
+            'categoria_id': categoria.pk,
+            'letra': cancion.letra,
+            'usa_capodastro': cancion.usa_capodastro,
+            'traste_capodastro': cancion.traste_capodastro,
+        }
+    }, status=201)
 
 
 def categoria(request,id):
