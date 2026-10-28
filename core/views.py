@@ -147,6 +147,7 @@ def calendario(request):
             'lugar': servicio.lugar,
             'observaciones': servicio.observaciones,
             'tipo_grupo': servicio.grupo.tipo,
+            'estado': servicio.estado,
         }
         for servicio in Servicio.objects.filter(
             activo=True,
