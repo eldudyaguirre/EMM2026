@@ -83,6 +83,29 @@
 	</div>
 	<!-- Preloader End -->
 
+    <!-- Fallback: evitar que el preloader bloquee la página si falla alguna librería JS. -->
+    <script>
+    (function () {
+        function ocultarPreloader() {
+            var preloader = document.querySelector('.preloader');
+            if (preloader) {
+                preloader.style.opacity = '0';
+                preloader.style.visibility = 'hidden';
+                preloader.style.pointerEvents = 'none';
+                window.setTimeout(function () {
+                    preloader.style.display = 'none';
+                }, 650);
+            }
+        }
+        if (document.readyState === 'complete') {
+            ocultarPreloader();
+        } else {
+            window.addEventListener('load', ocultarPreloader, { once: true });
+            window.setTimeout(ocultarPreloader, 3000);
+        }
+    })();
+    </script>
+
     <!-- Header Start -->
 	<header class="main-header" >
 		<div class="header-sticky">
