@@ -182,7 +182,7 @@ def gestion_servicios(request):
     servicio_id_form = ''
 
     hoy = date.today()
-    mes_solicitado = (request.POST.get('mes') if request.method == 'POST' else request.GET.get('mes', '')).strip()
+    mes_solicitado = (request.POST.get('mes', '') if request.method == 'POST' else request.GET.get('mes', '')).strip()
     try:
         if not re.fullmatch(r'\d{4}-\d{2}', mes_solicitado):
             raise ValueError
