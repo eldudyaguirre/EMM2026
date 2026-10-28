@@ -595,8 +595,6 @@ def servicios_programados_para_cancion(request, cancion_id):
         Servicio.objects.filter(
             estado=Servicio.ESTADO_PROGRAMADO,
             fecha__gte=hoy,
-            activo=True,
-            grupo__activo=True,
         )
         .select_related('grupo')
         .prefetch_related('repertorio')
@@ -679,8 +677,6 @@ def agregar_cancion_a_servicio(request, cancion_id):
         pk=servicio_id,
         estado=Servicio.ESTADO_PROGRAMADO,
         fecha__gte=date.today(),
-        activo=True,
-        grupo__activo=True,
     ).select_related('grupo').first()
     if not servicio:
         return JsonResponse({
