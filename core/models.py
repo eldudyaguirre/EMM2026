@@ -161,6 +161,63 @@ class Servicio(models.Model):
         return f"{self.titulo} - {self.grupo.nombre} ({self.fecha:%d/%m/%Y})"
 
 
+class RepertorioServicio(models.Model):
+    """Versión de una canción asignada a un servicio, independiente de la canción original."""
+    NOTACION_ORIGINAL = 'original'
+    NOTACION_LATINA = 'latina'
+    NOTACION_INGLESA = 'inglesa'
+    NOTACIONES = (
+        (NOTACION_ORIGINAL, 'Original'),
+        (NOTACION_LATINA, 'DO–RE–MI'),
+        (NOTACION_INGLESA, 'C–D–E'),
+    )
+
+    servicio = models.ForeignKey(
+        Servicio,
+        on_delete=models.CASCADE,
+        related_name='repertorio',
+    )
+    cancion = models.ForeignKey(
+        Cancion,
+        on_delete=models.PROTECT,
+        related_name='repertorios_servicio',
+    )
+    numero_snapshot = models.IntegerField(null=True, blank=True)
+    titulo_snapshot = models.CharField(max_length=200)
+    letra_snapshot = models.TextField(
+        help_text='Copia de la letra y acordes como se prepararon para este servicio.'
+    )
+    semitonos_transpuestos = models.IntegerField(default=0)
+    notacion_acordes = models.CharField(
+        max_length=10,
+        choices=NOTACIONES,
+        default=NOTACION_ORIGINAL,
+    )
+    orden = models.PositiveIntegerField(default=0)
+    agregado_por = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='canciones_repertorio_agregadas',
+    )
+    fecha_agregado = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['orden', 'id']
+        verbose_name = 'Canción del repertorio del servicio'
+        verbose_name_plural = 'Canciones del repertorio de los servicios'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['servicio', 'cancion'],
+                name='uniq_cancion_por_servicio',
+            ),
+        ]
+
+    def __str__(self):
+        return f'{self.servicio} · {self.titulo_snapshot}'
+
+
 class Instrumento(models.Model):
     """Catálogo de instrumentos musicales que pueden tocar los servidores."""
     nombre = models.CharField(max_length=100, unique=True)
