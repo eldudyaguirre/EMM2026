@@ -3,7 +3,7 @@ from .models import Categoria, Cancion, Servicio, Grupo, Perfil, Instrumento
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import Q
-from datetime import date
+from datetime import date, time as datetime_time
 from django.utils.safestring import mark_safe
 import re
 import logging
@@ -168,6 +168,114 @@ def calendario(request):
     return render(request, 'calendario.html', {
         'servicios': servicios,
         'cumpleanos': cumpleanos,
+    })
+
+
+
+@staff_member_required(login_url='home')
+def gestion_servicios(request):
+    """Lista los servicios y permite crear o cambiar su estado."""
+    valores_formulario = {}
+    abrir_modal = False
+
+    if request.method == 'POST':
+        accion = request.POST.get('accion', '')
+
+        if accion == 'cambiar_estado':
+            servicio = get_object_or_404(Servicio, pk=request.POST.get('servicio_id'))
+            servicio.activo = not servicio.activo
+            servicio.save(update_fields=['activo'])
+            messages.success(
+                request,
+                f'Estado del servicio «{servicio.titulo}» actualizado a '
+                f'{"Activo" if servicio.activo else "Inactivo"}.'
+            )
+            return redirect('servicios')
+
+        if accion == 'crear_servicio':
+            abrir_modal = True
+            campos = (
+                'titulo', 'grupo_id', 'fecha', 'hora_inicio',
+                'hora_fin', 'lugar', 'observaciones', 'estado',
+            )
+            valores_formulario = {campo: request.POST.get(campo, '').strip() for campo in campos}
+
+            titulo = valores_formulario['titulo']
+            grupo = Grupo.objects.filter(
+                pk=valores_formulario['grupo_id'],
+                activo=True,
+            ).first()
+            fecha_texto = valores_formulario['fecha']
+            hora_inicio_texto = valores_formulario['hora_inicio']
+            hora_fin_texto = valores_formulario['hora_fin']
+            lugar = valores_formulario['lugar']
+            observaciones = valores_formulario['observaciones']
+            estado = valores_formulario['estado'] or 'activo'
+
+            errores = []
+            if not titulo:
+                errores.append('El nombre del servicio es obligatorio.')
+            elif len(titulo) > 150:
+                errores.append('El nombre del servicio no puede superar 150 caracteres.')
+            if not grupo:
+                errores.append('Selecciona un grupo responsable activo.')
+
+            fecha_servicio = None
+            try:
+                fecha_servicio = date.fromisoformat(fecha_texto)
+            except (ValueError, TypeError):
+                errores.append('Selecciona una fecha válida.')
+
+            hora_inicio = None
+            try:
+                hora_inicio = datetime_time.fromisoformat(hora_inicio_texto)
+            except (ValueError, TypeError):
+                errores.append('Selecciona una hora de inicio válida.')
+
+            hora_fin = None
+            if hora_fin_texto:
+                try:
+                    hora_fin = datetime_time.fromisoformat(hora_fin_texto)
+                except (ValueError, TypeError):
+                    errores.append('La hora de finalización no es válida.')
+
+            if hora_inicio and hora_fin and hora_fin <= hora_inicio:
+                errores.append('La hora de finalización debe ser posterior a la hora de inicio.')
+            if estado not in ('activo', 'inactivo'):
+                errores.append('Selecciona un estado válido.')
+            if len(lugar) > 200:
+                errores.append('El lugar no puede superar 200 caracteres.')
+
+            if errores:
+                for error in errores:
+                    messages.error(request, error)
+            else:
+                servicio = Servicio.objects.create(
+                    titulo=titulo,
+                    grupo=grupo,
+                    fecha=fecha_servicio,
+                    hora_inicio=hora_inicio,
+                    hora_fin=hora_fin,
+                    lugar=lugar,
+                    observaciones=observaciones,
+                    activo=(estado == 'activo'),
+                )
+                messages.success(
+                    request,
+                    f'Servicio «{servicio.titulo}» creado correctamente con el ID #{servicio.pk}.'
+                )
+                return redirect('servicios')
+
+    servicios = Servicio.objects.select_related('grupo').order_by(
+        '-fecha', '-hora_inicio', '-pk'
+    )
+    grupos = Grupo.objects.filter(activo=True).order_by('nombre')
+    return render(request, 'servicios.html', {
+        'servicios': servicios,
+        'grupos': grupos,
+        'fecha_hoy': date.today().isoformat(),
+        'valores_formulario': valores_formulario,
+        'abrir_modal': abrir_modal,
     })
 
 
