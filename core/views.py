@@ -527,17 +527,14 @@ def exportar_servicios_pdf(request):
 
     def dibujar_cabecera_pie(canvas, documento):
         canvas.saveState()
-        granate_oscuro = colors.HexColor('#251016')
-        rojo_emaus = colors.HexColor('#bd0026')
+        negro = colors.HexColor('#000000')
 
-        # Cabecera oscura con acento rojo, acorde a la interfaz web.
-        canvas.setFillColor(granate_oscuro)
+        # Cabecera blanca, sin franjas de color, para imprimir limpiamente.
+        canvas.setFillColor(colors.white)
         canvas.rect(0, alto - alto_cabecera, ancho, alto_cabecera, fill=1, stroke=0)
-        canvas.setFillColor(rojo_emaus)
-        canvas.rect(0, alto - 2.5 * mm, ancho, 2.5 * mm, fill=1, stroke=0)
 
         # Logo centrado en una zona propia; el texto institucional queda debajo y sin solaparse.
-        logo_path = finders.find('images/logomio.svg')
+        logo_path = finders.find('images/logomio_negro.svg')
         if logo_path:
             try:
                 logo = svg2rlg(logo_path)
@@ -553,7 +550,7 @@ def exportar_servicios_pdf(request):
             except Exception:
                 pass
 
-        canvas.setFillColor(colors.white)
+        canvas.setFillColor(negro)
         canvas.setFont('Helvetica', 9)
         canvas.drawCentredString(
             ancho / 2, alto - 29 * mm,
@@ -568,7 +565,7 @@ def exportar_servicios_pdf(request):
         )
 
         # Pie sobrio con acento rojo, sin sección de notas al final del documento.
-        canvas.setStrokeColor(rojo_emaus)
+        canvas.setStrokeColor(colors.HexColor('#777777'))
         canvas.setLineWidth(0.8)
         canvas.line(margen_lateral, 14 * mm, ancho - margen_lateral, 14 * mm)
         canvas.setFillColor(colors.HexColor('#555555'))
