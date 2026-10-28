@@ -558,14 +558,29 @@
         if(window.EmausSongTools) window.EmausSongTools.reset(editor);
         editor.contentEditable=true;
         editor.classList.add("modo-edicion");
+        let tools = editor.parentElement.querySelector(".capo-edit-tools");
+        if(!tools){
+            tools=document.createElement("div");
+            tools.className="capo-edit-tools";
+            tools.style.cssText="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 0";
+            const enabled=document.createElement("input"); enabled.type="checkbox"; enabled.id="capo-enabled-"+id; enabled.checked=editor.dataset.capoEnabled==="true";
+            const label=document.createElement("label"); label.htmlFor=enabled.id; label.textContent="Usar capodastro"; label.prepend(enabled);
+            const number=document.createElement("input"); number.type="number"; number.min="1"; number.max="12"; number.id="capo-fret-"+id; number.placeholder="Traste del capo"; number.style.cssText="width:140px;padding:7px";
+            number.value=editor.dataset.capoFret||""; number.disabled=!enabled.checked;
+            enabled.addEventListener("change",()=>{number.disabled=!enabled.checked;if(!enabled.checked)number.value="";});
+            tools.append(label,number); editor.insertAdjacentElement("afterend",tools);
+        }
+        tools.style.display="flex";
         editor.focus();
     }
     function guardarCancion(id){
         let editor = document.getElementById("cancion"+id);
         let letra = editor.innerText;
-        fetch("/guardar-cancion/"+id+"/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCookie("csrftoken")},body:JSON.stringify({letra:letra})})
+        const capoEnabled=document.getElementById("capo-enabled-"+id);
+        const capoFret=document.getElementById("capo-fret-"+id);
+        fetch("/guardar-cancion/"+id+"/",{method:"POST",headers:{"Content-Type":"application/json","X-CSRFToken":getCookie("csrftoken")},body:JSON.stringify({letra:letra,usa_capodastro:capoEnabled?capoEnabled.checked:editor.dataset.capoEnabled==="true",traste_capodastro:capoFret&&capoFret.value?parseInt(capoFret.value,10):null})})
         .then(response=>{if(!response.ok) throw new Error("Error HTTP: "+response.status); return response.json();})
-        .then(data=>{if(data.ok){editor.contentEditable=false;editor.classList.remove("modo-edicion");alert("Cambios guardados correctamente");}else{alert("No se pudo guardar");}})
+        .then(data=>{if(data.ok){editor.contentEditable=false;editor.classList.remove("modo-edicion");editor.dataset.capoEnabled=data.usa_capodastro?"true":"false";editor.dataset.capoFret=data.traste_capodastro||"";const capoTools=document.querySelector("#cancion"+id+" + .capo-edit-tools");if(capoTools)capoTools.style.display="none";const info=document.querySelector("#cancion"+id).parentElement.querySelector(".song-info");if(info)info.innerHTML=data.usa_capodastro?'<span class="badge bg-warning">🎸 Capo: '+data.traste_capodastro+'</span>':'';alert("Cambios guardados correctamente");}else{alert("No se pudo guardar");}})
         .catch(error=>{console.error(error);alert("Error guardando: "+error.message);});
     }
     function exportarPDF(id){window.location="/exportar-pdf/"+id+"/";}
