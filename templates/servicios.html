@@ -34,6 +34,8 @@
         .srv-btn:hover{background:#e31b3d;color:#fff}
         .srv-btn.secondary{background:#35363d;color:#fff}
         .srv-btn.secondary:hover{background:#454650}
+        .srv-btn.pdf{background:#1e3b60;border:1px solid #365681}
+        .srv-btn.pdf:hover{background:#294c78;color:#fff}
         .srv-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px}
         .srv-stat{background:#202127;border:1px solid var(--srv-line);border-radius:11px;padding:15px}
         .srv-stat strong{display:block;font:700 24px 'Phudu',sans-serif;color:#fff}
@@ -166,6 +168,7 @@
                         </select>
                     </form>
                     <button type="button" class="srv-btn" id="btnNuevoServicio"><i class="fa fa-plus" aria-hidden="true"></i> Nuevo servicio</button>
+                    <a class="srv-btn pdf" href="{% url 'exportar_servicios_pdf' %}?mes={{ mes_seleccionado }}&amp;anio={{ anio_seleccionado }}" aria-label="Exportar calendario de servicios del mes seleccionado a PDF"><i class="fa fa-file-pdf" aria-hidden="true"></i> Exportar PDF</a>
                 </div>
             </div>
 
