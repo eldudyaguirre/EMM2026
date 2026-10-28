@@ -11,6 +11,7 @@ urlpatterns = [
     path('grupos-servidores/', views.grupos_servidores, name='grupos_servidores'),
     path('grupos-servidores/exportar-pdf/', views.exportar_grupos_pdf, name='exportar_grupos_pdf'),
     path('servidores/', views.servidores, name='servidores'),
+    path('servidores/exportar-pdf/', views.exportar_servidores_pdf, name='exportar_servidores_pdf'),
     path('exportar-pdf/<int:id>/', views.exportar_pdf, name='exportar_pdf'),
     path('categoria/<int:id>/',views.categoria,name='categoria'),
     path('logout/',views.cerrar_sesion,name='logout'),
