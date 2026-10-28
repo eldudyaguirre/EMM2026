@@ -634,3 +634,150 @@ def servidores(request):
         'instrumentos': Instrumento.objects.filter(activo=True),
         'instrumentos_perfil': list(perfil_editar.instrumentos.values_list('id', flat=True)) if perfil_editar else [],
     })
+
+
+@staff_member_required(login_url='home')
+def exportar_servidores_pdf(request):
+    """Exporta todos los servidores registrados a un PDF en formato horizontal."""
+    from reportlab.lib.pagesizes import landscape
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.platypus import Paragraph
+    from xml.sax.saxutils import escape
+
+    perfiles = list(
+        Perfil.objects.select_related('usuario')
+        .prefetch_related('instrumentos')
+        .order_by('nombres')
+    )
+
+    buffer = BytesIO()
+    page_size = landscape(A4)
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=page_size,
+        rightMargin=12 * mm,
+        leftMargin=12 * mm,
+        topMargin=27 * mm,
+        bottomMargin=17 * mm,
+        title='Listado de servidores - Emaús',
+        author='Emaús - Ministerio de Música',
+    )
+
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(
+        name='ServidoresPDFTitle',
+        parent=styles['Title'],
+        fontName='Helvetica-Bold',
+        fontSize=18,
+        leading=22,
+        alignment=TA_CENTER,
+        textColor=colors.HexColor('#bd0026'),
+        spaceAfter=2 * mm,
+    ))
+    styles.add(ParagraphStyle(
+        name='ServidoresPDFSubtitle',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=9,
+        leading=12,
+        alignment=TA_CENTER,
+        textColor=colors.HexColor('#555555'),
+        spaceAfter=5 * mm,
+    ))
+    styles.add(ParagraphStyle(
+        name='ServidoresPDFCell',
+        parent=styles['BodyText'],
+        fontName='Helvetica',
+        fontSize=7.2,
+        leading=9,
+        wordWrap='CJK',
+    ))
+    styles.add(ParagraphStyle(
+        name='ServidoresPDFHeader',
+        parent=styles['BodyText'],
+        fontName='Helvetica-Bold',
+        fontSize=7,
+        leading=8,
+        textColor=colors.white,
+        alignment=TA_CENTER,
+    ))
+
+    story = [
+        Paragraph('LISTADO DE SERVIDORES', styles['ServidoresPDFTitle']),
+        Paragraph(
+            f'Ministerio de Música · Emaús · {len(perfiles)} servidor(es) registrado(s)',
+            styles['ServidoresPDFSubtitle']
+        ),
+    ]
+
+    header = ['N.º', 'Servidor', 'Usuario', 'Correo electrónico', 'Teléfono',
+              'Nacimiento', 'Estado', 'Instrumentos / voz']
+    rows = [[Paragraph(escape(item), styles['ServidoresPDFHeader']) for item in header]]
+
+    for numero, perfil in enumerate(perfiles, start=1):
+        instrumentos = [instrumento.nombre for instrumento in perfil.instrumentos.all()]
+        if perfil.es_cantante:
+            instrumentos.append('Canto')
+        texto_instrumentos = ', '.join(instrumentos) if instrumentos else '—'
+        estado = 'Activo' if perfil.usuario.is_active else 'Inactivo'
+        nacimiento = perfil.fecha_nacimiento.strftime('%d/%m/%Y') if perfil.fecha_nacimiento else '—'
+        datos = [
+            str(numero),
+            perfil.nombres or '—',
+            perfil.usuario.username or '—',
+            perfil.correo or '—',
+            perfil.telefono or '—',
+            nacimiento,
+            estado,
+            texto_instrumentos,
+        ]
+        rows.append([Paragraph(escape(str(value)), styles['ServidoresPDFCell']) for value in datos])
+
+    if not perfiles:
+        rows.append([
+            Paragraph('—', styles['ServidoresPDFCell']),
+            Paragraph('No hay servidores registrados.', styles['ServidoresPDFCell']),
+            Paragraph('', styles['ServidoresPDFCell']),
+            Paragraph('', styles['ServidoresPDFCell']),
+            Paragraph('', styles['ServidoresPDFCell']),
+            Paragraph('', styles['ServidoresPDFCell']),
+            Paragraph('', styles['ServidoresPDFCell']),
+            Paragraph('', styles['ServidoresPDFCell']),
+        ])
+
+    col_widths = [8*mm, 37*mm, 23*mm, 49*mm, 25*mm, 22*mm, 19*mm, 90*mm]
+    table = Table(rows, colWidths=col_widths, repeatRows=1, hAlign='LEFT')
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#25252b')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('GRID', (0, 0), (-1, -1), 0.4, colors.HexColor('#d5d5da')),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+        ('ALIGN', (5, 1), (6, -1), 'CENTER'),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1),
+         [colors.white, colors.HexColor('#f5f5f7')]),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 4),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+    ]))
+    story.append(table)
+
+    def dibujar_pie(canvas, documento):
+        canvas.saveState()
+        canvas.setFillColor(colors.HexColor('#bd0026'))
+        canvas.rect(0, page_size[1] - 5 * mm, page_size[0], 5 * mm, fill=1, stroke=0)
+        canvas.setStrokeColor(colors.HexColor('#dddddd'))
+        canvas.line(12 * mm, 12 * mm, page_size[0] - 12 * mm, 12 * mm)
+        canvas.setFont('Helvetica', 8)
+        canvas.setFillColor(colors.HexColor('#666666'))
+        canvas.drawString(12 * mm, 7 * mm, 'Emaús · Listado de servidores')
+        canvas.drawRightString(page_size[0] - 12 * mm, 7 * mm, f'Página {documento.page}')
+        canvas.restoreState()
+
+    doc.build(story, onFirstPage=dibujar_pie, onLaterPages=dibujar_pie)
+    response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+    response['Content-Disposition'] = 'attachment; filename="listado_servidores_emaus.pdf"'
+    buffer.close()
+    return response
+
