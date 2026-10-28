@@ -70,6 +70,46 @@
                 padding-top: 55px;
             }
         }
+
+        /* Buscador global del cancionero */
+        .song-search-panel{margin-top:24px;background:#fff;border:1px solid #e8e4de;border-radius:14px;padding:18px;box-shadow:0 8px 24px rgba(0,0,0,.04)}
+        .song-search-panel h3{font-size:18px;font-weight:800;margin:0 0 7px;color:#171717}
+        .song-search-help{font-size:12px;color:#777;margin:0 0 12px}
+        .song-search-input{width:100%;border:1px solid #d9d5ce;border-radius:9px;padding:12px 13px;background:#faf9f6;color:#222;outline:none}
+        .song-search-input:focus{border-color:#bd0026;box-shadow:0 0 0 3px rgba(189,0,38,.1)}
+        .song-search-results{display:none;margin-top:9px;border:1px solid #e8e4de;border-radius:10px;overflow:hidden;max-height:360px;overflow-y:auto}
+        .song-search-results.open{display:block}
+        .song-search-result{display:block;width:100%;text-align:left;background:#fff;border:0;border-bottom:1px solid #eee9e2;padding:11px 12px;color:#232323;cursor:pointer}
+        .song-search-result:last-child{border-bottom:0}
+        .song-search-result:hover,.song-search-result:focus{background:#fff4f5;outline:none}
+        .song-result-heading{display:block;font-size:13px;font-weight:800}
+        .song-result-category{display:block;font-size:11px;color:#bd0026;margin-top:3px;font-weight:700}
+        .song-result-preview{display:block;font-size:11px;color:#777;margin-top:4px;line-height:1.45}
+        .song-search-empty{padding:12px;color:#777;font-size:12px;background:#fff}
+        .song-list-header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+        .song-list-header h2{margin:0!important}
+        .btn-nueva-cancion{display:inline-flex;align-items:center;justify-content:center;gap:7px;background:#bd0026;color:#fff;border:0;border-radius:8px;padding:10px 14px;font-size:13px;font-weight:800;cursor:pointer;white-space:nowrap}
+        .btn-nueva-cancion:hover{background:#97001e;color:#fff}
+        .song-modal-backdrop{display:none;position:fixed;inset:0;z-index:3000;background:rgba(10,10,12,.76);padding:22px;align-items:center;justify-content:center;overflow:auto}
+        .song-modal-backdrop.open{display:flex}
+        .song-modal{width:min(760px,100%);max-height:calc(100vh - 44px);overflow:auto;background:#fff;color:#222;border-radius:16px;box-shadow:0 25px 70px rgba(0,0,0,.35);padding:25px;position:relative}
+        .song-modal-top{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;border-bottom:1px solid #eee;padding-bottom:14px;margin-bottom:16px}
+        .song-modal-top h2{font-family:'Phudu',sans-serif;font-size:clamp(22px,3vw,30px);line-height:1.2;color:#181818;margin:0}
+        .song-modal-close{flex:0 0 auto;width:36px;height:36px;border:0;border-radius:9px;background:#f1efec;color:#222;font-size:25px;line-height:1;cursor:pointer}
+        .song-modal-meta{font-size:13px;color:#bd0026;font-weight:700;margin:0 0 12px}
+        .song-modal-lyrics{white-space:pre-wrap;overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:13px;line-height:1.7;background:#faf9f6;border:1px solid #eee9e2;border-radius:10px;padding:17px;margin:0;color:#222}
+        .song-form-grid{display:grid;grid-template-columns:1fr 2fr;gap:13px}
+        .song-form-field{display:flex;flex-direction:column;gap:6px;margin-bottom:13px}
+        .song-form-field label{font-size:12px;font-weight:800;color:#333}
+        .song-form-field input,.song-form-field textarea{width:100%;border:1px solid #d8d4cc;border-radius:8px;padding:10px 11px;background:#fff;color:#222}
+        .song-form-field textarea{min-height:240px;resize:vertical;line-height:1.55}
+        .song-form-field input:focus,.song-form-field textarea:focus{outline:none;border-color:#bd0026;box-shadow:0 0 0 3px rgba(189,0,38,.1)}
+        .song-form-checkbox{display:flex;align-items:center;gap:8px;font-size:13px;margin:0 0 14px;color:#333}
+        .song-form-error{display:none;background:#fff0f2;border:1px solid #ffcbd3;border-radius:8px;padding:10px 12px;font-size:13px;color:#9a001f;margin-bottom:13px}
+        .song-form-error.show{display:block}
+        .song-modal-actions{display:flex;justify-content:flex-end;gap:9px;flex-wrap:wrap;margin-top:12px}
+        .song-modal-secondary{background:#eeeae5;color:#333;border:0;border-radius:8px;padding:10px 14px;font-weight:700;cursor:pointer}
+        @media(max-width:767px){.song-search-panel{padding:14px}.song-list-header{align-items:flex-start}.song-list-header h2{font-size:28px!important}.song-modal-backdrop{padding:10px}.song-modal{padding:17px;border-radius:12px}.song-form-grid{grid-template-columns:1fr;gap:0}.song-form-field textarea{min-height:190px}}
     </style>
 </head>
 <body>
@@ -159,13 +199,22 @@
                                 </ul>
                             </div>
                         </div>
+                        <div class="song-search-panel">
+                            <h3><i class="fa fa-search" aria-hidden="true"></i> Buscar canciones</h3>
+                            <p class="song-search-help">Busca en todo el cancionero, sin importar la categoría.</p>
+                            <input type="search" id="buscarCancionGlobal" class="song-search-input" placeholder="Escribe título, letra o número..." autocomplete="off" aria-label="Buscar canciones en todo el cancionero">
+                            <div id="resultadosBusquedaCanciones" class="song-search-results" role="listbox" aria-label="Coincidencias de canciones"></div>
+                        </div>
                     </div>
                 </div>
                 <div class="col-lg-8">
                     <div class="service-single-content">
                         <div class="page-single-faqs">
-                            <div class="section-title">
+                            <div class="section-title song-list-header">
                                 <h2 class="text-anime-style-3" data-cursor="-opaque">Listado de Canciones</h2>
+                                {% if request.user.is_authenticated and request.user.is_staff %}
+                                <button type="button" class="btn-nueva-cancion" id="btnNuevaCancion"><i class="fa fa-plus" aria-hidden="true"></i> Nueva canción</button>
+                                {% endif %}
                             </div>
                             <div class="faq-accordion" id="accordion">
                                 {% for cancion in canciones %}
@@ -200,6 +249,59 @@
             </div>
         </div>
     </div>
+
+    <!-- Popup para canciones encontradas en cualquier categoría -->
+    <div class="song-modal-backdrop" id="songDetailModal" role="dialog" aria-modal="true" aria-labelledby="songDetailTitle">
+        <div class="song-modal">
+            <div class="song-modal-top">
+                <h2 id="songDetailTitle">Canción</h2>
+                <button type="button" class="song-modal-close" data-close-song-detail aria-label="Cerrar">×</button>
+            </div>
+            <p class="song-modal-meta" id="songDetailMeta"></p>
+            <div id="songDetailCapo"></div>
+            <pre class="song-modal-lyrics" id="songDetailLyrics"></pre>
+        </div>
+    </div>
+
+    {% if request.user.is_authenticated and request.user.is_staff %}
+    <!-- Modal para crear una canción en la categoría actual -->
+    <div class="song-modal-backdrop" id="newSongModal" role="dialog" aria-modal="true" aria-labelledby="newSongTitle">
+        <div class="song-modal">
+            <div class="song-modal-top">
+                <h2 id="newSongTitle">Nueva canción · {{ categoria.nombre }}</h2>
+                <button type="button" class="song-modal-close" data-close-new-song aria-label="Cerrar">×</button>
+            </div>
+            <p style="font-size:13px;color:#666;margin-top:-5px;margin-bottom:17px">La canción se guardará en la categoría <strong>{{ categoria.nombre }}</strong>.</p>
+            <form id="newSongForm" action="{% url 'crear_cancion' categoria.id %}" method="post">
+                {% csrf_token %}
+                <div id="newSongFormError" class="song-form-error" role="alert"></div>
+                <div class="song-form-grid">
+                    <div class="song-form-field">
+                        <label for="newSongNumber">Número (opcional)</label>
+                        <input id="newSongNumber" name="numero" type="number" min="1" step="1" placeholder="Ej. 125">
+                    </div>
+                    <div class="song-form-field">
+                        <label for="newSongTitleInput">Título *</label>
+                        <input id="newSongTitleInput" name="titulo" type="text" maxlength="200" required placeholder="Nombre de la canción">
+                    </div>
+                </div>
+                <div class="song-form-field">
+                    <label for="newSongLyricsInput">Letra y acordes *</label>
+                    <textarea id="newSongLyricsInput" name="letra" required placeholder="Escribe aquí la letra y sus acordes, conservando los saltos de línea."></textarea>
+                </div>
+                <label class="song-form-checkbox"><input type="checkbox" id="newSongHasCapo" name="usa_capodastro"> Usa capodastro</label>
+                <div class="song-form-field" id="newSongCapoField" style="display:none;max-width:220px">
+                    <label for="newSongCapoFret">Traste del capodastro *</label>
+                    <input id="newSongCapoFret" name="traste_capodastro" type="number" min="1" step="1" placeholder="Ej. 2">
+                </div>
+                <div class="song-modal-actions">
+                    <button type="button" class="song-modal-secondary" data-close-new-song>Cancelar</button>
+                    <button type="submit" class="btn-nueva-cancion" id="saveNewSongButton">Guardar canción</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    {% endif %}
 
     <footer class="main-footer bg-section dark-section">
         <div class="footer-copyright">
@@ -262,7 +364,262 @@
         .catch(error=>{console.error(error);alert("Error guardando: "+error.message);});
     }
     function exportarPDF(id){window.location="/exportar-pdf/"+id+"/";}
+
     function agregarServicio(id){alert("Lo conectaremos luego");}
+
+    // Buscador global: las coincidencias provienen de todas las categorías.
+    (function(){
+        const input=document.getElementById('buscarCancionGlobal');
+        const resultsBox=document.getElementById('resultadosBusquedaCanciones');
+        const detailModal=document.getElementById('songDetailModal');
+        if(!input||!resultsBox||!detailModal)return;
+
+        const searchUrl="{% url 'buscar_canciones' %}";
+        const detailUrlTemplate="{% url 'detalle_cancion' 987654321 %}";
+        let searchTimer=null;
+        let searchSequence=0;
+
+        function showSearchMessage(message){
+            resultsBox.replaceChildren();
+            const row=document.createElement('div');
+            row.className='song-search-empty';
+            row.textContent=message;
+            resultsBox.appendChild(row);
+            resultsBox.classList.add('open');
+        }
+
+        function renderSearchResults(items){
+            resultsBox.replaceChildren();
+            if(!items.length){
+                showSearchMessage('No se encontraron canciones con esa búsqueda.');
+                return;
+            }
+            items.forEach(song=>{
+                const button=document.createElement('button');
+                button.type='button';
+                button.className='song-search-result';
+                button.setAttribute('role','option');
+
+                const heading=document.createElement('span');
+                heading.className='song-result-heading';
+                heading.textContent=(song.numero!==null&&song.numero!==undefined?song.numero+' - ':'')+song.titulo;
+                button.appendChild(heading);
+
+                const category=document.createElement('span');
+                category.className='song-result-category';
+                category.textContent=song.categoria;
+                button.appendChild(category);
+
+                if(song.preview){
+                    const preview=document.createElement('span');
+                    preview.className='song-result-preview';
+                    preview.textContent=song.preview;
+                    button.appendChild(preview);
+                }
+
+                button.addEventListener('click',()=>openSongDetail(song.id));
+                resultsBox.appendChild(button);
+            });
+            resultsBox.classList.add('open');
+        }
+
+        input.addEventListener('input',function(){
+            clearTimeout(searchTimer);
+            const query=input.value.trim();
+            const sequence=++searchSequence;
+            if(query.length<2){
+                resultsBox.classList.remove('open');
+                resultsBox.replaceChildren();
+                return;
+            }
+            showSearchMessage('Buscando canciones…');
+            searchTimer=setTimeout(async function(){
+                try{
+                    const response=await fetch(searchUrl+'?q='+encodeURIComponent(query),{
+                        headers:{'X-Requested-With':'XMLHttpRequest'}
+                    });
+                    if(!response.ok)throw new Error('HTTP '+response.status);
+                    const data=await response.json();
+                    if(sequence!==searchSequence||query!==input.value.trim())return;
+                    renderSearchResults(data.results||[]);
+                }catch(error){
+                    console.error('Error buscando canciones:',error);
+                    if(sequence===searchSequence)showSearchMessage('No se pudo completar la búsqueda. Inténtalo nuevamente.');
+                }
+            },230);
+        });
+
+        const detailTitle=document.getElementById('songDetailTitle');
+        const detailMeta=document.getElementById('songDetailMeta');
+        const detailCapo=document.getElementById('songDetailCapo');
+        const detailLyrics=document.getElementById('songDetailLyrics');
+
+        async function openSongDetail(id){
+            detailTitle.textContent='Cargando canción…';
+            detailMeta.textContent='';
+            detailCapo.replaceChildren();
+            detailLyrics.textContent='';
+            detailModal.classList.add('open');
+            try{
+                const detailUrl=detailUrlTemplate.replace('987654321',String(id));
+                const response=await fetch(detailUrl,{headers:{'X-Requested-With':'XMLHttpRequest'}});
+                if(!response.ok)throw new Error('HTTP '+response.status);
+                const data=await response.json();
+                if(!data.ok)throw new Error(data.error||'No se pudo abrir la canción.');
+                const song=data.song;
+                detailTitle.textContent=(song.numero!==null&&song.numero!==undefined?song.numero+' - ':'')+song.titulo;
+                detailMeta.textContent='Categoría: '+song.categoria;
+                if(song.usa_capodastro&&song.traste_capodastro){
+                    const badge=document.createElement('span');
+                    badge.className='badge bg-warning';
+                    badge.textContent='🎸 Capo: '+song.traste_capodastro;
+                    detailCapo.appendChild(badge);
+                }
+                detailLyrics.textContent=song.letra||'Esta canción no tiene letra registrada.';
+            }catch(error){
+                detailTitle.textContent='No se pudo abrir la canción';
+                detailLyrics.textContent='Ocurrió un error al cargar esta canción. Inténtalo nuevamente.';
+                console.error('Error abriendo canción:',error);
+            }
+        }
+
+        function closeDetailModal(){detailModal.classList.remove('open');}
+        detailModal.querySelectorAll('[data-close-song-detail]').forEach(button=>button.addEventListener('click',closeDetailModal));
+        detailModal.addEventListener('click',event=>{if(event.target===detailModal)closeDetailModal();});
+
+        // Si el usuario tiene permisos de administración, puede crear canciones en esta categoría.
+        const newSongModal=document.getElementById('newSongModal');
+        const newSongButton=document.getElementById('btnNuevaCancion');
+        const newSongForm=document.getElementById('newSongForm');
+        if(newSongModal&&newSongButton&&newSongForm){
+            const errorBox=document.getElementById('newSongFormError');
+            const saveButton=document.getElementById('saveNewSongButton');
+            const capoCheckbox=document.getElementById('newSongHasCapo');
+            const capoField=document.getElementById('newSongCapoField');
+            const capoInput=document.getElementById('newSongCapoFret');
+
+            function closeNewSongModal(){newSongModal.classList.remove('open');}
+            newSongButton.addEventListener('click',()=>{
+                errorBox.classList.remove('show');
+                errorBox.textContent='';
+                newSongModal.classList.add('open');
+                document.getElementById('newSongTitleInput').focus();
+            });
+            newSongModal.querySelectorAll('[data-close-new-song]').forEach(button=>button.addEventListener('click',closeNewSongModal));
+            newSongModal.addEventListener('click',event=>{if(event.target===newSongModal)closeNewSongModal();});
+            capoCheckbox.addEventListener('change',()=>{
+                capoField.style.display=capoCheckbox.checked?'flex':'none';
+                capoInput.required=capoCheckbox.checked;
+                if(!capoCheckbox.checked)capoInput.value='';
+            });
+
+            function addSongAction(actions,label,icon,handler){
+                const button=document.createElement('button');
+                button.type='button';
+                button.className='btn-accion';
+                if(icon){
+                    const i=document.createElement('i');
+                    i.className='fa '+icon;
+                    i.setAttribute('aria-hidden','true');
+                    button.appendChild(i);
+                    button.appendChild(document.createTextNode(' '));
+                }
+                button.appendChild(document.createTextNode(label));
+                button.addEventListener('click',handler);
+                actions.appendChild(button);
+            }
+
+            function appendNewSong(song){
+                const accordion=document.getElementById('accordion');
+                if(!accordion)return;
+                const item=document.createElement('div');
+                item.className='accordion-item wow fadeInUp';
+                const header=document.createElement('h2');
+                header.className='accordion-header';
+                header.id='headingNueva'+song.id;
+                const toggle=document.createElement('button');
+                toggle.className='accordion-button collapsed';
+                toggle.type='button';
+                toggle.setAttribute('data-bs-toggle','collapse');
+                toggle.setAttribute('data-bs-target','#collapseNueva'+song.id);
+                toggle.setAttribute('aria-expanded','false');
+                toggle.textContent=(song.numero!==null&&song.numero!==undefined?song.numero+' - ':'')+song.titulo;
+                header.appendChild(toggle);
+                item.appendChild(header);
+
+                const collapse=document.createElement('div');
+                collapse.className='accordion-collapse collapse';
+                collapse.id='collapseNueva'+song.id;
+                collapse.setAttribute('data-bs-parent','#accordion');
+                const body=document.createElement('div');
+                body.className='accordion-body';
+                if(song.usa_capodastro&&song.traste_capodastro){
+                    const info=document.createElement('div');
+                    info.className='song-info';
+                    const badge=document.createElement('span');
+                    badge.className='badge bg-warning';
+                    badge.textContent='🎸 Capo: '+song.traste_capodastro;
+                    info.appendChild(badge);
+                    body.appendChild(info);
+                }
+                const lyrics=document.createElement('pre');
+                lyrics.id='cancion'+song.id;
+                lyrics.className='texto-musical';
+                lyrics.textContent=song.letra||'';
+                body.appendChild(lyrics);
+
+                const actions=document.createElement('div');
+                actions.className='acciones-cancion';
+                addSongAction(actions,'Editar','fa-pen',()=>editarCancion(song.id));
+                addSongAction(actions,'Guardar','fa-save',()=>guardarCancion(song.id));
+                addSongAction(actions,'PDF','fa-file-pdf',()=>exportarPDF(song.id));
+                addSongAction(actions,'Servicio','fa-plus',()=>agregarServicio(song.id));
+                body.appendChild(actions);
+                collapse.appendChild(body);
+                item.appendChild(collapse);
+                accordion.appendChild(item);
+            }
+
+            newSongForm.addEventListener('submit',async function(event){
+                event.preventDefault();
+                errorBox.classList.remove('show');
+                errorBox.textContent='';
+                saveButton.disabled=true;
+                saveButton.textContent='Guardando…';
+                try{
+                    const response=await fetch(newSongForm.action,{
+                        method:'POST',
+                        headers:{'X-CSRFToken':getCookie('csrftoken'),'X-Requested-With':'XMLHttpRequest'},
+                        body:new FormData(newSongForm)
+                    });
+                    const data=await response.json();
+                    if(!response.ok||!data.ok)throw new Error(data.error||'No se pudo crear la canción.');
+                    appendNewSong(data.song);
+                    newSongForm.reset();
+                    capoField.style.display='none';
+                    capoInput.required=false;
+                    closeNewSongModal();
+                    alert('La canción se creó correctamente en {{ categoria.nombre|escapejs }}.');
+                }catch(error){
+                    errorBox.textContent=error.message||'Ocurrió un error al guardar.';
+                    errorBox.classList.add('show');
+                }finally{
+                    saveButton.disabled=false;
+                    saveButton.innerHTML='Guardar canción';
+                }
+            });
+        }
+
+        document.addEventListener('keydown',event=>{
+            if(event.key==='Escape'){
+                closeDetailModal();
+                if(newSongModal)newSongModal.classList.remove('open');
+            }
+        });
+        document.addEventListener('click',event=>{
+            if(!event.target.closest('.song-search-panel'))resultsBox.classList.remove('open');
+        });
+    })();
     </script>
 </body>
 </html>
