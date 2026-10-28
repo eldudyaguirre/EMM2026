@@ -24,6 +24,11 @@
         .srv-toolbar{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:20px}
         .srv-toolbar h2{font-family:'Phudu',sans-serif;font-size:24px;color:#fff;margin:0}
         .srv-actions{display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+        .srv-month-filter{display:flex;align-items:center;gap:9px;margin:0}
+        .srv-month-filter label{font-size:12px;font-weight:800;color:#c9cad2;white-space:nowrap;margin:0}
+        .srv-month-select{min-width:185px;max-width:250px;background:#101114;color:#fff;border:1px solid #454650;padding:10px 12px;border-radius:8px;font-size:12px;font-weight:700;outline:none}
+        .srv-month-select:focus{border-color:var(--srv-red);box-shadow:0 0 0 3px rgba(189,0,38,.14)}
+        .srv-month-select option{background:#191a20;color:#fff}
         .srv-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--srv-red);color:#fff;border:0;border-radius:8px;padding:10px 15px;font-weight:800;text-decoration:none;cursor:pointer;white-space:nowrap}
         .srv-btn:hover{background:#e31b3d;color:#fff}
         .srv-btn.secondary{background:#35363d;color:#fff}
@@ -135,7 +140,7 @@
         {% endfor %}
 
         <div class="srv-stats">
-            <div class="srv-stat"><strong>{{ total_servicios }}</strong><span>Servicios registrados</span></div>
+            <div class="srv-stat"><strong>{{ total_servicios }}</strong><span>Servicios registrados en {{ anio_actual }}</span></div>
             <div class="srv-stat"><strong>{{ total_programados }}</strong><span>Programados</span></div>
             <div class="srv-stat"><strong>{{ total_en_ejecucion }}</strong><span>En ejecución</span></div>
             <div class="srv-stat"><strong>{{ total_terminados }}</strong><span>Terminados</span></div>
@@ -143,8 +148,16 @@
 
         <section class="srv-panel">
             <div class="srv-toolbar">
-                <h2>Listado de servicios</h2>
+                <h2>Servicios · {{ mes_label }}</h2>
                 <div class="srv-actions">
+                    <form method="get" id="srvMonthFilterForm" class="srv-month-filter">
+                        <label for="srvMonthFilter">Mes</label>
+                        <select id="srvMonthFilter" name="mes" class="srv-month-select" onchange="this.form.submit()" aria-label="Filtrar servicios por mes">
+                            {% for mes in meses_disponibles %}
+                            <option value="{{ mes.valor }}" {% if mes.valor == mes_seleccionado %}selected{% endif %}>{{ mes.etiqueta }}</option>
+                            {% endfor %}
+                        </select>
+                    </form>
                     <button type="button" class="srv-btn" id="btnNuevoServicio"><i class="fa fa-plus" aria-hidden="true"></i> Nuevo servicio</button>
                 </div>
             </div>
@@ -188,8 +201,8 @@
             {% else %}
             <div class="srv-empty">
                 <i class="fa fa-calendar-plus" aria-hidden="true"></i>
-                <strong>Aún no hay servicios registrados</strong>
-                <p>Usa el botón «Nuevo servicio» para programar el primero.</p>
+                <strong>No hay servicios en {{ mes_label }}</strong>
+                <p>Selecciona otro mes o pulsa «Nuevo servicio» para programar un evento en este mes.</p>
             </div>
             {% endif %}
 
@@ -205,6 +218,7 @@
         {% csrf_token %}
         <input type="hidden" name="accion" value="eliminar_servicio">
         <input type="hidden" name="servicio_id" id="srvDeleteServiceId" value="">
+        <input type="hidden" name="mes" id="srvDeleteMonth" value="{{ mes_seleccionado }}">
         <button type="submit" class="srv-action-item danger" role="menuitem"><span aria-hidden="true">⌫</span> Eliminar</button>
     </form>
 </div>
@@ -220,6 +234,7 @@
         {% endif %}
         <form method="post" id="nuevoServicioForm">
             {% csrf_token %}
+            <input type="hidden" name="mes" value="{{ mes_seleccionado }}">
             <input type="hidden" name="accion" id="srvAction" value="{% if modo_edicion %}editar_servicio{% else %}crear_servicio{% endif %}">
             <input type="hidden" name="servicio_id" id="srvServicioId" value="{{ servicio_id_form }}">
             <div class="srv-form-grid">
@@ -327,6 +342,8 @@
     const editAction=document.getElementById('srvEditAction');
     const deleteForm=document.getElementById('srvDeleteServiceForm');
     const deleteId=document.getElementById('srvDeleteServiceId');
+    const deleteMonth=document.getElementById('srvDeleteMonth');
+    const monthFilter=document.getElementById('srvMonthFilter');
     let activeActionButton=null;
 
     function closeActionMenu(){
@@ -340,8 +357,10 @@
         closeActionMenu();
         activeActionButton=button;
         button.setAttribute('aria-expanded','true');
-        editAction.href='?editar='+encodeURIComponent(id);
+        const selectedMonth=monthFilter?monthFilter.value:'{{ mes_seleccionado|escapejs }}';
+        editAction.href='?editar='+encodeURIComponent(id)+'&mes='+encodeURIComponent(selectedMonth);
         deleteId.value=id;
+        deleteMonth.value=selectedMonth;
         actionMenu.classList.add('open');
         actionMenu.setAttribute('aria-hidden','false');
         const rect=button.getBoundingClientRect();
