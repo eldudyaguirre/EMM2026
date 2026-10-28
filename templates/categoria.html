@@ -542,7 +542,11 @@
         }
 
         function decorateChordLines(pre){
-            if(!pre || pre.querySelector('.acorde')) return;
+            // Reconstruir desde el texto completo aunque el servidor haya coloreado
+            // solo algunos acordes. Así también se detectan acordes en minúsculas
+            // (mi, fa, lam, sim) dentro de una línea formada íntegramente por acordes.
+            // No se colorean palabras sueltas en líneas de letra.
+            if(!pre) return;
             const lines = (pre.textContent || '').split('\n');
             const fragment = document.createDocumentFragment();
             lines.forEach(function(line, lineIndex){
