@@ -1395,6 +1395,9 @@
         const repertoireWrap = document.getElementById('songServiceRepertoire');
         const repertoireTitle = document.getElementById('songServiceRepertoireTitle');
         const repertoireList = document.getElementById('songServiceRepertoireList');
+        const usesCapoCheckbox = document.getElementById('songServiceUsesCapo');
+        const capoFretPanel = document.getElementById('songServiceCapoFretPanel');
+        const capoFretSelect = document.getElementById('songServiceCapoFret');
         const optionsUrlTemplate = "{% url 'servicios_programados_para_cancion' 987654321 %}";
         const saveUrlTemplate = "{% url 'agregar_cancion_a_servicio' 987654321 %}";
         const csrfHidden = document.getElementById('songServiceCsrf');
@@ -1402,6 +1405,7 @@
         let currentSongId = null;
         let currentSongLyrics = '';
         let currentSongMeta = {semitonos_transpuestos:0,notacion_acordes:'original'};
+        let originalCapoSettings = {usa_capodastro:false,traste_capodastro:null};
         let selectedServiceId = null;
         let servicesCache = [];
 
@@ -1427,6 +1431,29 @@
 
         function findSelectedService(){
             return servicesCache.find(function(service){return String(service.id) === String(selectedServiceId);}) || null;
+        }
+
+        function setCapoForm(enabled, fret){
+            usesCapoCheckbox.checked = !!enabled;
+            capoFretPanel.classList.toggle('open', !!enabled);
+            capoFretSelect.required = !!enabled;
+            capoFretSelect.value = enabled && fret ? String(fret) : '';
+        }
+
+        function getTrackForCurrentSong(service){
+            if(!service || !Array.isArray(service.repertorio)) return null;
+            return service.repertorio.find(function(track){
+                return Number(track.cancion_id) === Number(currentSongId);
+            }) || null;
+        }
+
+        function setCapoFormForService(service){
+            const savedTrack = getTrackForCurrentSong(service);
+            if(savedTrack){
+                setCapoForm(savedTrack.usa_capodastro, savedTrack.traste_capodastro);
+            }else{
+                setCapoForm(originalCapoSettings.usa_capodastro, originalCapoSettings.traste_capodastro);
+            }
         }
 
         function updateSaveButton(){
@@ -1461,12 +1488,27 @@
                 const strong = document.createElement('strong');
                 strong.textContent = (track.numero_snapshot !== null && track.numero_snapshot !== undefined ? track.numero_snapshot + ' · ' : '') + track.titulo_snapshot;
                 title.appendChild(strong);
-                if(track.cancion_id === currentSongId){
+                if(Number(track.cancion_id) === Number(currentSongId)){
                     const label = document.createElement('span');
                     label.className = 'song-service-added';
                     label.textContent = 'Esta canción';
                     title.appendChild(document.createTextNode(' '));
                     title.appendChild(label);
+                }
+                const capoInfo = document.createElement('span');
+                capoInfo.className = 'song-service-option-meta';
+                capoInfo.textContent = track.usa_capodastro && track.traste_capodastro
+                    ? 'Capodastro · traste ' + track.traste_capodastro
+                    : 'Sin capodastro';
+                title.appendChild(document.createElement('br'));
+                title.appendChild(capoInfo);
+                if(Number(track.semitonos_transpuestos || 0) !== 0){
+                    const toneInfo = document.createElement('span');
+                    toneInfo.className = 'song-service-option-meta';
+                    const toneShift = Number(track.semitonos_transpuestos);
+                    toneInfo.textContent = 'Tonalidad: ' + (toneShift > 0 ? '+' : '') + toneShift + ' semitono(s)';
+                    title.appendChild(document.createElement('br'));
+                    title.appendChild(toneInfo);
                 }
                 row.appendChild(order);
                 row.appendChild(title);
@@ -1482,8 +1524,10 @@
                 card.classList.toggle('selected', !!selected);
                 if(radio) radio.checked = !!selected;
             });
+            const service = findSelectedService();
+            setCapoFormForService(service);
             updateSaveButton();
-            renderCurrentRepertoire(findSelectedService());
+            renderCurrentRepertoire(service);
             showMessage('', '');
         }
 
@@ -1587,6 +1631,11 @@
             currentSongMeta = window.EmausSongTools
                 ? window.EmausSongTools.getMeta(pre)
                 : {semitonos_transpuestos:0,notacion_acordes:'original'};
+            originalCapoSettings = {
+                usa_capodastro: pre.dataset.capoEnabled === 'true',
+                traste_capodastro: pre.dataset.capoFret ? Number(pre.dataset.capoFret) : null
+            };
+            setCapoForm(originalCapoSettings.usa_capodastro, originalCapoSettings.traste_capodastro);
             if(!currentSongLyrics || !currentSongLyrics.trim()){
                 alert('Esta canción no tiene letra ni acordes para agregar al servicio.');
                 return;
@@ -1620,7 +1669,9 @@
                         servicio_id: service.id,
                         letra_snapshot: currentSongLyrics,
                         semitonos_transpuestos: currentSongMeta.semitonos_transpuestos || 0,
-                        notacion_acordes: currentSongMeta.notacion_acordes || 'original'
+                        notacion_acordes: currentSongMeta.notacion_acordes || 'original',
+                        usa_capodastro: usesCapoCheckbox.checked,
+                        traste_capodastro: usesCapoCheckbox.checked ? capoFretSelect.value : null
                     })
                 });
                 const data = await response.json();
@@ -1647,6 +1698,11 @@
         });
         modal.addEventListener('click', function(event){
             if(event.target === modal) modal.classList.remove('open');
+        });
+        usesCapoCheckbox.addEventListener('change', function(){
+            capoFretPanel.classList.toggle('open', usesCapoCheckbox.checked);
+            capoFretSelect.required = usesCapoCheckbox.checked;
+            if(!usesCapoCheckbox.checked) capoFretSelect.value = '';
         });
         saveButton.addEventListener('click', saveToRepertoire);
         document.addEventListener('keydown', function(event){
