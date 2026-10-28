@@ -386,6 +386,228 @@ def gestion_servicios(request):
     })
 
 
+
+@staff_member_required(login_url='home')
+def exportar_servicios_pdf(request):
+    """Exporta el calendario de servicios para el mes y año seleccionados."""
+    from django.contrib.staticfiles import finders
+    from svglib.svglib import svg2rlg
+    from reportlab.graphics import renderPDF
+    from reportlab.lib.pagesizes import A4
+    from xml.sax.saxutils import escape
+
+    hoy = date.today()
+    try:
+        mes = int(request.GET.get('mes', hoy.month))
+        anio = int(request.GET.get('anio', hoy.year))
+        if not 1 <= mes <= 12 or not 1900 <= anio <= 2200:
+            raise ValueError
+    except (ValueError, TypeError):
+        mes, anio = hoy.month, hoy.year
+
+    meses_es = [
+        'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+        'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+    ]
+    dias_es = [
+        'lunes', 'martes', 'miércoles', 'jueves',
+        'viernes', 'sábado', 'domingo',
+    ]
+    nombre_mes = meses_es[mes - 1]
+    servicios_mes = list(
+        Servicio.objects.select_related('grupo', 'grupo__lider')
+        .filter(fecha__year=anio, fecha__month=mes)
+        .order_by('fecha', 'hora_inicio', 'titulo')
+    )
+
+    buffer = BytesIO()
+    ancho, alto = A4
+    margen_lateral = 15 * mm
+    ancho_util = ancho - margen_lateral * 2
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=margen_lateral,
+        leftMargin=margen_lateral,
+        topMargin=53 * mm,
+        bottomMargin=19 * mm,
+        title=f'Calendario de servicios - {nombre_mes.capitalize()} {anio}',
+        author='Fundación de Fieles Caminantes de Emaús - Cuenca',
+    )
+
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(
+        name='CalendarioCell',
+        parent=styles['BodyText'],
+        fontName='Helvetica',
+        fontSize=7.5,
+        leading=9.5,
+        textColor=colors.HexColor('#252b35'),
+        spaceAfter=0,
+        wordWrap='CJK',
+    ))
+    styles.add(ParagraphStyle(
+        name='CalendarioCellCenter',
+        parent=styles['CalendarioCell'],
+        alignment=TA_CENTER,
+    ))
+    styles.add(ParagraphStyle(
+        name='CalendarioCellBold',
+        parent=styles['CalendarioCell'],
+        fontName='Helvetica-Bold',
+    ))
+    styles.add(ParagraphStyle(
+        name='CalendarioHeaderCell',
+        parent=styles['BodyText'],
+        fontName='Helvetica-Bold',
+        fontSize=7.5,
+        leading=9,
+        textColor=colors.white,
+        alignment=TA_LEFT,
+    ))
+    styles.add(ParagraphStyle(
+        name='CalendarioNote',
+        parent=styles['BodyText'],
+        fontName='Helvetica',
+        fontSize=8.5,
+        leading=12,
+        textColor=colors.HexColor('#555555'),
+        leftIndent=4 * mm,
+        bulletIndent=1 * mm,
+        spaceAfter=2 * mm,
+    ))
+    styles.add(ParagraphStyle(
+        name='CalendarioNotesTitle',
+        parent=styles['Heading3'],
+        fontName='Helvetica-Bold',
+        fontSize=11,
+        leading=14,
+        textColor=colors.HexColor('#1e3b60'),
+        spaceBefore=5 * mm,
+        spaceAfter=2 * mm,
+    ))
+
+    encabezados = ['#', 'FECHA', 'DÍA', 'SERVICIO / HORARIO',
+                   'RESPONSABLE', 'LÍDER DEL GRUPO', 'IGLESIA / LUGAR']
+    filas = [[Paragraph(escape(texto), styles['CalendarioHeaderCell']) for texto in encabezados]]
+    observaciones_mes = []
+
+    for numero, servicio in enumerate(servicios_mes, start=1):
+        dia_semana = dias_es[servicio.fecha.weekday()].capitalize()
+        fecha_texto = f'{servicio.fecha.day} de {meses_es[servicio.fecha.month - 1]}'
+        horario = servicio.hora_inicio.strftime('%H:%M')
+        if servicio.hora_fin:
+            horario += '–' + servicio.hora_fin.strftime('%H:%M')
+        servicio_html = (
+            f'<b>{escape(servicio.titulo)}</b><br/>'
+            f'<font size="7" color="#626262">{escape(horario)}</font>'
+        )
+        nombre_lider = servicio.grupo.lider.nombres if servicio.grupo.lider_id else 'Sin líder asignado'
+        lugar = servicio.lugar.strip() if servicio.lugar else '—'
+        fila = [
+            Paragraph(str(numero), styles['CalendarioCellCenter']),
+            Paragraph(escape(fecha_texto), styles['CalendarioCell']),
+            Paragraph(escape(dia_semana), styles['CalendarioCell']),
+            Paragraph(servicio_html, styles['CalendarioCell']),
+            Paragraph(escape(servicio.grupo.nombre), styles['CalendarioCellBold']),
+            Paragraph(escape(nombre_lider), styles['CalendarioCell']),
+            Paragraph(escape(lugar), styles['CalendarioCell']),
+        ]
+        filas.append(fila)
+        if servicio.observaciones and servicio.observaciones.strip():
+            observaciones_mes.append(
+                f'{fecha_texto.capitalize()} · {servicio.titulo}: {servicio.observaciones.strip()}'
+            )
+
+    if not servicios_mes:
+        filas.append([
+            Paragraph('—', styles['CalendarioCellCenter']),
+            Paragraph('No hay servicios registrados para este mes.', styles['CalendarioCell']),
+            Paragraph('', styles['CalendarioCell']),
+            Paragraph('', styles['CalendarioCell']),
+            Paragraph('', styles['CalendarioCell']),
+            Paragraph('', styles['CalendarioCell']),
+            Paragraph('', styles['CalendarioCell']),
+        ])
+
+    anchuras = [7*mm, 27*mm, 18*mm, 39*mm, 25*mm, 32*mm, ancho_util-(7+27+18+39+25+32)*mm]
+    tabla = Table(filas, colWidths=anchuras, repeatRows=1, hAlign='LEFT')
+    tabla.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#1e3b60')),
+        ('GRID', (0, 0), (-1, -1), 0.55, colors.HexColor('#1e3b60')),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN', (0, 0), (0, -1), 'CENTER'),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1),
+         [colors.HexColor('#dfe7f4'), colors.white]),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+        ('TOPPADDING', (0, 0), (-1, -1), 7),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 7),
+    ]))
+
+    story = [tabla, Spacer(1, 4 * mm), Paragraph('Notas:', styles['CalendarioNotesTitle'])]
+    if observaciones_mes:
+        for nota in observaciones_mes:
+            story.append(Paragraph('• ' + escape(nota), styles['CalendarioNote']))
+    else:
+        story.append(Paragraph(
+            'No hay observaciones registradas para los servicios de este mes.',
+            styles['CalendarioNote']
+        ))
+
+    def dibujar_cabecera_pie(canvas, documento):
+        canvas.saveState()
+        azul = colors.HexColor('#1e3b60')
+        canvas.setFillColor(azul)
+        canvas.rect(0, alto - 49 * mm, ancho, 49 * mm, fill=1, stroke=0)
+
+        # Logo blanco de Emaús centrado en la cabecera.
+        logo_path = finders.find('images/logomio.svg')
+        if logo_path:
+            try:
+                logo = svg2rlg(logo_path)
+                if logo and logo.width and logo.height:
+                    escala = min((38 * mm) / logo.width, (10 * mm) / logo.height)
+                    x_logo = (ancho - logo.width * escala) / 2
+                    y_logo = alto - 13 * mm - logo.height * escala
+                    canvas.saveState()
+                    canvas.translate(x_logo, y_logo)
+                    canvas.scale(escala, escala)
+                    renderPDF.draw(logo, canvas, 0, 0)
+                    canvas.restoreState()
+            except Exception:
+                pass
+
+        canvas.setFillColor(colors.white)
+        canvas.setFont('Helvetica', 9)
+        canvas.drawCentredString(
+            ancho / 2, alto - 21 * mm,
+            'Fundación de Fieles Caminantes de Emaús — Cuenca'
+        )
+        canvas.setFont('Helvetica-Bold', 12)
+        canvas.drawCentredString(ancho / 2, alto - 27 * mm, 'Ministerio de Música')
+        canvas.setFont('Helvetica-Bold', 15)
+        titulo = f'CALENDARIO DE SERVICIOS — {nombre_mes.upper()} {anio}'
+        canvas.drawCentredString(ancho / 2, alto - 39 * mm, titulo)
+
+        canvas.setStrokeColor(colors.HexColor('#1e3b60'))
+        canvas.setLineWidth(0.65)
+        canvas.line(margen_lateral, 14 * mm, ancho - margen_lateral, 14 * mm)
+        canvas.setFillColor(colors.HexColor('#555555'))
+        canvas.setFont('Helvetica', 8.5)
+        canvas.drawCentredString(ancho / 2, 8 * mm, 'Ministerio de Música — Emaús Cuenca')
+        canvas.drawRightString(ancho - margen_lateral, 8 * mm, f'Página {documento.page}')
+        canvas.restoreState()
+
+    doc.build(story, onFirstPage=dibujar_cabecera_pie, onLaterPages=dibujar_cabecera_pie)
+    response = HttpResponse(buffer.getvalue(), content_type='application/pdf')
+    response['Content-Disposition'] = (
+        f'attachment; filename="calendario_servicios_{anio}_{mes:02d}.pdf"'
+    )
+    buffer.close()
+    return response
+
+
 def buscar_canciones(request):
     """Busca coincidencias en todo el cancionero para el buscador lateral."""
     if request.method != 'GET':
