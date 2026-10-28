@@ -31,6 +31,9 @@
         .legend-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;background:#ff4967}
         .legend-dot.thursday{background:#e5b64b}
         .legend-dot.sunday{background:#5ea9ff}
+        .legend-dot.birthday{background:#c58aff}
+        .day-card.has-birthday{border-color:rgba(197,138,255,.7)}
+        .birthday-pill{display:block;margin-top:8px;padding:6px 7px;border-radius:7px;font-size:11px;line-height:1.35;font-weight:700;overflow-wrap:anywhere;background:rgba(197,138,255,.14);color:#dfbdff}
         .calendar-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:9px}
         .weekday{text-align:center;color:var(--cal-muted);font-size:12px;font-weight:800;text-transform:uppercase;padding:9px 2px}
         .day-card{min-height:126px;background:var(--cal-panel);border:1px solid var(--cal-line);border-radius:13px;padding:11px;min-width:0;transition:border-color .2s,transform .2s}
@@ -110,7 +113,7 @@
             </div>
             <div class="calendar-legend">
                 <span><i class="legend-dot"></i>Servicio programado</span>
-                <span>Los horarios y grupos provienen de la base de datos.</span>
+                <span><i class="legend-dot birthday"></i>Cumpleaños de servidores</span>
             </div>
             <div class="calendar-grid" id="calendar-grid" aria-live="polite"></div>
             <div class="calendar-note"><strong>Administración:</strong> Cada grupo es responsable de los ensayos y servicios en calendario. Cualquier cambio debe ser notificado con administración.</div>
@@ -124,6 +127,7 @@
     <script src="{% static 'js/jquery.slicknav.js' %}"></script>
     <script src="{% static 'js/function.js' %}"></script>
     {{ servicios|json_script:"services-data" }}
+    {{ cumpleanos|json_script:"birthdays-data" }}
     <script>
 
     (function(){
@@ -133,7 +137,9 @@
         const weekdays=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
         const months=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
         const services=JSON.parse(document.getElementById('services-data').textContent);
+        const birthdays=JSON.parse(document.getElementById('birthdays-data').textContent);
         const dateKey=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+        const birthdayKey=d=>String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
         let currentMonth=localToday(); currentMonth.setDate(1);
         const fmt=d=>d.getDate()+' de '+months[d.getMonth()]+' de '+d.getFullYear();
         function localToday(){
@@ -156,7 +162,8 @@
                 const isCurrentMonth=date.getMonth()===currentMonth.getMonth();
                 const card=document.createElement('article');
                 const dayServices=services.filter(s=>s.fecha===dateKey(date));
-                card.className='day-card'+(!isCurrentMonth?' other-month':'')+(dayServices.length?' has-service':'')+(date.getTime()===today.getTime()?' today':'');
+                const dayBirthdays=birthdays.filter(b=>b.dia_mes===birthdayKey(date));
+                card.className='day-card'+(!isCurrentMonth?' other-month':'')+(dayServices.length?' has-service':'')+(dayBirthdays.length?' has-birthday':'')+(date.getTime()===today.getTime()?' today':'');
                 card.dataset.weekday=weekdays[date.getDay()];
                 const num=document.createElement('div');num.className='day-number';num.textContent=date.getDate();card.appendChild(num);
                 const mon=document.createElement('div');mon.className='day-month';mon.textContent=months[date.getMonth()];card.appendChild(mon);
@@ -186,6 +193,13 @@
                     none.textContent='Sin servicio programado';
                     card.appendChild(none);
                 }
+                dayBirthdays.forEach(birthday=>{
+                    const pill=document.createElement('div');
+                    pill.className='birthday-pill';
+                    pill.textContent='🎂 '+birthday.nombre;
+                    pill.title='Cumpleaños';
+                    card.appendChild(pill);
+                });
                 grid.appendChild(card);
             }
         }
