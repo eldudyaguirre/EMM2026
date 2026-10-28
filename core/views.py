@@ -135,7 +135,7 @@ def cambiar_password(request):
 
 
 def calendario(request):
-    """Muestra los servicios activos guardados en la base de datos."""
+    """Muestra los servicios y los cumpleaños de los servidores activos."""
     servicios = [
         {
             'titulo': servicio.titulo,
@@ -152,7 +152,22 @@ def calendario(request):
             grupo__activo=True
         ).select_related('grupo').order_by('fecha', 'hora_inicio')
     ]
-    return render(request, 'calendario.html', {'servicios': servicios})
+
+    cumpleanos = [
+        {
+            'nombre': perfil.nombres,
+            'dia_mes': perfil.fecha_nacimiento.strftime('%m-%d'),
+        }
+        for perfil in Perfil.objects.filter(
+            usuario__is_active=True,
+            fecha_nacimiento__isnull=False,
+        ).order_by('nombres')
+    ]
+
+    return render(request, 'calendario.html', {
+        'servicios': servicios,
+        'cumpleanos': cumpleanos,
+    })
 
 
 def categoria(request,id):
