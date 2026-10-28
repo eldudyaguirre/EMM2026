@@ -359,7 +359,7 @@ def gestion_servicios(request):
         fecha_anio.year for fecha_anio in Servicio.objects.dates('fecha', 'year', order='ASC')
     )
     anios_opciones.add(mes_seleccionado_fecha.year)
-    anios_disponibles = sorted(anios_opciones, reverse=True)
+    anios_disponibles = [str(anio) for anio in sorted(anios_opciones, reverse=True)]
 
     mes_label = f'{nombres_meses[mes_seleccionado_fecha.month - 1].capitalize()} de {mes_seleccionado_fecha.year}'
     fecha_formulario_default = hoy.isoformat() if mes_seleccionado_fecha.year == hoy.year and mes_seleccionado_fecha.month == hoy.month else mes_seleccionado_fecha.isoformat()
