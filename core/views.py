@@ -600,11 +600,10 @@ def servicios_visibles_para_usuario(user):
     except (Perfil.DoesNotExist, AttributeError):
         return base.none()
 
-    # La relación explícita de integrantes es la fuente preferida.
-    por_integrantes = Q(grupo__integrantes=perfil)
-    # Compatibilidad con el grupo numérico del perfil (p. ej. grupo 3 -> "Grupo 3").
-    por_grupo_perfil = Q(grupo__nombre__iexact=f'Grupo {perfil.grupo}')
-    return base.filter(por_integrantes | por_grupo_perfil).distinct()
+    # Los servidores solo ven servicios del grupo permanente indicado en su perfil.
+    # No combinar con grupos_asignados: esa relación puede incluir grupos temporales
+    # u otros grupos a los que el servidor presta apoyo.
+    return base.filter(grupo__nombre__iexact=f'Grupo {perfil.grupo}').distinct()
 
 
 @login_required(login_url='home')
