@@ -88,7 +88,7 @@ main{padding:26px 0 70px}.empty{padding:40px 20px;text-align:center;background:v
 <div class="empty"><i class="fa-solid fa-music" style="font-size:32px;color:#ff7188"></i><h2 style="color:white;margin-top:16px">Todavía no hay canciones en este repertorio</h2><p>Abre el cancionero, selecciona las canciones y agrégalas a este servicio. Luego podrás volver aquí para recorrer el repertorio completo.</p><a class="btnx" href="{% url 'calendario' %}">Volver al calendario</a></div>
 {% endif %}
 </main>
-<div class="song-popup" id="requestedSongPopup" role="dialog" aria-modal="true" aria-labelledby="requestedSongTitle"><div class="song-popup-card"><div class="song-popup-head"><div><h2 id="requestedSongTitle">Canción</h2><div class="song-popup-meta" id="requestedSongMeta"></div></div><button class="btnx popup-close" type="button" id="closeRequestedSong" aria-label="Cerrar canción" title="Cerrar canción"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></div><div class="popup-controls"><button class="btnx" type="button" id="popupAutoScroll" aria-label="Iniciar o pausar desfile automático" title="Iniciar o pausar desfile automático"><i class="fa-solid fa-play" aria-hidden="true"></i></button><label for="popupScrollSpeed">Velocidad</label><select id="popupScrollSpeed"><option value="4">Muy lenta</option><option value="8">Lenta</option><option value="20" selected>Normal</option><option value="40">Rápida</option><option value="60">Muy rápida</option></select><button class="btnx" type="button" id="popupScrollTop" aria-label="Volver al inicio de la canción" title="Volver al inicio de la canción">↑</button><button class="btnx" type="button" id="popupFontSmaller" aria-label="Reducir tamaño de letra" title="Reducir tamaño de letra (A−)">A−</button><button class="btnx" type="button" id="popupFontLarger" aria-label="Aumentar tamaño de letra" title="Aumentar tamaño de letra (A+)>A+</button></div><div class="song-popup-lyrics" id="requestedSongLyrics"></div></div></div>
+<div class="song-popup" id="requestedSongPopup" role="dialog" aria-modal="true" aria-labelledby="requestedSongTitle"><div class="song-popup-card"><div class="song-popup-head"><div><h2 id="requestedSongTitle">Canción</h2><div class="song-popup-meta" id="requestedSongMeta"></div></div><button class="btnx popup-close" type="button" id="closeRequestedSong" aria-label="Cerrar canción" title="Cerrar canción"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button></div><div class="popup-controls"><button class="btnx" type="button" id="popupAutoScroll" aria-label="Iniciar o pausar desfile automático" title="Iniciar o pausar desfile automático"><i class="fa-solid fa-play" aria-hidden="true"></i></button><label for="popupScrollSpeed">Velocidad</label><select id="popupScrollSpeed"><option value="4">Muy lenta</option><option value="8">Lenta</option><option value="20" selected>Normal</option><option value="40">Rápida</option><option value="60">Muy rápida</option></select><button class="btnx" type="button" id="popupScrollTop" aria-label="Volver al inicio de la canción" title="Volver al inicio de la canción">↑</button><button class="btnx" type="button" id="popupFontSmaller" aria-label="Reducir tamaño de letra" title="Reducir tamaño de letra (A−)">A−</button><button class="btnx" type="button" id="popupFontLarger" aria-label="Aumentar tamaño de letra" title="Aumentar tamaño de letra (A+)">A+</button></div><div class="song-popup-lyrics" id="requestedSongLyrics"></div></div></div>
 <script>
 (function(){
  const popup=document.getElementById('requestedSongPopup'),popupTitle=document.getElementById('requestedSongTitle'),popupMeta=document.getElementById('requestedSongMeta'),popupLyrics=document.getElementById('requestedSongLyrics');
@@ -119,23 +119,28 @@ main{padding:26px 0 70px}.empty{padding:40px 20px;text-align:center;background:v
  function go(index){if(!songs.length)return;current=Math.max(0,Math.min(index,songs.length-1));songs.forEach((s,i)=>s.classList.toggle('current',i===current));songs[current].scrollIntoView({behavior:'smooth',block:'start'});counter.textContent=(current+1)+' de '+songs.length+' canciones';bar.style.width=((current+1)/songs.length*100)+'%';}
  function stopAuto(){if(autoTimer){clearInterval(autoTimer);autoTimer=null;}}
  document.getElementById('prevBtn').addEventListener('click',()=>{stopAuto();go(current-1)});document.getElementById('nextBtn').addEventListener('click',()=>{stopAuto();go(current+1)});
- document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{
-  stopAuto();
-  const index=Number(b.dataset.go);
-  const song=songs[index];
-  if(!song)return;
-  const title=song.querySelector('.song-title');
-  const meta=song.querySelector('.song-meta');
-  const lyrics=song.querySelector('.lyrics');
-  const popup=document.getElementById('requestedSongPopup');
-  document.getElementById('requestedSongTitle').textContent=title?title.innerText.trim():'Canción';
-  document.getElementById('requestedSongMeta').textContent=meta?meta.innerText.trim():'';
-  document.getElementById('requestedSongLyrics').textContent=lyrics?lyrics.innerText:'Esta canción no tiene letra registrada.';
-  popup.classList.add('open');
-  document.body.style.overflow='hidden';
-  document.getElementById('closeRequestedSong').focus();
- }));
-
+  // Delegación de eventos para que Abrir canción funcione también en pantallas táctiles.
+  document.addEventListener('click',e=>{
+   const b=e.target.closest('button[data-go]');
+   if(!b)return;
+   e.preventDefault();
+   e.stopPropagation();
+   stopAuto();
+   const song=songs[Number(b.dataset.go)];
+   if(!song)return;
+   const title=song.querySelector('.song-title');
+   const meta=song.querySelector('.song-meta');
+   const lyrics=song.querySelector('.lyrics');
+   const popup=document.getElementById('requestedSongPopup');
+   if(!popup)return;
+   document.getElementById('requestedSongTitle').textContent=title?title.innerText.trim():'Canción';
+   document.getElementById('requestedSongMeta').textContent=meta?meta.innerText.trim():'';
+   document.getElementById('requestedSongLyrics').textContent=lyrics?lyrics.innerText:'Esta canción no tiene letra registrada.';
+   document.getElementById('requestedSongLyrics').scrollTop=0;
+   popup.classList.add('open');
+   popup.setAttribute('aria-hidden','false');
+   document.body.style.overflow='hidden';
+  });
  document.addEventListener('keydown',e=>{if(e.key==='Escape')stopAuto();if(e.key==='ArrowDown'||e.key==='PageDown'){e.preventDefault();stopAuto();go(current+1)}if(e.key==='ArrowUp'||e.key==='PageUp'){e.preventDefault();stopAuto();go(current-1)}});
  if(songs.length)go(0);
 })();
