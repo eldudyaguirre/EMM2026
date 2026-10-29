@@ -117,7 +117,22 @@ main{padding:26px 0 70px}.empty{padding:40px 20px;text-align:center;background:v
  function startAuto(){stopAuto();if(!songs.length)return;const b=document.getElementById('autoScroll');b.classList.add('active');b.setAttribute('aria-pressed','true');b.innerHTML='<i class="fa-solid fa-pause"></i> Pausar desfile';autoTimer=setInterval(()=>{if(window.scrollY+window.innerHeight>=document.documentElement.scrollHeight-4){stopAuto();return;}window.scrollBy({top:1,behavior:'auto'});},autoSpeed);}
  const autoBtn=document.getElementById('autoScroll');autoBtn.addEventListener('click',()=>autoTimer?stopAuto():startAuto());document.getElementById('scrollSpeed').addEventListener('change',e=>{autoSpeed=Number(e.target.value);if(autoTimer)startAuto();});
  document.getElementById('prevBtn').addEventListener('click',()=>{stopAuto();go(current-1)});document.getElementById('nextBtn').addEventListener('click',()=>{stopAuto();go(current+1)});
- document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{stopAuto();go(Number(b.dataset.go))}));
+ document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{
+  stopAuto();
+  const index=Number(b.dataset.go);
+  const song=songs[index];
+  if(!song)return;
+  const title=song.querySelector('.song-title');
+  const meta=song.querySelector('.song-meta');
+  const lyrics=song.querySelector('.lyrics');
+  const popup=document.getElementById('requestedSongPopup');
+  document.getElementById('requestedSongTitle').textContent=title?title.innerText.trim():'Canción';
+  document.getElementById('requestedSongMeta').textContent=meta?meta.innerText.trim():'';
+  document.getElementById('requestedSongLyrics').textContent=lyrics?lyrics.innerText:'Esta canción no tiene letra registrada.';
+  popup.classList.add('open');
+  document.body.style.overflow='hidden';
+  document.getElementById('closeRequestedSong').focus();
+ }));
  document.getElementById('smaller').addEventListener('click',()=>{fontSize=Math.max(11,fontSize-1);document.querySelectorAll('.lyrics').forEach(e=>e.style.fontSize=fontSize+'px')});
  document.getElementById('larger').addEventListener('click',()=>{fontSize=Math.min(30,fontSize+1);document.querySelectorAll('.lyrics').forEach(e=>e.style.fontSize=fontSize+'px')});
  document.getElementById('fullscreen').addEventListener('click',async()=>{try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen();else await document.exitFullscreen()}catch(e){}});
