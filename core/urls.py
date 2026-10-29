@@ -1,6 +1,6 @@
 from django.urls import path
 from . import views
-from .repertorio_views import repertorio_servicio, gestionar_cancion_repertorio
+from .repertorio_views import repertorio_servicio, gestionar_cancion_repertorio, exportar_repertorio_servicio_pdf
 
 urlpatterns = [
     path('', views.home, name='home'),
@@ -10,6 +10,7 @@ urlpatterns = [
     path('cambiar-password/', views.cambiar_password, name='cambiar_password'),
     path('calendario/', views.calendario, name='calendario'),
     path('servicios/<int:servicio_id>/repertorio/', repertorio_servicio, name='repertorio_servicio'),
+    path('servicios/<int:servicio_id>/repertorio/exportar-pdf/', exportar_repertorio_servicio_pdf, name='exportar_repertorio_servicio_pdf'),
     path('servicios/<int:servicio_id>/repertorio/gestionar/', gestionar_cancion_repertorio, name='gestionar_cancion_repertorio'),
     path('servicios/cancion/<int:cancion_id>/programados/', views.servicios_programados_para_cancion, name='servicios_programados_para_cancion'),
     path('servicios/cancion/<int:cancion_id>/agregar/', views.agregar_cancion_a_servicio, name='agregar_cancion_a_servicio'),
