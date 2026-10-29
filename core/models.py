@@ -83,6 +83,8 @@ class Perfil(models.Model):
 
     fecha_nacimiento = models.DateField()
 
+    debe_cambiar_password = models.BooleanField(default=True, verbose_name='Debe cambiar contraseña al ingresar')
+
     es_cantante = models.BooleanField(default=False, verbose_name='Es cantante')
     instrumentos = models.ManyToManyField('Instrumento', blank=True, related_name='servidores')
 
