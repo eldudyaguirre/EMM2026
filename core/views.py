@@ -53,9 +53,11 @@ def home(request):
                 )
 
                 logger.info('LOGIN_SUCCESS username=%s session_key_present=%s', user.get_username(), bool(request.session.session_key))
-                return redirect(
-                    'loginin'
-                )
+                if not (user.is_staff or user.is_superuser):
+                    perfil = getattr(user, 'perfil', None)
+                    if perfil and perfil.debe_cambiar_password:
+                        return redirect('primer_cambio_password')
+                return redirect('loginin')
 
             return render(
                 request,
@@ -109,6 +111,35 @@ def trazabilidad_preloader(request):
         getattr(user, 'is_staff', False), getattr(user, 'is_superuser', False),
         request.META.get('HTTP_USER_AGENT', '')[:180])
     return JsonResponse({'ok': True})
+
+
+@login_required(login_url='home')
+def primer_cambio_password(request):
+    user = request.user
+    if user.is_staff or user.is_superuser:
+        return redirect('loginin')
+    perfil = getattr(user, 'perfil', None)
+    if not perfil or not perfil.debe_cambiar_password:
+        return redirect('loginin')
+    error = ''
+    if request.method == 'POST':
+        nueva = request.POST.get('password_nueva', '')
+        confirmacion = request.POST.get('password_confirmacion', '')
+        if len(nueva) < 8:
+            error = 'La contraseña debe tener al menos 8 caracteres.'
+        elif nueva != confirmacion:
+            error = 'Las contraseñas no coinciden. Vuelve a escribirlas.'
+        elif not any(ch.isalpha() for ch in nueva) or not any(ch.isdigit() for ch in nueva):
+            error = 'Usa una combinación de letras y números para mayor seguridad.'
+        else:
+            user.set_password(nueva)
+            user.save(update_fields=['password'])
+            perfil.debe_cambiar_password = False
+            perfil.save(update_fields=['debe_cambiar_password'])
+            update_session_auth_hash(request, user)
+            messages.success(request, 'Tu contraseña quedó actualizada. ¡Bienvenido!')
+            return redirect('loginin')
+    return render(request, 'primer_cambio_password.html', {'error': error})
 
 
 @login_required(login_url='home')
