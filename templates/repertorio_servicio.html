@@ -117,9 +117,7 @@ main{padding:26px 0 70px}.empty{padding:40px 20px;text-align:center;background:v
  const songs=Array.from(document.querySelectorAll('.song'));let current=0;let fontSize=16;let autoTimer=null;let autoSpeed=40;
  const counter=document.getElementById('counter'),bar=document.getElementById('progressBar');
  function go(index){if(!songs.length)return;current=Math.max(0,Math.min(index,songs.length-1));songs.forEach((s,i)=>s.classList.toggle('current',i===current));songs[current].scrollIntoView({behavior:'smooth',block:'start'});counter.textContent=(current+1)+' de '+songs.length+' canciones';bar.style.width=((current+1)/songs.length*100)+'%';}
- function stopAuto(){if(autoTimer){clearInterval(autoTimer);autoTimer=null;}const b=document.getElementById('autoScroll');if(b){b.classList.remove('active');b.setAttribute('aria-pressed','false');b.innerHTML='<i class="fa-solid fa-forward"></i> Desfile automático';}}
- function startAuto(){stopAuto();if(!songs.length)return;const b=document.getElementById('autoScroll');b.classList.add('active');b.setAttribute('aria-pressed','true');b.innerHTML='<i class="fa-solid fa-pause"></i> Pausar desfile';autoTimer=setInterval(()=>{if(window.scrollY+window.innerHeight>=document.documentElement.scrollHeight-4){stopAuto();return;}window.scrollBy({top:1,behavior:'auto'});},autoSpeed);}
- const autoBtn=document.getElementById('autoScroll');autoBtn.addEventListener('click',()=>autoTimer?stopAuto():startAuto());document.getElementById('scrollSpeed').addEventListener('change',e=>{autoSpeed=Number(e.target.value);if(autoTimer)startAuto();});
+ function stopAuto(){if(autoTimer){clearInterval(autoTimer);autoTimer=null;}}
  document.getElementById('prevBtn').addEventListener('click',()=>{stopAuto();go(current-1)});document.getElementById('nextBtn').addEventListener('click',()=>{stopAuto();go(current+1)});
  document.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{
   stopAuto();
@@ -137,9 +135,7 @@ main{padding:26px 0 70px}.empty{padding:40px 20px;text-align:center;background:v
   document.body.style.overflow='hidden';
   document.getElementById('closeRequestedSong').focus();
  }));
- document.getElementById('smaller').addEventListener('click',()=>{fontSize=Math.max(11,fontSize-1);document.querySelectorAll('.lyrics').forEach(e=>e.style.fontSize=fontSize+'px')});
- document.getElementById('larger').addEventListener('click',()=>{fontSize=Math.min(30,fontSize+1);document.querySelectorAll('.lyrics').forEach(e=>e.style.fontSize=fontSize+'px')});
- document.getElementById('fullscreen').addEventListener('click',async()=>{try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen();else await document.exitFullscreen()}catch(e){}});
+
  document.addEventListener('keydown',e=>{if(e.key==='Escape')stopAuto();if(e.key==='ArrowDown'||e.key==='PageDown'){e.preventDefault();stopAuto();go(current+1)}if(e.key==='ArrowUp'||e.key==='PageUp'){e.preventDefault();stopAuto();go(current-1)}});
  if(songs.length)go(0);
 })();
