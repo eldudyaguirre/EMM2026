@@ -8,6 +8,7 @@ urlpatterns = [
     path('loginin/',views.loginin, name='loginin'),
     path('trazabilidad-preloader/', views.trazabilidad_preloader, name='trazabilidad_preloader'),
     path('cambiar-password/', views.cambiar_password, name='cambiar_password'),
+    path('primer-cambio-password/', views.primer_cambio_password, name='primer_cambio_password'),
     path('calendario/', views.calendario, name='calendario'),
     path('servicios/<int:servicio_id>/repertorio/', repertorio_servicio, name='repertorio_servicio'),
     path('servicios/<int:servicio_id>/repertorio/exportar-pdf/', exportar_repertorio_servicio_pdf, name='exportar_repertorio_servicio_pdf'),
