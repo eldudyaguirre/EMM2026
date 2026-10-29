@@ -12,7 +12,7 @@ from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Preformatted, KeepTogether, PageBreak
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Preformatted, KeepTogether, PageBreakIfNotEmpty
 from reportlab.graphics import renderPDF
 from svglib.svglib import svg2rlg
 from .models import Servicio, RepertorioServicio, Cancion
@@ -153,7 +153,7 @@ def exportar_repertorio_servicio_pdf(request, servicio_id):
     story = []
     for numero, item in enumerate(canciones, start=1):
         if numero > 1:
-            story.append(PageBreak())
+            story.append(PageBreakIfNotEmpty())
         story.extend([
             Paragraph(servicio.titulo, title_style),
             Paragraph(
