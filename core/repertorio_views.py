@@ -6,12 +6,15 @@ from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib import messages
 from io import BytesIO
 from django.http import HttpResponse
+from django.contrib.staticfiles import finders
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Preformatted, KeepTogether
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Preformatted, KeepTogether, PageBreak
+from reportlab.graphics import renderPDF
+from svglib.svglib import svg2rlg
 from .models import Servicio, RepertorioServicio, Cancion
 
 
@@ -105,7 +108,7 @@ def repertorio_servicio(request, servicio_id):
 
 @login_required(login_url='home')
 def exportar_repertorio_servicio_pdf(request, servicio_id):
-    """Genera un PDF descargable con todas las canciones del repertorio del servicio."""
+    """Exporta el repertorio en PDF, con una canción por página y franja roja."""
     servicio = get_object_or_404(
         Servicio.objects.select_related('grupo').prefetch_related('repertorio'),
         pk=servicio_id,
@@ -118,7 +121,7 @@ def exportar_repertorio_servicio_pdf(request, servicio_id):
     doc = SimpleDocTemplate(
         buffer, pagesize=A4,
         rightMargin=1.7 * cm, leftMargin=1.7 * cm,
-        topMargin=1.7 * cm, bottomMargin=1.7 * cm,
+        topMargin=2.0 * cm, bottomMargin=1.7 * cm,
         title=f"Repertorio - {servicio.titulo}",
         author="Ministerio de Música Emaús",
     )
@@ -134,66 +137,83 @@ def exportar_repertorio_servicio_pdf(request, servicio_id):
     )
     song_style = ParagraphStyle(
         'SongTitle', parent=base['Heading2'], fontName='Helvetica-Bold',
-        fontSize=12, leading=15, textColor=colors.HexColor('#bd0026'),
-        spaceBefore=10, spaceAfter=4, keepWithNext=True,
+        fontSize=15, leading=19, textColor=colors.HexColor('#bd0026'),
+        spaceBefore=8, spaceAfter=8, keepWithNext=True,
     )
     info_style = ParagraphStyle(
-        'SongInfo', parent=base['Normal'], fontSize=8, leading=10,
-        textColor=colors.HexColor('#555555'), spaceAfter=6, keepWithNext=True,
+        'SongInfo', parent=base['Normal'], fontSize=9, leading=12,
+        textColor=colors.HexColor('#555555'), spaceAfter=10, keepWithNext=True,
     )
     lyrics_style = ParagraphStyle(
         'SongLyrics', parent=base['Code'], fontName='Courier',
-        fontSize=8.5, leading=12, textColor=colors.HexColor('#161616'),
+        fontSize=9.5, leading=14, textColor=colors.HexColor('#161616'),
         leftIndent=4, rightIndent=4, spaceAfter=10, splitLongWords=1,
     )
 
-    story = [
-        Paragraph("MINISTERIO DE MÚSICA · EMAÚS", meta_style),
-        Paragraph(servicio.titulo, title_style),
-        Paragraph(
-            f"{servicio.fecha.strftime('%d/%m/%Y')} · "
-            f"{servicio.hora_inicio.strftime('%H:%M')}"
-            f"{' – ' + servicio.hora_fin.strftime('%H:%M') if servicio.hora_fin else ''}"
-            f" · {servicio.grupo.nombre}"
-            f"{' · ' + servicio.lugar if servicio.lugar else ''}",
-            meta_style,
-        ),
-        Spacer(1, 5),
-    ]
+    story = []
+    for numero, item in enumerate(canciones, start=1):
+        if numero > 1:
+            story.append(PageBreak())
+        story.extend([
+            Paragraph(servicio.titulo, title_style),
+            Paragraph(
+                f"{servicio.fecha.strftime('%d/%m/%Y')} · "
+                f"{servicio.hora_inicio.strftime('%H:%M')}"
+                f"{' – ' + servicio.hora_fin.strftime('%H:%M') if servicio.hora_fin else ''}"
+                f" · {servicio.grupo.nombre}"
+                f"{' · ' + servicio.lugar if servicio.lugar else ''}",
+                meta_style,
+            ),
+            Spacer(1, 4),
+            Paragraph(f"{numero}. {item.titulo_snapshot}", song_style),
+        ])
+        info = []
+        if item.usa_capodastro and item.traste_capodastro:
+            info.append(f"Capodastro: traste {item.traste_capodastro}")
+        if item.semitonos_transpuestos:
+            info.append(f"Transposición: {item.semitonos_transpuestos:+d} semitono(s)")
+        notacion = item.get_notacion_acordes_display()
+        if notacion:
+            info.append(f"Notación: {notacion}")
+        if info:
+            story.append(Paragraph(" · ".join(info), info_style))
+        story.append(Preformatted(item.letra_snapshot or "", lyrics_style, maxLineLength=100))
 
     if not canciones:
+        story.append(Paragraph(servicio.titulo, title_style))
         story.append(Paragraph("Este servicio todavía no tiene canciones en su repertorio.", base['Normal']))
-    else:
-        for numero, item in enumerate(canciones, start=1):
-            info = []
-            if item.usa_capodastro and item.traste_capodastro:
-                info.append(f"Capodastro: traste {item.traste_capodastro}")
-            if item.semitonos_transpuestos:
-                info.append(f"Transposición: {item.semitonos_transpuestos:+d} semitono(s)")
-            notacion = item.get_notacion_acordes_display()
-            if notacion:
-                info.append(f"Notación: {notacion}")
-            bloque = [
-                Paragraph(f"{numero}. {item.titulo_snapshot}", song_style),
-            ]
-            if info:
-                bloque.append(Paragraph(" · ".join(info), info_style))
-            letra = item.letra_snapshot or ""
-            bloque.append(Preformatted(letra, lyrics_style, maxLineLength=100))
-            story.append(KeepTogether(bloque[:2]) if len(bloque) > 1 else bloque[0])
-            if len(bloque) > 2:
-                story.append(bloque[2])
-            story.append(Spacer(1, 5))
 
-    def footer(canvas, document):
+    def dibujar_encabezado_pie(canvas, document):
         canvas.saveState()
+        # Franja roja en todas las páginas.
+        canvas.setFillColor(colors.HexColor('#bd0026'))
+        canvas.rect(0, A4[1] - 0.28 * cm, A4[0], 0.28 * cm, fill=1, stroke=0)
+
+        # Logo institucional solo en la primera página, debajo de la franja.
+        if document.page == 1:
+            logo_path = finders.find('images/logomio_negro.svg')
+            if not logo_path:
+                logo_path = finders.find('images/logomio.svg')
+            if logo_path:
+                try:
+                    dibujo = svg2rlg(logo_path)
+                    if dibujo and dibujo.width and dibujo.height:
+                        ancho_max, alto_max = 5.0 * cm, 1.45 * cm
+                        escala = min(ancho_max / dibujo.width, alto_max / dibujo.height)
+                        dibujo.width *= escala
+                        dibujo.height *= escala
+                        dibujo.scale(escala, escala)
+                        renderPDF.draw(dibujo, canvas, (A4[0] - dibujo.width) / 2, A4[1] - 0.55 * cm - dibujo.height)
+                except Exception:
+                    pass
+
         canvas.setFont('Helvetica', 8)
         canvas.setFillColor(colors.HexColor('#777777'))
         canvas.drawString(1.7 * cm, 0.9 * cm, "Ministerio de Música · Emaús")
         canvas.drawRightString(A4[0] - 1.7 * cm, 0.9 * cm, f"Página {document.page}")
         canvas.restoreState()
 
-    doc.build(story, onFirstPage=footer, onLaterPages=footer)
+    doc.build(story, onFirstPage= dibujar_encabezado_pie, onLaterPages=dibujar_encabezado_pie)
     pdf = buffer.getvalue()
     buffer.close()
     response = HttpResponse(pdf, content_type='application/pdf')
