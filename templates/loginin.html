@@ -185,7 +185,7 @@
                                 {% endif %}
                                 <li class="nav-item"><a class="nav-link" href="{% url 'calendario' %}">Calendario</a></li>
                                 {% if request.user.is_authenticated %}
-                                <li class="nav-item"><a class="nav-link" href="#" id="abrirCambioPassword">Cambiar contraseña</a></li>
+                                <li class="nav-item"><a class="nav-link" href="{% url 'cambiar_password' %}" id="abrirCambioPassword">Cambiar contraseña</a></li>
                                 {% endif %}
                                 <li class="nav-item"><a class="nav-link" href="{% url 'logout' %}">Cerrar sesión</a></li>
                             </ul>
