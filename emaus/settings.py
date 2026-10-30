@@ -26,7 +26,15 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+    if host.strip()
+]
+# Autorizar el Quick Tunnel vigente para pruebas externas, incluso si .env define ALLOWED_HOSTS.
+QUICK_TUNNEL_HOST = 'nathan-songs-yield-longest.trycloudflare.com'
+if QUICK_TUNNEL_HOST not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(QUICK_TUNNEL_HOST)
 
 CSRF_TRUSTED_ORIGINS = [
     'https://ministeriodemusicaemaus.up.railway.app',
