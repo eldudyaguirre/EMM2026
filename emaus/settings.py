@@ -32,13 +32,13 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 # Autorizar el Quick Tunnel vigente para pruebas externas, incluso si .env define ALLOWED_HOSTS.
-QUICK_TUNNEL_HOST = 'nathan-songs-yield-longest.trycloudflare.com'
+QUICK_TUNNEL_HOST = 'bidding-badly-specialized-league.trycloudflare.com'
 if QUICK_TUNNEL_HOST not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(QUICK_TUNNEL_HOST)
 
 CSRF_TRUSTED_ORIGINS = [
     'https://ministeriodemusicaemaus.up.railway.app',
-    'https://nathan-songs-yield-longest.trycloudflare.com',
+    'https://bidding-badly-specialized-league.trycloudflare.com',
 ]
 
 # Application definition
