@@ -5,6 +5,8 @@ from django.db import transaction
 from django.db.models import Q, Count
 from datetime import date, time as datetime_time
 from django.utils.safestring import mark_safe
+from django.utils import timezone
+from django.contrib.staticfiles import finders
 import re
 import logging
 from django.contrib.auth import authenticate, login
@@ -1615,3 +1617,99 @@ def exportar_servidores_pdf(request):
     buffer.close()
     return response
 
+
+
+@login_required(login_url='home')
+def datos_offline(request):
+    """Entrega una copia de consulta del cancionero y los repertorios autorizados."""
+    categorias = [
+        {'id': categoria.pk, 'nombre': categoria.nombre}
+        for categoria in Categoria.objects.order_by('nombre')
+    ]
+
+    canciones = [
+        {
+            'id': cancion.pk,
+            'numero': cancion.numero,
+            'titulo': cancion.titulo,
+            'categoria_id': cancion.categoria_id,
+            'categoria': cancion.categoria.nombre,
+            'letra': cancion.letra or '',
+            'usa_capodastro': cancion.usa_capodastro,
+            'traste_capodastro': cancion.traste_capodastro,
+        }
+        for cancion in Cancion.objects.select_related('categoria').order_by('numero', 'titulo')
+    ]
+
+    # Se incluyen servicios futuros o en ejecución que el usuario tiene permitido consultar.
+    servicios_qs = Servicio.objects.filter(
+        estado__in=(Servicio.ESTADO_PROGRAMADO, Servicio.ESTADO_EN_EJECUCION),
+        fecha__gte=date.today(),
+        activo=True,
+        grupo__activo=True,
+    ).select_related('grupo').prefetch_related('repertorio').order_by('fecha', 'hora_inicio', 'pk')
+
+    if not (request.user.is_staff or request.user.is_superuser):
+        try:
+            perfil = request.user.perfil
+        except (Perfil.DoesNotExist, AttributeError):
+            perfil = None
+        if perfil is None:
+            servicios_qs = servicios_qs.none()
+        else:
+            servicios_qs = servicios_qs.filter(
+                grupo__tipo=Grupo.TIPO_PERMANENTE,
+                grupo__integrantes=perfil,
+            ).distinct()
+
+    servicios = []
+    for servicio in servicios_qs:
+        repertorio = []
+        for item in servicio.repertorio.all().order_by('orden', 'id'):
+            repertorio.append({
+                'id': item.pk,
+                'cancion_id': item.cancion_id,
+                'numero': item.numero_snapshot,
+                'titulo': item.titulo_snapshot,
+                'letra': item.letra_snapshot or '',
+                'usa_capodastro': item.usa_capodastro,
+                'traste_capodastro': item.traste_capodastro,
+                'semitonos_transpuestos': item.semitonos_transpuestos,
+                'notacion_acordes': item.get_notacion_acordes_display(),
+                'orden': item.orden,
+            })
+        servicios.append({
+            'id': servicio.pk,
+            'titulo': servicio.titulo,
+            'fecha': servicio.fecha.isoformat(),
+            'hora_inicio': servicio.hora_inicio.strftime('%H:%M') if servicio.hora_inicio else '',
+            'hora_fin': servicio.hora_fin.strftime('%H:%M') if servicio.hora_fin else '',
+            'grupo': servicio.grupo.nombre,
+            'lugar': servicio.lugar or '',
+            'estado': servicio.get_estado_display(),
+            'repertorio': repertorio,
+        })
+
+    response = JsonResponse({
+        'ok': True,
+        'version': 1,
+        'usuario': request.user.get_username(),
+        'generado': timezone.now().isoformat(),
+        'categorias': categorias,
+        'canciones': canciones,
+        'servicios': servicios,
+    })
+    response['Cache-Control'] = 'private, no-store, max-age=0'
+    return response
+
+
+def pwa_service_worker(request):
+    """Sirve el Service Worker desde la raíz para que controle toda la aplicación."""
+    worker_path = finders.find('pwa/sw.js')
+    if not worker_path:
+        return HttpResponse('Service Worker no encontrado.', status=404)
+    with open(worker_path, 'rb') as worker_file:
+        response = HttpResponse(worker_file.read(), content_type='application/javascript; charset=utf-8')
+    response['Service-Worker-Allowed'] = '/'
+    response['Cache-Control'] = 'no-cache'
+    return response
