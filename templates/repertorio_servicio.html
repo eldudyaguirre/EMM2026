@@ -3,6 +3,8 @@
 <html lang="es">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#bd0026">
+    <link rel="manifest" href="{% static 'pwa/manifest.webmanifest' %}">
 <title>{{ servicio.titulo }} · Repertorio Emaús</title>
 <link rel="shortcut icon" href="{% static 'images/favicon.png' %}">
 <link href="{% static 'css/bootstrap.min.css' %}" rel="stylesheet">
@@ -145,4 +147,12 @@ main{padding:26px 0 70px}.empty{padding:40px 20px;text-align:center;background:v
  if(songs.length)go(0);
 })();
 </script>
+    <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/sw.js', {scope: '/'})
+          .catch(function (error) { console.error('Emaús PWA: no se pudo registrar el modo offline.', error); });
+      });
+    }
+    </script>
 </body></html>
