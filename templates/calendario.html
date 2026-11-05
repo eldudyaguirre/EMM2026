@@ -4,6 +4,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#bd0026">
+    <link rel="manifest" href="{% static 'pwa/manifest.webmanifest' %}">
     <title>Emaús - Calendario de servicios</title>
     <link rel="shortcut icon" type="image/x-icon" href="{% static 'images/favicon.png' %}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -230,6 +232,14 @@
         document.getElementById('forward-btn').addEventListener('click',()=>{currentMonth=new Date(currentMonth.getFullYear(),currentMonth.getMonth()+1,1);render();});
         render();
     })();
+    </script>
+    <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/sw.js', {scope: '/'})
+          .catch(function (error) { console.error('Emaús PWA: no se pudo registrar el modo offline.', error); });
+      });
+    }
     </script>
 </body>
 </html>
