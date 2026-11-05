@@ -32,13 +32,13 @@ ALLOWED_HOSTS = [
     if host.strip()
 ]
 # Autorizar el Quick Tunnel vigente para pruebas externas, incluso si .env define ALLOWED_HOSTS.
-QUICK_TUNNEL_HOST = 'bidding-badly-specialized-league.trycloudflare.com'
+QUICK_TUNNEL_HOST = 'alien-experience-heater-feed.trycloudflare.com'
 if QUICK_TUNNEL_HOST not in ALLOWED_HOSTS:
     ALLOWED_HOSTS.append(QUICK_TUNNEL_HOST)
 
 CSRF_TRUSTED_ORIGINS = [
     'https://ministeriodemusicaemaus.up.railway.app',
-    'https://bidding-badly-specialized-league.trycloudflare.com',
+    'https://alien-experience-heater-feed.trycloudflare.com',
 ]
 
 # Application definition
