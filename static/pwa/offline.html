@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#bd0026">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Emaús · Modo sin conexión</title>
+  <link rel="manifest" href="/static/pwa/manifest.webmanifest">
+  <link rel="icon" href="/static/pwa/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/pwa/offline.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <img src="/static/pwa/icon.svg" alt="" width="42" height="42">
+      <div><strong>EMAÚS</strong><span>Ministerio de Música</span></div>
+    </div>
+    <span id="connectionBadge" class="connection online">Con conexión</span>
+  </header>
+
+  <main class="container">
+    <section class="intro">
+      <p class="eyebrow">CANCIONERO DIGITAL</p>
+      <h1>Tu música, también sin Internet</h1>
+      <p>Descarga canciones y repertorios mientras tengas conexión. Luego podrás consultarlos desde este dispositivo aunque no tengas Internet.</p>
+      <div class="actions">
+        <button id="syncButton" class="primary">Descargar / actualizar contenido</button>
+        <button id="installButton" class="secondary" hidden>Instalar Emaús</button>
+      </div>
+      <p id="statusMessage" class="status" role="status">Conéctate y descarga los datos para preparar este dispositivo.</p>
+      <div id="stats" class="stats" hidden></div>
+      <p class="privacy-note">Los datos descargados quedan guardados en este dispositivo. En equipos compartidos, elimínalos al terminar.</p>
+    </section>
+
+    <section id="contentSection" class="content-section" hidden>
+      <div class="tabs" role="tablist">
+        <button id="songsTab" class="tab active" role="tab" aria-selected="true">Cancionero</button>
+        <button id="servicesTab" class="tab" role="tab" aria-selected="false">Mis repertorios</button>
+      </div>
+
+      <div id="songsPanel" class="panel">
+        <div class="filters">
+          <label class="sr-only" for="songSearch">Buscar canción</label>
+          <input id="songSearch" type="search" placeholder="Buscar por título, letra o número…">
+          <label class="sr-only" for="categoryFilter">Filtrar categoría</label>
+          <select id="categoryFilter"><option value="">Todas las categorías</option></select>
+        </div>
+        <p id="songsCount" class="section-note"></p>
+        <div id="songsList" class="cards"></div>
+      </div>
+
+      <div id="servicesPanel" class="panel" hidden>
+        <label class="field-label" for="serviceSelect">Servicio descargado</label>
+        <select id="serviceSelect"><option value="">Selecciona un servicio</option></select>
+        <p id="servicesCount" class="section-note"></p>
+        <div id="serviceDetail"></div>
+      </div>
+    </section>
+
+    <footer>
+      <button id="clearButton" class="link-button" type="button">Eliminar contenido guardado de este dispositivo</button>
+      <a href="/" class="back-link">Volver a Emaús cuando haya conexión</a>
+      <p>Ministerio de Música Emaús</p>
+    </footer>
+  </main>
+  <script src="/static/pwa/offline.js" defer></script>
+</body>
+</html>
