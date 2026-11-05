@@ -7,6 +7,8 @@
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+    <meta name="theme-color" content="#bd0026">
+    <link rel="manifest" href="{% static 'pwa/manifest.webmanifest' %}">
 	<meta name="description" content="">
 	<meta name="keywords" content="">
 	<meta name="author" content="Awaiken">
@@ -239,6 +241,14 @@
 </script>
     <!-- Main Custom js file -->
     <script src="{% static 'js/function.js' %}"></script>
+    <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/sw.js', {scope: '/'})
+          .catch(function (error) { console.error('Emaús PWA: no se pudo registrar el modo offline.', error); });
+      });
+    }
+    </script>
 </body>
 </html>
 
