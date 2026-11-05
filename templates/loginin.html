@@ -8,6 +8,8 @@
 	<meta charset="utf-8">
 	<meta http-equiv="X-UA-Compatible" content="IE=edge">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+    <meta name="theme-color" content="#bd0026">
+    <link rel="manifest" href="{% static 'pwa/manifest.webmanifest' %}">
 	<meta name="description" content="">
 	<meta name="keywords" content="">
 	<meta name="author" content="Awaiken">
@@ -184,6 +186,7 @@
                                 </li>
                                 {% endif %}
                                 <li class="nav-item"><a class="nav-link" href="{% url 'calendario' %}">Calendario</a></li>
+                                <li class="nav-item"><a class="nav-link" href="{% static 'pwa/offline.html' %}">Modo sin conexión</a></li>
                                 {% if request.user.is_authenticated %}
                                 <li class="nav-item"><a class="nav-link" href="{% url 'cambiar_password' %}" id="abrirCambioPassword">Cambiar contraseña</a></li>
                                 {% endif %}
@@ -194,6 +197,7 @@
                         <!-- Header Btn Start -->
                         <div class="header-btn">
                             <a href="{% url 'contact' %}" class="btn-default btn-highlighted">Contactanos</a>
+                            <button type="button" id="installPwaBtn" class="btn-default btn-highlighted" hidden style="margin-left:8px;border:0">Instalar Emaús</button>
                         </div>
                         <!-- Header Btn End -->
                     </div>
@@ -714,6 +718,35 @@
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded',function(){const slider=document.querySelector('.emaus-categories-swiper');if(!slider||typeof Swiper==='undefined')return;new Swiper(slider,{slidesPerView:1.12,spaceBetween:16,speed:650,grabCursor:true,watchOverflow:true,keyboard:{enabled:true},navigation:{nextEl:'.emaus-swiper-next',prevEl:'.emaus-swiper-prev'},pagination:{el:'.emaus-swiper-pagination',clickable:true},breakpoints:{576:{slidesPerView:2,spaceBetween:18},992:{slidesPerView:3,spaceBetween:22},1280:{slidesPerView:4,spaceBetween:24}}});});
+    </script>
+    <script>
+    (function () {
+      if (!('serviceWorker' in navigator)) return;
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/sw.js', {scope: '/'})
+          .then(function () { console.info('Emaús: modo PWA preparado.'); })
+          .catch(function (error) { console.error('Emaús: no se pudo registrar el Service Worker.', error); });
+      });
+      let installPrompt = null;
+      const installButton = document.getElementById('installPwaBtn');
+      window.addEventListener('beforeinstallprompt', function (event) {
+        event.preventDefault();
+        installPrompt = event;
+        if (installButton) installButton.hidden = false;
+      });
+      if (installButton) {
+        installButton.addEventListener('click', async function () {
+          if (!installPrompt) return;
+          installPrompt.prompt();
+          await installPrompt.userChoice;
+          installPrompt = null;
+          installButton.hidden = true;
+        });
+      }
+      window.addEventListener('appinstalled', function () {
+        if (installButton) installButton.hidden = true;
+      });
+    })();
     </script>
 </body>
 </html>
