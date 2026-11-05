@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#bd0026"/>
+  <path d="M256 82c-12 0-22 10-22 22v74h-74c-12 0-22 10-22 22s10 22 22 22h74v74c0 12 10 22 22 22s22-10 22-22v-74h74c12 0 22-10 22-22s-10-22-22-22h-74v-74c0-12-10-22-22-22z" fill="#fff"/>
+  <text x="256" y="430" text-anchor="middle" font-family="Arial,sans-serif" font-size="64" font-weight="700" fill="#fff">EMAÚS</text>
+</svg>
