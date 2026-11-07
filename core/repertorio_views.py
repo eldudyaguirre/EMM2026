@@ -177,7 +177,10 @@ def exportar_repertorio_servicio_pdf(request, servicio_id):
             info.append(f"Notación: {notacion}")
         if info:
             story.append(Paragraph(" · ".join(info), info_style))
-        story.append(Preformatted(item.letra_snapshot or "", lyrics_style, maxLineLength=100))
+        # Normalizar saltos de línea Windows/Mac antes de dibujar el texto.
+        # Los \r que quedan dentro de Preformatted se imprimen como cuadros negros.
+        letra_pdf = (item.letra_snapshot or "").replace("\r\n", "\n").replace("\r", "\n")
+        story.append(Preformatted(letra_pdf, lyrics_style, maxLineLength=100))
 
     if not canciones:
         story.append(Paragraph(servicio.titulo, title_style))
