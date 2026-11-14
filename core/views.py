@@ -1,6 +1,6 @@
 from django.shortcuts import render,get_object_or_404
 from .models import Categoria, Cancion, Servicio, Grupo, Perfil, Instrumento, RepertorioServicio
-from .liturgia import lectura_para_fecha
+from .liturgia import lectura_para_fecha, referencia_para_fecha
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import Q, Count
@@ -1692,6 +1692,25 @@ def datos_offline(request):
                 'evangelio': lectura.evangelio,
                 'url_fuente': lectura.url_fuente,
             }
+        referencia = referencia_para_fecha(servicio.fecha)
+        referencia_data = None
+        if referencia:
+            referencia_data = {
+                'anio_liturgico': referencia.anio_liturgico,
+                'tiempo_liturgico': referencia.tiempo_liturgico,
+                'semana_liturgica': referencia.semana_liturgica,
+                'ciclo_dominical': referencia.ciclo_dominical,
+                'ciclo_ferial': referencia.ciclo_ferial,
+                'celebracion': referencia.celebracion,
+                'primera_lectura': referencia.primera_lectura_ref,
+                'salmo': referencia.salmo_ref,
+                'segunda_lectura': referencia.segunda_lectura_ref,
+                'aclamacion': referencia.aclamacion_ref,
+                'evangelio': referencia.evangelio_ref,
+                'fuente': referencia.get_fuente_display(),
+                'url_fuente': referencia.url_fuente,
+                'validada': referencia.validada,
+            }
         servicios.append({
             'id': servicio.pk,
             'titulo': servicio.titulo,
@@ -1703,6 +1722,7 @@ def datos_offline(request):
             'estado': servicio.get_estado_display(),
             'repertorio': repertorio,
             'lectura_liturgica': lectura_data,
+            'referencia_liturgica': referencia_data,
         })
 
     response = JsonResponse({
