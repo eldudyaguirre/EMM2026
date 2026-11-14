@@ -8,6 +8,7 @@ from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from core.models import LecturaLiturgica
+from core.calendario_liturgico import datos_dia
 
 SECCIONES = (
     ('primera_lectura', 'PRIMERA LECTURA'),
@@ -33,16 +34,12 @@ class TextoHTML(HTMLParser):
             self.partes.append(texto)
 
 
-def domingo_advento(anio):
-    fecha = date(anio, 11, 27)
-    return fecha + timedelta(days=(6 - fecha.weekday()) % 7)
-
-
 def ciclo_fecha(fecha):
-    if fecha.weekday() == 6:
-        anio_liturgico = fecha.year if fecha >= domingo_advento(fecha.year) else fecha.year - 1
-        return ('A', 'B', 'C')[(anio_liturgico - 2025) % 3]
-    return 'I' if fecha.year % 2 else 'II'
+    """Devuelve A/B/C para domingos, I/II para ferias ordinarias y F para tiempos propios."""
+    datos = datos_dia(fecha)
+    if datos['es_domingo']:
+        return datos['ciclo_dominical']
+    return datos['ciclo_ferial'] or 'F'
 
 
 def extraer_seccion(texto, titulo):
@@ -76,7 +73,7 @@ def extraer_seccion(texto, titulo):
 
 def obtener_lecturas(fecha):
     url = 'https://misal.mx/' + fecha.isoformat()
-    request = Request(url, headers={'User-Agent': 'EmausLiturgicalCalendar/1.0'})
+    request = Request(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'})
     with urlopen(request, timeout=25) as response:
         html = response.read().decode(
             response.headers.get_content_charset() or 'utf-8',
@@ -105,7 +102,7 @@ def obtener_lecturas(fecha):
 
 
 class Command(BaseCommand):
-    help = 'Importa lecturas de Misal.mx por día/mes y ciclo litúrgico.'
+    help = 'Importa textos de Misal.mx por fecha concreta y ciclo litúrgico; revisar permisos antes de redistribuirlos.'
 
     def add_arguments(self, parser):
         parser.add_argument('--desde', type=date.fromisoformat, required=True, help='YYYY-MM-DD')
@@ -130,13 +127,18 @@ class Command(BaseCommand):
                 defaults = {**datos, 'fecha_fuente': fecha, 'url_fuente': url}
 
                 with transaction.atomic():
-                    registro, creada = LecturaLiturgica.objects.get_or_create(
-                        dia=fecha.day,
-                        mes=fecha.month,
-                        ciclo=ciclo,
-                        fecha_especifica__isnull=True,
-                        defaults=defaults,
-                    )
+                    registro = LecturaLiturgica.objects.filter(
+                        fecha_especifica=fecha
+                    ).order_by('-id').first()
+                    creada = registro is None
+                    if creada:
+                        registro = LecturaLiturgica.objects.create(
+                            dia=fecha.day,
+                            mes=fecha.month,
+                            ciclo=ciclo,
+                            fecha_especifica=fecha,
+                            **defaults,
+                        )
 
                     if creada:
                         nuevas += 1
