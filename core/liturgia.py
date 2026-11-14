@@ -1,6 +1,7 @@
 from datetime import date, timedelta
 
 from .models import LecturaLiturgica, ReferenciaLecturaLiturgica
+from .calendario_liturgico import datos_dia
 
 
 def domingo_advento(anio):
@@ -9,11 +10,11 @@ def domingo_advento(anio):
 
 
 def ciclo_lectura(fecha):
-    """Devuelve el ciclo dominical A/B/C o ferial I/II correspondiente."""
-    if fecha.weekday() == 6:
-        anio_liturgico = fecha.year if fecha >= domingo_advento(fecha.year) else fecha.year - 1
-        return ('A', 'B', 'C')[(anio_liturgico - 2025) % 3]
-    return 'I' if fecha.year % 2 else 'II'
+    """Devuelve el ciclo aplicable: A/B/C, I/II o F para tiempos propios."""
+    datos = datos_dia(fecha)
+    if datos['es_domingo']:
+        return datos['ciclo_dominical']
+    return datos['ciclo_ferial'] or 'F'
 
 
 def lectura_para_fecha(fecha):
