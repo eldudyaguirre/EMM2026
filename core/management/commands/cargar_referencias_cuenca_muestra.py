@@ -42,7 +42,7 @@ class Command(BaseCommand):
                     'validada': True,
                     'observaciones': f"Referencia transcrita de {fila['documento_origen']}; conservar el PDF como comprobante.",
                 }
-                existente = ReferenciaLecturaLiturgica.objects.filter(fecha=fecha).first()
+                existente = ReferenciaLecturaLiturgica.objects.filter(fecha=fecha, fuente='arquidiocesis_cuenca').first()
                 if existente is None:
                     ReferenciaLecturaLiturgica.objects.create(fecha=fecha, **defaults)
                     creadas += 1
