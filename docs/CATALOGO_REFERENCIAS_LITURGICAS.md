@@ -69,3 +69,16 @@ python manage.py auditar_referencias_liturgicas --anio 2026
 El comando genera un CSV de 365 filas. Las fechas sin referencia quedan explícitas como `sin referencia`; no se rellenan por cálculo aproximado.
 
 La tabla no importa la columna de santoral de los PDF. El campo `celebracion` se reserva para solemnidades, fiestas o títulos litúrgicos relevantes para la selección de lecturas; Emaús no necesita almacenar la lista diaria de santos.
+
+## Varias fuentes para una misma fecha
+
+El modelo conserva un registro por combinación de fecha y fuente. Así se pueden guardar, por ejemplo, las referencias de la Arquidiócesis de Cuenca y las de Misal.mx para el mismo domingo sin que una fuente sobrescriba a la otra. El resolvedor de los servicios prioriza referencias validadas y, entre ellas, la fuente local de Cuenca; las comparativas USCCB quedan como apoyo externo.
+
+Después de cargar referencias de ambas fuentes, los comandos permiten revisar cobertura y discrepancias:
+
+```powershell
+python manage.py auditar_referencias_liturgicas --anio 2025
+python manage.py comparar_referencias_liturgicas --anio 2025
+```
+
+El segundo comando exporta una fila por fuente para cada fecha que tenga dos o más registros. Marca si las citas coinciden o si requieren revisión.
