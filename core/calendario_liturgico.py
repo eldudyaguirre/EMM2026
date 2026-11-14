@@ -93,8 +93,14 @@ def ciclo_dominical(fecha):
 
 
 def ciclo_ferial(fecha):
-    """Ciclo ferial I/II del Tiempo Ordinario."""
-    return 'I' if fecha.year % 2 else 'II'
+    """Ciclo ferial I/II del año litúrgico vigente.
+
+    El ciclo cambia con el primer domingo de Adviento, no el 1 de enero.
+    Por ejemplo, el año litúrgico 2026-2027 utiliza el ciclo ferial I,
+    incluido Adviento 2026.
+    """
+    anio_ciclo = anio_liturgico(fecha) + 1
+    return 'I' if anio_ciclo % 2 else 'II'
 
 
 def _lunes_inicio_ordinario(anio):
