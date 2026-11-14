@@ -76,10 +76,15 @@ def extraer_seccion(texto, titulo):
 
 def extraer_nombre_celebracion(texto):
     """
-    Misal.mx publica en esta página el santoral bajo 'Santos:'.
-    Se conserva como referencia del día, sin inventar una solemnidad.
+    Misal.mx puede separar el rótulo 'Santos:' y los nombres en nodos
+    de texto distintos. Se admite que el santoral esté en la misma línea
+    o en la siguiente, sin confundirlo con el nombre de la celebración.
     """
-    match = re.search(r'^\s*Santos:\s*(.+?)\s*$', texto, re.IGNORECASE | re.MULTILINE)
+    match = re.search(
+        r'^[ \t]*Santos:[ \t]*(?:\n[ \t]*)?([^\n]+)',
+        texto,
+        re.IGNORECASE | re.MULTILINE,
+    )
     if not match:
         return ''
     return ('Santos del día: ' + match.group(1).strip())[:200]
