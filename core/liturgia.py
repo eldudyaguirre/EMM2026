@@ -1,5 +1,7 @@
 from datetime import date, timedelta
 
+from django.db.models import Case, IntegerField, Value, When
+
 from .models import LecturaLiturgica, ReferenciaLecturaLiturgica
 from .calendario_liturgico import datos_dia
 
@@ -38,6 +40,19 @@ def lectura_para_fecha(fecha):
     ).first()
 
 
+def referencias_ordenadas():
+    """Ordena fuentes: validadas primero; luego manual, Cuenca, Misal.mx y comparativas."""
+    return ReferenciaLecturaLiturgica.objects.annotate(
+        prioridad_fuente=Case(
+            When(fuente='manual', then=Value(0)),
+            When(fuente='arquidiocesis_cuenca', then=Value(1)),
+            When(fuente='misal_mx', then=Value(2)),
+            default=Value(3),
+            output_field=IntegerField(),
+        )
+    ).order_by('fecha', '-validada', 'prioridad_fuente', '-consultada')
+
+
 def referencia_para_fecha(fecha):
-    """Busca metadatos de citas bíblicas para la fecha exacta del servicio."""
-    return ReferenciaLecturaLiturgica.objects.filter(fecha=fecha).first()
+    """Devuelve la fuente preferida para la fecha exacta del servicio."""
+    return referencias_ordenadas().filter(fecha=fecha).first()
