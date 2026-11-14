@@ -134,7 +134,8 @@ def repertorio_servicio(request, servicio_id):
     return render(request, 'repertorio_servicio.html', {
         'servicio': servicio,
         'canciones': canciones,
-        'total_canciones': len(canciones),\n        'lectura_liturgica': lectura_liturgica,
+        'total_canciones': len(canciones),
+        'lectura_liturgica': lectura_liturgica,
     })
 
 @login_required(login_url='home')
