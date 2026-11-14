@@ -21,7 +21,7 @@ class Command(BaseCommand):
         salida = Path(options['salida'] or f'calendario_liturgico_{anio}.csv')
         filas = generar_calendario_anual(anio)
         campos = [
-            'fecha', 'dia_semana', 'anio_liturgico', 'tiempo_liturgico',
+            'fecha', 'dia_semana', 'anio_liturgico', 'anio_liturgico_inicio', 'tiempo_liturgico',
             'semana_liturgica', 'ciclo_dominical', 'ciclo_ferial',
             'celebracion_calculada', 'es_domingo',
         ]
