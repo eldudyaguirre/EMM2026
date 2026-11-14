@@ -18,6 +18,36 @@ from svglib.svglib import svg2rlg
 from .models import Servicio, RepertorioServicio, Cancion, LecturaLiturgica
 
 
+def _domingo_advento(anio):
+    from datetime import date, timedelta
+    fecha = date(anio, 11, 30)
+    return fecha - timedelta(days=(fecha.weekday() + 1) % 7)
+
+
+def _ciclo_lectura(fecha):
+    if fecha.weekday() == 6:
+        anio_liturgico = fecha.year if fecha >= _domingo_advento(fecha.year) else fecha.year - 1
+        return ('A', 'B', 'C')[(anio_liturgico - 2025) % 3]
+    return 'I' if fecha.year % 2 else 'II'
+
+
+def _lectura_para_fecha(fecha):
+    exacta = LecturaLiturgica.objects.filter(fecha_especifica=fecha).order_by('-id').first()
+    if exacta:
+        return exacta
+    ciclo = _ciclo_lectura(fecha)
+    lectura = LecturaLiturgica.objects.filter(
+        dia=fecha.day, mes=fecha.month, ciclo=ciclo,
+        fecha_especifica__isnull=True,
+    ).first()
+    if lectura:
+        return lectura
+    return LecturaLiturgica.objects.filter(
+        dia=fecha.day, mes=fecha.month, ciclo='F',
+        fecha_especifica__isnull=True,
+    ).first()
+
+
 @login_required(login_url='home')
 @require_POST
 def gestionar_cancion_repertorio(request, servicio_id):
@@ -100,6 +130,7 @@ def repertorio_servicio(request, servicio_id):
     canciones = list(
         servicio.repertorio.select_related('cancion').order_by('orden', 'id')
     )
+    lectura_liturgica = _lectura_para_fecha(servicio.fecha)
     return render(request, 'repertorio_servicio.html', {
         'servicio': servicio,
         'canciones': canciones,
