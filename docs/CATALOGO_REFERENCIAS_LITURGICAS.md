@@ -59,3 +59,11 @@ La fecha del primer domingo de Adviento determina el cambio de año litúrgico. 
 ## Estado y límites
 
 Este catálogo es una base verificable y ampliable, no todavía un Leccionario completo de Ecuador. La muestra cubre 24 fechas. El importador Misal.mx aporta otras fechas según disponibilidad y calidad de extracción. Antes de usar las referencias para seleccionar textos en un servicio, se debe validar la precedencia de celebraciones y resolver cualquier diferencia entre Misal.mx y la Arquidiócesis de Cuenca.
+
+Para auditar cobertura (fechas con referencia, validadas, incompletas y faltantes):
+
+```powershell
+python manage.py auditar_referencias_liturgicas --anio 2026
+```
+
+El comando genera un CSV de 365 filas. Las fechas sin referencia quedan explícitas como `sin referencia`; no se rellenan por cálculo aproximado.
