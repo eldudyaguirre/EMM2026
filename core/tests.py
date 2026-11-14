@@ -9,6 +9,7 @@ from django.test import SimpleTestCase
 
 from core.calendario_liturgico import (
     bautismo_del_senor,
+    epifania_del_senor,
     ciclo_dominical,
     datos_dia,
     domingo_pascua,
@@ -21,6 +22,7 @@ from core.calendario_liturgico import (
 class CalendarioLiturgicoTests(SimpleTestCase):
     def test_fechas_principales_2026_ecuador(self):
         fechas = fechas_moviles(2026)
+        self.assertEqual(epifania_del_senor(2026), date(2026, 1, 4))
         self.assertEqual(bautismo_del_senor(2026), date(2026, 1, 11))
         self.assertEqual(fechas['miercoles_ceniza'], date(2026, 2, 18))
         self.assertEqual(fechas['domingo_ramos'], date(2026, 3, 29))
