@@ -15,7 +15,7 @@ from reportlab.lib.units import cm
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Preformatted, KeepTogether, PageBreakIfNotEmpty
 from reportlab.graphics import renderPDF
 from svglib.svglib import svg2rlg
-from .models import Servicio, RepertorioServicio, Cancion
+from .models import Servicio, RepertorioServicio, Cancion, LecturaLiturgica
 
 
 @login_required(login_url='home')
@@ -103,7 +103,7 @@ def repertorio_servicio(request, servicio_id):
     return render(request, 'repertorio_servicio.html', {
         'servicio': servicio,
         'canciones': canciones,
-        'total_canciones': len(canciones),
+        'total_canciones': len(canciones),\n        'lectura_liturgica': lectura_liturgica,
     })
 
 @login_required(login_url='home')
