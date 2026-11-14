@@ -1,8 +1,8 @@
 """Motor de estructura del calendario litúrgico romano, perfil Ecuador.
 
-Calcula fechas móviles, tiempos, semanas y ciclos. No determina por sí solo
-las lecturas bíblicas ni el santoral completo: eso requiere el Leccionario y
-el calendario particular aprobado para Ecuador.
+Calcula fechas móviles, tiempos, semanas y algunas celebraciones principales.
+No determina por sí solo todas las precedencias ni el santoral completo: eso
+requiere el calendario particular aprobado para Ecuador y validación eclesial.
 """
 from datetime import date, timedelta
 
@@ -41,7 +41,7 @@ def primer_domingo_adviento(anio):
 
 
 def epifania_del_senor(anio):
-    """Epifanía celebrada en domingo entre el 2 y el 8 de enero (Ecuador)."""
+    """Epifanía celebrada en domingo entre el 2 y el 8 de enero (perfil Ecuador)."""
     fecha = date(anio, 1, 2)
     return fecha + timedelta(days=(6 - fecha.weekday()) % 7)
 
@@ -57,6 +57,7 @@ def bautismo_del_senor(anio):
 def fechas_moviles(anio):
     pascua = domingo_pascua(anio)
     pentecostes = pascua + timedelta(days=49)
+    adviento = primer_domingo_adviento(anio)
     return {
         'epifania': epifania_del_senor(anio),
         'bautismo_senor': bautismo_del_senor(anio),
@@ -66,19 +67,22 @@ def fechas_moviles(anio):
         'viernes_santo': pascua - timedelta(days=2),
         'sabado_santo': pascua - timedelta(days=1),
         'pascua': pascua,
-        # En Ecuador la Ascensión se celebra el domingo (Pascua + 42 días).
+        # En Ecuador la Ascensión y Corpus Christi se trasladan al domingo.
         'ascension_ecuador': pascua + timedelta(days=42),
         'pentecostes': pentecostes,
         'santisima_trinidad': pascua + timedelta(days=56),
-        # En Ecuador Corpus Christi se celebra el domingo (Pascua + 63 días).
         'corpus_christi_ecuador': pascua + timedelta(days=63),
         'sagrado_corazon': pascua + timedelta(days=68),
-        'primer_domingo_adviento': primer_domingo_adviento(anio),
+        'inmaculado_corazon': pascua + timedelta(days=69),
+        'maria_madre_iglesia': pentecostes + timedelta(days=1),
+        'cristo_sumo_eterno_sacerdote': pentecostes + timedelta(days=4),
+        'cristo_rey': adviento - timedelta(days=7),
+        'primer_domingo_adviento': adviento,
     }
 
 
 def anio_liturgico(fecha):
-    """Año en que comienza el año litúrgico vigente (primer domingo de Adviento)."""
+    """Año inicial del periodo litúrgico (p. ej. 2025 para 2025-2026)."""
     return fecha.year if fecha >= primer_domingo_adviento(fecha.year) else fecha.year - 1
 
 
@@ -89,7 +93,7 @@ def ciclo_dominical(fecha):
 
 
 def ciclo_ferial(fecha):
-    """Ciclo ferial I/II del Tiempo Ordinario; None en los tiempos propios."""
+    """Ciclo ferial I/II del Tiempo Ordinario."""
     return 'I' if fecha.year % 2 else 'II'
 
 
@@ -101,6 +105,63 @@ def _semanas_ordinarias_antes_cuaresma(anio):
     inicio = _lunes_inicio_ordinario(anio)
     ceniza = fechas_moviles(anio)['miercoles_ceniza']
     return ((ceniza - inicio).days // 7) + 1
+
+
+def _sagrada_familia(anio):
+    """Domingo dentro de la octava de Navidad; 30 de diciembre si no hay domingo."""
+    navidad = date(anio, 12, 25)
+    fin_octava = date(anio, 12, 31)
+    dias_hasta_domingo = (6 - navidad.weekday()) % 7
+    domingo = navidad + timedelta(days=dias_hasta_domingo)
+    if navidad <= domingo <= fin_octava:
+        return domingo
+    return date(anio, 12, 30)
+
+
+def _celebraciones_principales(anio, moviles):
+    """Hitos y celebraciones principales; catálogo deliberadamente no exhaustivo."""
+    celebraciones = {
+        date(anio, 1, 1): 'Santa María, Madre de Dios',
+        moviles['epifania']: 'Epifanía del Señor',
+        date(anio, 2, 2): 'Presentación del Señor',
+        date(anio, 3, 19): 'San José, esposo de la Virgen María',
+        date(anio, 3, 25): 'Anunciación del Señor',
+        date(anio, 4, 20): 'Santísima Virgen Dolorosa del Colegio (Ecuador; verificar rango)',
+        moviles['maria_madre_iglesia']: 'Bienaventurada Virgen María, Madre de la Iglesia',
+        date(anio, 5, 26): 'Santa Mariana de Jesús de Paredes (Ecuador)',
+        moviles['cristo_sumo_eterno_sacerdote']: 'Jesucristo, Sumo y Eterno Sacerdote (Ecuador)',
+        date(anio, 6, 24): 'Nacimiento de San Juan Bautista',
+        date(anio, 6, 29): 'Santos Pedro y Pablo, apóstoles',
+        date(anio, 8, 15): 'Asunción de la Bienaventurada Virgen María',
+        date(anio, 9, 24): 'Nuestra Señora de la Merced (calendario Ecuador; verificar rango)',
+        date(anio, 11, 1): 'Todos los Santos',
+        date(anio, 11, 2): 'Conmemoración de todos los fieles difuntos',
+        date(anio, 11, 9): 'Dedicación de la Basílica de Letrán',
+        moviles['cristo_rey']: 'Nuestro Señor Jesucristo, Rey del Universo',
+        date(anio, 12, 8): 'Inmaculada Concepción de la Virgen María',
+        date(anio, 12, 25): 'Natividad del Señor',
+        date(anio, 12, 26): 'San Esteban, protomártir',
+        _sagrada_familia(anio): 'La Sagrada Familia de Jesús, María y José',
+        date(anio, 12, 28): 'Santos Inocentes, mártires',
+        moviles['miercoles_ceniza']: 'Miércoles de Ceniza',
+        moviles['domingo_ramos']: 'Domingo de Ramos de la Pasión del Señor',
+        # Los tres días de Semana Santa anteriores al Triduo se muestran por nombre.
+        moviles['domingo_ramos'] + timedelta(days=1): 'Lunes Santo',
+        moviles['domingo_ramos'] + timedelta(days=2): 'Martes Santo',
+        moviles['domingo_ramos'] + timedelta(days=3): 'Miércoles Santo',
+        moviles['jueves_santo']: 'Jueves Santo en la Cena del Señor',
+        moviles['viernes_santo']: 'Viernes Santo de la Pasión del Señor',
+        moviles['sabado_santo']: 'Sábado Santo',
+        moviles['pascua']: 'Domingo de Pascua de la Resurrección del Señor',
+        moviles['ascension_ecuador']: 'Ascensión del Señor (celebración en domingo, Ecuador)',
+        moviles['pentecostes']: 'Domingo de Pentecostés',
+        moviles['santisima_trinidad']: 'Santísima Trinidad',
+        moviles['corpus_christi_ecuador']: 'Santísimo Cuerpo y Sangre de Cristo (Ecuador)',
+        moviles['sagrado_corazon']: 'Sagrado Corazón de Jesús',
+        moviles['inmaculado_corazon']: 'Inmaculado Corazón de María',
+        moviles['primer_domingo_adviento']: 'I Domingo de Adviento',
+    }
+    return celebraciones
 
 
 def datos_dia(fecha):
@@ -116,36 +177,6 @@ def datos_dia(fecha):
     pentecostes = moviles['pentecostes']
     adviento = moviles['primer_domingo_adviento']
     bautismo = moviles['bautismo_senor']
-
-    celebraciones = {
-        date(fecha.year, 1, 1): 'Santa María, Madre de Dios',
-        moviles['epifania']: 'Epifanía del Señor',
-        date(fecha.year, 2, 2): 'Presentación del Señor',
-        date(fecha.year, 3, 19): 'San José, esposo de la Virgen María',
-        date(fecha.year, 3, 25): 'Anunciación del Señor',
-        date(fecha.year, 5, 26): 'Santa Mariana de Jesús de Paredes (Ecuador)',
-        date(fecha.year, 6, 24): 'Nacimiento de San Juan Bautista',
-        date(fecha.year, 6, 29): 'Santos Pedro y Pablo, apóstoles',
-        date(fecha.year, 8, 15): 'Asunción de la Bienaventurada Virgen María',
-        date(fecha.year, 11, 1): 'Todos los Santos',
-        date(fecha.year, 11, 2): 'Conmemoración de todos los fieles difuntos',
-        date(fecha.year, 11, 9): 'Dedicación de la Basílica de Letrán',
-        date(fecha.year, 12, 8): 'Inmaculada Concepción de la Virgen María',
-        date(fecha.year, 12, 25): 'Natividad del Señor',
-        moviles['miercoles_ceniza']: 'Miércoles de Ceniza',
-        ramos: 'Domingo de Ramos de la Pasión del Señor',
-        jueves_santo: 'Jueves Santo en la Cena del Señor',
-        moviles['viernes_santo']: 'Viernes Santo de la Pasión del Señor',
-        moviles['sabado_santo']: 'Sábado Santo',
-        pascua: 'Domingo de Pascua de la Resurrección del Señor',
-        moviles['ascension_ecuador']: 'Ascensión del Señor (celebración en domingo, Ecuador)',
-        pentecostes: 'Domingo de Pentecostés',
-        moviles['santisima_trinidad']: 'Santísima Trinidad',
-        moviles['corpus_christi_ecuador']: 'Santísimo Cuerpo y Sangre de Cristo (Ecuador)',
-        moviles['sagrado_corazon']: 'Sagrado Corazón de Jesús',
-        adviento: 'I Domingo de Adviento',
-        bautismo: 'Bautismo del Señor',
-    }
 
     if fecha.month == 12 and fecha.day >= 25:
         tiempo, semana = NOMBRES_TIEMPOS['NAVIDAD'], None
@@ -164,7 +195,10 @@ def datos_dia(fecha):
     elif ceniza <= fecha < ramos:
         tiempo = NOMBRES_TIEMPOS['CUARESMA']
         primer_domingo_cuaresma = ceniza + timedelta(days=(6 - ceniza.weekday()) % 7)
-        semana = 0 if fecha < primer_domingo_cuaresma else ((fecha - primer_domingo_cuaresma).days // 7) + 1
+        # Miércoles de Ceniza a sábado se identifican por su nombre, no como semana 0.
+        semana = None if fecha < primer_domingo_cuaresma else (
+            (fecha - primer_domingo_cuaresma).days // 7
+        ) + 1
     else:
         tiempo = NOMBRES_TIEMPOS['ORDINARIO']
         if fecha < ceniza:
@@ -174,8 +208,7 @@ def datos_dia(fecha):
             inicio = pentecostes + timedelta(days=1)
             semana_inicial = _semanas_ordinarias_antes_cuaresma(fecha.year) + 2
             semana = semana_inicial + ((fecha - inicio).days // 7)
-        # El domingo inaugura la semana litúrgica siguiente a la semana ferial
-        # que comenzó el lunes anterior: lunes I, domingo II.
+        # Los domingos inauguran la semana siguiente a la ferial precedente.
         if fecha.weekday() == 6:
             semana += 1
 
@@ -184,15 +217,17 @@ def datos_dia(fecha):
         if tiempo == NOMBRES_TIEMPOS['ORDINARIO'] and fecha.weekday() != 6
         else None
     )
+    inicio_anio = anio_liturgico(fecha)
     return {
         'fecha': fecha,
         'dia_semana': DIAS_SEMANA_ES[fecha.weekday()],
-        'anio_liturgico': anio_liturgico(fecha),
+        'anio_liturgico': f'{inicio_anio}-{inicio_anio + 1}',
+        'anio_liturgico_inicio': inicio_anio,
         'tiempo_liturgico': tiempo,
         'semana_liturgica': semana,
         'ciclo_dominical': ciclo_dominical(fecha),
         'ciclo_ferial': ciclo_ferial_aplicable,
-        'celebracion_calculada': celebraciones.get(fecha, ''),
+        'celebracion_calculada': _celebraciones_principales(fecha.year, moviles).get(fecha, ''),
         'es_domingo': fecha.weekday() == 6,
     }
 
