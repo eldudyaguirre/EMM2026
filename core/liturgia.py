@@ -4,8 +4,8 @@ from .models import LecturaLiturgica
 
 
 def domingo_advento(anio):
-    fecha = date(anio, 11, 30)
-    return fecha - timedelta(days=(fecha.weekday() + 1) % 7)
+    fecha = date(anio, 11, 27)
+    return fecha + timedelta(days=(6 - fecha.weekday()) % 7)
 
 
 def ciclo_lectura(fecha):
