@@ -191,7 +191,7 @@ def extraer_referencia(seccion, tipo):
     if tipo == 'salmo':
         for linea in candidatas:
             limpio = _sin_acentos(linea)
-            match = re.search(r'\\bsalmo\\s+(\\d{1,3}[a-z]?)\\b', limpio)
+            match = re.search(r'\bsalmo\s+(\d{1,3}[a-z]?)\b', limpio)
             if match:
                 return f"Salmo {match.group(1)}"
         return ''
@@ -199,7 +199,7 @@ def extraer_referencia(seccion, tipo):
     if tipo == 'aclamacion':
         for linea in candidatas:
             match = re.search(
-                r'\\b(?:cfr\\.?\\s*)?([1-3]?\\s?[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑáéíóúñ ]{1,35}\\s+\\d{1,3}\\s*[,.:]\\s*[\\d.,; -]+)',
+                r'\b(?:cfr\.?\s*)?([1-3]?\s?[A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑáéíóúñ ]{1,35}\s+\d{1,3}\s*[,.:]\s*[\d.,; -]+)',
                 linea,
                 re.I,
             )
@@ -215,11 +215,11 @@ def extraer_referencia(seccion, tipo):
         if not libro:
             continue
         rango = _normalizar_rango(despues)
-        match = re.match(r'^(\\d{1,3})\\s*[,.:]\\s*(.+)$', rango)
+        match = re.match(r'^(\d{1,3})\s*[,.:]\s*(.+)$', rango)
         if match:
             capitulo, versiculos = match.groups()
             return f'{libro} {capitulo}, {versiculos}'
-        if libro in LIBROS_UN_CAPITULO and re.match(r'^\\d+[a-z]?(?:\\s*[-–]\\s*\\d+[a-z]?)?$', rango):
+        if libro in LIBROS_UN_CAPITULO and re.match(r'^\d+[a-z]?(?:\s*[-–]\s*\d+[a-z]?)?$', rango):
             return f'{libro} {rango}'
     return ''
 
