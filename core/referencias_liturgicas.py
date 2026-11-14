@@ -200,7 +200,7 @@ def extraer_referencia(seccion, tipo):
                 return _normalizar_rango(match.group(1))
         return ''
 
-    for linea in lineas[:8]:
+    for linea in candidatas:
         if ':' not in linea:
             continue
         antes, despues = linea.rsplit(':', 1)
