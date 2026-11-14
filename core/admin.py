@@ -1,5 +1,8 @@
 from django.contrib import admin
-from .models import Categoria, Cancion, Perfil, Grupo, Servicio, Instrumento, LecturaLiturgica
+from .models import (
+    Categoria, Cancion, Perfil, Grupo, Servicio, Instrumento,
+    LecturaLiturgica, ReferenciaLecturaLiturgica,
+)
 
 
 admin.site.register(Categoria)
@@ -45,3 +48,19 @@ class LecturaLiturgicaAdmin(admin.ModelAdmin):
     list_filter = ('ciclo', 'mes')
     search_fields = ('nombre_celebracion', 'primera_lectura', 'salmo', 'evangelio')
     ordering = ('mes', 'dia', 'ciclo')
+
+
+@admin.register(ReferenciaLecturaLiturgica)
+class ReferenciaLecturaLiturgicaAdmin(admin.ModelAdmin):
+    list_display = (
+        'fecha', 'tiempo_liturgico', 'ciclo_dominical', 'ciclo_ferial',
+        'fuente', 'validada',
+    )
+    list_filter = ('tiempo_liturgico', 'ciclo_dominical', 'ciclo_ferial', 'fuente', 'validada')
+    search_fields = (
+        'celebracion', 'primera_lectura_ref', 'salmo_ref',
+        'segunda_lectura_ref', 'evangelio_ref',
+    )
+    date_hierarchy = 'fecha'
+    readonly_fields = ('consultada',)
+    ordering = ('fecha',)
