@@ -74,22 +74,6 @@ def extraer_seccion(texto, titulo):
     return texto[inicio:fin].strip(' :-–—\n\r')
 
 
-def extraer_nombre_celebracion(texto):
-    """
-    Misal.mx puede separar el rótulo 'Santos:' y los nombres en nodos
-    de texto distintos. Se admite que el santoral esté en la misma línea
-    o en la siguiente, sin confundirlo con el nombre de la celebración.
-    """
-    match = re.search(
-        r'^[ \t]*Santos:[ \t]*(?:\n[ \t]*)?([^\n]+)',
-        texto,
-        re.IGNORECASE | re.MULTILINE,
-    )
-    if not match:
-        return ''
-    return ('Santos del día: ' + match.group(1).strip())[:200]
-
-
 def obtener_lecturas(fecha):
     url = 'https://misal.mx/' + fecha.isoformat()
     request = Request(url, headers={'User-Agent': 'EmausLiturgicalCalendar/1.0'})
@@ -104,7 +88,8 @@ def obtener_lecturas(fecha):
     texto = '\n'.join(parser.partes)
 
     datos = {campo: extraer_seccion(texto, titulo) for campo, titulo in SECCIONES}
-    datos['nombre_celebracion'] = extraer_nombre_celebracion(texto)
+    # Emaús no utiliza el santoral; mantener el campo vacío por compatibilidad.
+    datos['nombre_celebracion'] = ''
 
     if not datos['primera_lectura'] or not datos['salmo'] or not datos['evangelio']:
         faltantes = [
