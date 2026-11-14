@@ -1,6 +1,6 @@
 from datetime import date, timedelta
 
-from .models import LecturaLiturgica
+from .models import LecturaLiturgica, ReferenciaLecturaLiturgica
 
 
 def domingo_advento(anio):
@@ -35,3 +35,8 @@ def lectura_para_fecha(fecha):
         ciclo='F',
         fecha_especifica__isnull=True,
     ).first()
+
+
+def referencia_para_fecha(fecha):
+    """Busca metadatos de citas bíblicas para la fecha exacta del servicio."""
+    return ReferenciaLecturaLiturgica.objects.filter(fecha=fecha).first()
