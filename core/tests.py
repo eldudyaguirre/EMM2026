@@ -159,3 +159,17 @@ class CicloLecturaResolverTests(SimpleTestCase):
         self.assertEqual(ciclo_lectura(date(2026, 11, 13)), 'II')
         self.assertEqual(ciclo_lectura(date(2026, 12, 1)), 'F')
         self.assertEqual(ciclo_lectura(date(2026, 2, 19)), 'F')
+
+
+    def test_acepta_cita_separada_en_nodos_html(self):
+        html = """
+        <h2>PRIMERA LECTURA</h2>
+        <p>De la segunda carta del apóstol san Juan:</p><span>4-9</span>
+        <h2>SALMO</h2><p>Del salmo</p><span>118</span>
+        <h2>EVANGELIO</h2>
+        <p>Del santo Evangelio según san Lucas:</p><span>17, 26-37</span>
+        """
+        refs = analizar_html_misal(html)
+        self.assertEqual(refs['primera_lectura_ref'], '2 Juan 4-9')
+        self.assertEqual(refs['salmo_ref'], 'Salmo 118')
+        self.assertEqual(refs['evangelio_ref'], 'Lucas 17, 26-37')
