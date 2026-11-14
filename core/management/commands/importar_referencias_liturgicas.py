@@ -60,7 +60,7 @@ class Command(BaseCommand):
                         'url_fuente': url,
                         'validada': False,
                     }
-                    registro = ReferenciaLecturaLiturgica.objects.filter(fecha=fecha).first()
+                    registro = ReferenciaLecturaLiturgica.objects.filter(fecha=fecha, fuente='misal_mx').first()
                     if registro is None:
                         ReferenciaLecturaLiturgica.objects.create(fecha=fecha, **defaults)
                         creadas += 1
