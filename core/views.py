@@ -1,5 +1,6 @@
 from django.shortcuts import render,get_object_or_404
 from .models import Categoria, Cancion, Servicio, Grupo, Perfil, Instrumento, RepertorioServicio
+from .liturgia import lectura_para_fecha
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import Q, Count
@@ -1678,6 +1679,19 @@ def datos_offline(request):
                 'notacion_acordes': item.get_notacion_acordes_display(),
                 'orden': item.orden,
             })
+        lectura = lectura_para_fecha(servicio.fecha)
+        lectura_data = None
+        if lectura:
+            lectura_data = {
+                'ciclo': lectura.get_ciclo_display(),
+                'nombre_celebracion': lectura.nombre_celebracion,
+                'primera_lectura': lectura.primera_lectura,
+                'salmo': lectura.salmo,
+                'segunda_lectura': lectura.segunda_lectura,
+                'aclamacion': lectura.aclamacion,
+                'evangelio': lectura.evangelio,
+                'url_fuente': lectura.url_fuente,
+            }
         servicios.append({
             'id': servicio.pk,
             'titulo': servicio.titulo,
@@ -1688,6 +1702,7 @@ def datos_offline(request):
             'lugar': servicio.lugar or '',
             'estado': servicio.get_estado_display(),
             'repertorio': repertorio,
+            'lectura_liturgica': lectura_data,
         })
 
     response = JsonResponse({
