@@ -265,7 +265,7 @@ class LecturaLiturgica(models.Model):
         verbose_name = 'Lectura litúrgica'
         verbose_name_plural = 'Lecturas litúrgicas'
         constraints = [models.UniqueConstraint(fields=['dia', 'mes', 'ciclo'], condition=models.Q(fecha_especifica__isnull=True), name='uniq_lectura_dia_mes_ciclo')]
-        indexes = [models.Index(fields=['fecha_especifica']), models.Index(fields=['mes', 'dia'])]
+        indexes = [models.Index(fields=['fecha_especifica'], name='core_lectur_fecha_e5b6e2_idx'), models.Index(fields=['mes', 'dia'], name='core_lectur_mes_6b5b8f_idx')]
 
     def __str__(self):
         return f'{self.dia:02d}/{self.mes:02d} · {self.get_ciclo_display()}'
