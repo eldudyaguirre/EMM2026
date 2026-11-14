@@ -111,7 +111,7 @@ def _sagrada_familia(anio):
     """Domingo dentro de la octava de Navidad; 30 de diciembre si no hay domingo."""
     navidad = date(anio, 12, 25)
     fin_octava = date(anio, 12, 31)
-    dias_hasta_domingo = (6 - navidad.weekday()) % 7
+    dias_hasta_domingo = (6 - navidad.weekday()) % 7 or 7
     domingo = navidad + timedelta(days=dias_hasta_domingo)
     if navidad <= domingo <= fin_octava:
         return domingo
