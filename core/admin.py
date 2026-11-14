@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Categoria, Cancion, Perfil, Grupo, Servicio, Instrumento
+from .models import Categoria, Cancion, Perfil, Grupo, Servicio, Instrumento, LecturaLiturgica
 
 
 admin.site.register(Categoria)
@@ -37,3 +37,11 @@ class InstrumentoAdmin(admin.ModelAdmin):
     list_filter = ('activo',)
     search_fields = ('nombre',)
     ordering = ('nombre',)
+
+
+@admin.register(LecturaLiturgica)
+class LecturaLiturgicaAdmin(admin.ModelAdmin):
+    list_display = ('dia', 'mes', 'ciclo', 'nombre_celebracion', 'fecha_especifica')
+    list_filter = ('ciclo', 'mes')
+    search_fields = ('nombre_celebracion', 'primera_lectura', 'salmo', 'evangelio')
+    ordering = ('mes', 'dia', 'ciclo')
