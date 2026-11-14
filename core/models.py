@@ -269,3 +269,50 @@ class LecturaLiturgica(models.Model):
 
     def __str__(self):
         return f'{self.dia:02d}/{self.mes:02d} · {self.get_ciclo_display()}'
+
+
+class ReferenciaLecturaLiturgica(models.Model):
+    """Referencia bíblica asignada a una fecha, sin almacenar el texto bíblico."""
+
+    FUENTES = (
+        ('misal_mx', 'Misal.mx'),
+        ('arquidiocesis_cuenca', 'Arquidiócesis de Cuenca'),
+        ('usccb', 'USCCB (referencia comparativa)'),
+        ('manual', 'Carga o validación manual'),
+    )
+
+    fecha = models.DateField(unique=True)
+    anio_liturgico = models.CharField(max_length=9)
+    tiempo_liturgico = models.CharField(max_length=40)
+    semana_liturgica = models.PositiveSmallIntegerField(null=True, blank=True)
+    dia_semana = models.CharField(max_length=12)
+    ciclo_dominical = models.CharField(max_length=1, blank=True)
+    ciclo_ferial = models.CharField(max_length=2, blank=True)
+    celebracion = models.CharField(max_length=200, blank=True)
+
+    primera_lectura_ref = models.CharField(max_length=250, blank=True)
+    salmo_ref = models.CharField(max_length=250, blank=True)
+    segunda_lectura_ref = models.CharField(max_length=250, blank=True)
+    aclamacion_ref = models.CharField(max_length=250, blank=True)
+    evangelio_ref = models.CharField(max_length=250, blank=True)
+
+    fuente = models.CharField(max_length=30, choices=FUENTES, default='misal_mx')
+    url_fuente = models.URLField(max_length=500, blank=True)
+    validada = models.BooleanField(
+        default=False,
+        help_text='Marcar solo después de contrastar la referencia con una fuente litúrgica aprobada.'
+    )
+    observaciones = models.TextField(blank=True)
+    consultada = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['fecha']
+        verbose_name = 'Referencia de lectura litúrgica'
+        verbose_name_plural = 'Referencias de lecturas litúrgicas'
+        indexes = [
+            models.Index(fields=['anio_liturgico', 'ciclo_dominical'], name='core_ref_anio_ciclo_idx'),
+            models.Index(fields=['tiempo_liturgico', 'semana_liturgica'], name='core_ref_tiempo_sem_idx'),
+        ]
+
+    def __str__(self):
+        return f'{self.fecha:%d/%m/%Y} · {self.celebracion or self.tiempo_liturgico}'
