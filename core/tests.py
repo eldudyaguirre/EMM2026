@@ -102,3 +102,49 @@ class CalendarioLiturgicoTests(SimpleTestCase):
         self.assertEqual(datos_dia(date(2026, 12, 1))['ciclo_ferial'], None)
         # En el siguiente Tiempo Ordinario, ciclo ferial I.
         self.assertEqual(datos_dia(date(2027, 1, 11))['ciclo_ferial'], 'I')
+
+
+from core.referencias_liturgicas import analizar_html_misal
+
+
+class ReferenciasLiturgicasParserTests(SimpleTestCase):
+    def test_extrae_referencias_de_misal_mx_sin_guardar_el_texto(self):
+        html = """
+        <h2>PRIMERA LECTURA</h2>
+        <p>El que permanece fiel a la doctrina de Cristo.</p>
+        <p>De la segunda carta del apóstol san Juan: 4-9</p>
+        <p>Hermanos: Me ha dado mucha alegría enterarme...</p>
+        <h2>SALMO</h2>
+        <p>Del salmo 118</p>
+        <p>R/. Dichoso el que cumple la ley del Señor.</p>
+        <h2>ACLAMACIÓN</h2>
+        <p>Aleluya, Aleluya. Estén atentos y levanten la cabeza.</p>
+        <h2>EVANGELIO</h2>
+        <p>Lo mismo sucederá el día en que el Hijo del hombre se manifieste.</p>
+        <p>Del santo Evangelio según san Lucas: 17, 26-37</p>
+        <p>En aquellos días, Jesús dijo a sus discípulos...</p>
+        """
+        refs = analizar_html_misal(html)
+        self.assertEqual(refs['primera_lectura_ref'], '2 Juan 4-9')
+        self.assertEqual(refs['salmo_ref'], 'Salmo 118')
+        self.assertEqual(refs['evangelio_ref'], 'Lucas 17, 26-37')
+        self.assertEqual(refs['segunda_lectura_ref'], '')
+        self.assertEqual(refs['aclamacion_ref'], '')
+        self.assertNotIn('Hermanos:', str(refs))
+
+    def test_extrae_citas_con_capitulo_y_versiculos(self):
+        html = """
+        <h2>PRIMERA LECTURA</h2>
+        <p>Del libro del profeta Isaías: 40, 1-5</p>
+        <h2>SALMO</h2><p>Del salmo 85</p>
+        <h2>SEGUNDA LECTURA</h2>
+        <p>De la primera carta del apóstol san Pablo a los Tesalonicenses: 5, 1-6</p>
+        <h2>ACLAMACIÓN</h2><p>Aleluya.</p>
+        <h2>EVANGELIO</h2>
+        <p>Del santo Evangelio según san Mateo: 3, 1-12</p>
+        """
+        refs = analizar_html_misal(html)
+        self.assertEqual(refs['primera_lectura_ref'], 'Isaías 40, 1-5')
+        self.assertEqual(refs['salmo_ref'], 'Salmo 85')
+        self.assertEqual(refs['segunda_lectura_ref'], '1 Tesalonicenses 5, 1-6')
+        self.assertEqual(refs['evangelio_ref'], 'Mateo 3, 1-12')
