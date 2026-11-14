@@ -148,3 +148,14 @@ class ReferenciasLiturgicasParserTests(SimpleTestCase):
         self.assertEqual(refs['salmo_ref'], 'Salmo 85')
         self.assertEqual(refs['segunda_lectura_ref'], '1 Tesalonicenses 5, 1-6')
         self.assertEqual(refs['evangelio_ref'], 'Mateo 3, 1-12')
+
+
+from core.liturgia import ciclo_lectura
+
+
+class CicloLecturaResolverTests(SimpleTestCase):
+    def test_devuelve_ciclo_dominical_y_ferial_o_propio(self):
+        self.assertEqual(ciclo_lectura(date(2026, 11, 22)), 'A')
+        self.assertEqual(ciclo_lectura(date(2026, 11, 13)), 'II')
+        self.assertEqual(ciclo_lectura(date(2026, 12, 1)), 'F')
+        self.assertEqual(ciclo_lectura(date(2026, 2, 19)), 'F')
