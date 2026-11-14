@@ -5,6 +5,7 @@ from django.test import SimpleTestCase
 from core.calendario_liturgico import (
     bautismo_del_senor,
     ciclo_dominical,
+    ciclo_ferial,
     datos_dia,
     domingo_pascua,
     epifania_del_senor,
@@ -62,6 +63,7 @@ class CalendarioLiturgicoTests(SimpleTestCase):
         self.assertEqual(datos_dia(date(2026, 4, 1))['celebracion_calculada'], 'Miércoles Santo')
         self.assertEqual(datos_dia(date(2026, 4, 2))['tiempo_liturgico'], 'Triduo Pascual')
         self.assertEqual(datos_dia(date(2026, 4, 5))['tiempo_liturgico'], 'Tiempo Pascual')
+        self.assertIsNone(datos_dia(date(2026, 5, 24))['semana_liturgica'])
         self.assertEqual(datos_dia(date(2026, 5, 17))['celebracion_calculada'], 'Ascensión del Señor (celebración en domingo, Ecuador)')
         self.assertEqual(datos_dia(date(2026, 5, 24))['celebracion_calculada'], 'Domingo de Pentecostés')
 
@@ -94,6 +96,7 @@ class CalendarioLiturgicoTests(SimpleTestCase):
     def test_ciclo_ferial_cambia_en_primer_domingo_de_adviento(self):
         # El año litúrgico 2025-2026 usa ciclo II hasta el sábado 28/11/2026.
         self.assertEqual(datos_dia(date(2026, 11, 28))['ciclo_ferial'], 'II')
+        self.assertEqual(ciclo_ferial(date(2026, 12, 1)), 'I')
         # El año litúrgico 2026-2027 usa ciclo I; su Adviento comienza el 29/11/2026.
         self.assertEqual(datos_dia(date(2026, 11, 30))['ciclo_ferial'], None)
         self.assertEqual(datos_dia(date(2026, 12, 1))['ciclo_ferial'], None)
