@@ -67,3 +67,5 @@ python manage.py auditar_referencias_liturgicas --anio 2026
 ```
 
 El comando genera un CSV de 365 filas. Las fechas sin referencia quedan explícitas como `sin referencia`; no se rellenan por cálculo aproximado.
+
+La tabla no importa la columna de santoral de los PDF. El campo `celebracion` se reserva para solemnidades, fiestas o títulos litúrgicos relevantes para la selección de lecturas; Emaús no necesita almacenar la lista diaria de santos.
