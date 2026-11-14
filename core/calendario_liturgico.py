@@ -40,10 +40,15 @@ def primer_domingo_adviento(anio):
     return fecha + timedelta(days=(6 - fecha.weekday()) % 7)
 
 
+def epifania_del_senor(anio):
+    """Epifanía celebrada en domingo entre el 2 y el 8 de enero (Ecuador)."""
+    fecha = date(anio, 1, 2)
+    return fecha + timedelta(days=(6 - fecha.weekday()) % 7)
+
+
 def bautismo_del_senor(anio):
     """Bautismo tras la Epifanía, con la excepción del 7/8 de enero."""
-    epifania = date(anio, 1, 2)
-    epifania += timedelta(days=(6 - epifania.weekday()) % 7)
+    epifania = epifania_del_senor(anio)
     if epifania.day in (7, 8):
         return epifania + timedelta(days=1)
     return epifania + timedelta(days=7)
@@ -53,6 +58,7 @@ def fechas_moviles(anio):
     pascua = domingo_pascua(anio)
     pentecostes = pascua + timedelta(days=49)
     return {
+        'epifania': epifania_del_senor(anio),
         'bautismo_senor': bautismo_del_senor(anio),
         'miercoles_ceniza': pascua - timedelta(days=46),
         'domingo_ramos': pascua - timedelta(days=7),
@@ -112,6 +118,20 @@ def datos_dia(fecha):
     bautismo = moviles['bautismo_senor']
 
     celebraciones = {
+        date(fecha.year, 1, 1): 'Santa María, Madre de Dios',
+        moviles['epifania']: 'Epifanía del Señor',
+        date(fecha.year, 2, 2): 'Presentación del Señor',
+        date(fecha.year, 3, 19): 'San José, esposo de la Virgen María',
+        date(fecha.year, 3, 25): 'Anunciación del Señor',
+        date(fecha.year, 5, 26): 'Santa Mariana de Jesús de Paredes (Ecuador)',
+        date(fecha.year, 6, 24): 'Nacimiento de San Juan Bautista',
+        date(fecha.year, 6, 29): 'Santos Pedro y Pablo, apóstoles',
+        date(fecha.year, 8, 15): 'Asunción de la Bienaventurada Virgen María',
+        date(fecha.year, 11, 1): 'Todos los Santos',
+        date(fecha.year, 11, 2): 'Conmemoración de todos los fieles difuntos',
+        date(fecha.year, 11, 9): 'Dedicación de la Basílica de Letrán',
+        date(fecha.year, 12, 8): 'Inmaculada Concepción de la Virgen María',
+        date(fecha.year, 12, 25): 'Natividad del Señor',
         moviles['miercoles_ceniza']: 'Miércoles de Ceniza',
         ramos: 'Domingo de Ramos de la Pasión del Señor',
         jueves_santo: 'Jueves Santo en la Cena del Señor',
