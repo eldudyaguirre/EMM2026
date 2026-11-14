@@ -90,3 +90,12 @@ class CalendarioLiturgicoTests(SimpleTestCase):
         self.assertEqual(domingo_pascua(2025), date(2025, 4, 20))
         self.assertEqual(domingo_pascua(2026), date(2026, 4, 5))
         self.assertEqual(domingo_pascua(2027), date(2027, 3, 28))
+
+    def test_ciclo_ferial_cambia_en_primer_domingo_de_adviento(self):
+        # El año litúrgico 2025-2026 usa ciclo II hasta el sábado 28/11/2026.
+        self.assertEqual(datos_dia(date(2026, 11, 28))['ciclo_ferial'], 'II')
+        # El año litúrgico 2026-2027 usa ciclo I; su Adviento comienza el 29/11/2026.
+        self.assertEqual(datos_dia(date(2026, 11, 30))['ciclo_ferial'], None)
+        self.assertEqual(datos_dia(date(2026, 12, 1))['ciclo_ferial'], None)
+        # En el siguiente Tiempo Ordinario, ciclo ferial I.
+        self.assertEqual(datos_dia(date(2027, 1, 11))['ciclo_ferial'], 'I')
