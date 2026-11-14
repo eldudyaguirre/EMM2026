@@ -281,7 +281,7 @@ class ReferenciaLecturaLiturgica(models.Model):
         ('manual', 'Carga o validación manual'),
     )
 
-    fecha = models.DateField(unique=True)
+    fecha = models.DateField()
     anio_liturgico = models.CharField(max_length=9)
     tiempo_liturgico = models.CharField(max_length=40)
     semana_liturgica = models.PositiveSmallIntegerField(null=True, blank=True)
@@ -309,6 +309,9 @@ class ReferenciaLecturaLiturgica(models.Model):
         ordering = ['fecha']
         verbose_name = 'Referencia de lectura litúrgica'
         verbose_name_plural = 'Referencias de lecturas litúrgicas'
+        constraints = [
+            models.UniqueConstraint(fields=['fecha', 'fuente'], name='uniq_ref_fecha_fuente'),
+        ]
         indexes = [
             models.Index(fields=['anio_liturgico', 'ciclo_dominical'], name='core_ref_anio_ciclo_idx'),
             models.Index(fields=['tiempo_liturgico', 'semana_liturgica'], name='core_ref_tiempo_sem_idx'),
