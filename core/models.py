@@ -241,3 +241,31 @@ class Instrumento(models.Model):
 
     def __str__(self):
         return self.nombre
+
+
+class LecturaLiturgica(models.Model):
+    """Lecturas por día/mes y ciclo litúrgico, con excepciones para fechas móviles."""
+    CICLOS = (('F', 'Celebración fija'), ('I', 'Ferial I'), ('II', 'Ferial II'), ('A', 'Dominical A'), ('B', 'Dominical B'), ('C', 'Dominical C'))
+    dia = models.PositiveSmallIntegerField()
+    mes = models.PositiveSmallIntegerField()
+    ciclo = models.CharField(max_length=2, choices=CICLOS, default='F')
+    fecha_especifica = models.DateField(null=True, blank=True, help_text='Para solemnidades móviles u otras excepciones.')
+    nombre_celebracion = models.CharField(max_length=200, blank=True)
+    primera_lectura = models.TextField(blank=True)
+    salmo = models.TextField(blank=True)
+    segunda_lectura = models.TextField(blank=True)
+    aclamacion = models.TextField(blank=True)
+    evangelio = models.TextField(blank=True)
+    fecha_fuente = models.DateField(null=True, blank=True)
+    url_fuente = models.URLField(max_length=500, blank=True)
+    actualizado = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['mes', 'dia', 'ciclo']
+        verbose_name = 'Lectura litúrgica'
+        verbose_name_plural = 'Lecturas litúrgicas'
+        constraints = [models.UniqueConstraint(fields=['dia', 'mes', 'ciclo'], condition=models.Q(fecha_especifica__isnull=True), name='uniq_lectura_dia_mes_ciclo')]
+        indexes = [models.Index(fields=['fecha_especifica']), models.Index(fields=['mes', 'dia'])]
+
+    def __str__(self):
+        return f'{self.dia:02d}/{self.mes:02d} · {self.get_ciclo_display()}'
