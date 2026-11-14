@@ -137,6 +137,7 @@ def _celebraciones_principales(anio, moviles):
         date(anio, 11, 1): 'Todos los Santos',
         date(anio, 11, 2): 'Conmemoración de todos los fieles difuntos',
         date(anio, 11, 9): 'Dedicación de la Basílica de Letrán',
+        date(anio, 11, 30): 'San Andrés, apóstol',
         moviles['cristo_rey']: 'Nuestro Señor Jesucristo, Rey del Universo',
         date(anio, 12, 8): 'Inmaculada Concepción de la Virgen María',
         date(anio, 12, 25): 'Natividad del Señor',
