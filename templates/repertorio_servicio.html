@@ -61,16 +61,45 @@ main{padding:26px 0 70px}.empty{padding:40px 20px;text-align:center;background:v
 <div class="meta"><span><i class="fa-regular fa-calendar"></i>{{ servicio.fecha|date:"l, d \d\e F \d\e Y" }}</span><span><i class="fa-regular fa-clock"></i>{{ servicio.hora_inicio|time:"H:i" }}{% if servicio.hora_fin %} – {{ servicio.hora_fin|time:"H:i" }}{% endif %}</span><span><i class="fa-solid fa-users"></i>{{ servicio.grupo.nombre }}</span>{% if servicio.lugar %}<span><i class="fa-solid fa-location-dot"></i>{{ servicio.lugar }}</span>{% endif %}</div>
 <div class="status-panel"><span class="status-badge status-{{ servicio.estado }}"><i class="fa-solid fa-circle"></i> {{ servicio.get_estado_display }}</span>{% if servicio.estado == 'programado' %}<form class="status-form" method="post">{% csrf_token %}<input type="hidden" name="accion" value="iniciar"><button class="btnx" type="submit"><i class="fa-solid fa-play"></i> Iniciar servicio</button></form>{% elif servicio.estado == 'en_ejecucion' %}<form class="status-form" method="post" onsubmit="return confirm('¿Marcar este servicio como terminado?');">{% csrf_token %}<input type="hidden" name="accion" value="terminar"><button class="btnx" type="submit"><i class="fa-solid fa-flag-checkered"></i> Terminar servicio</button></form><span class="status-note">El servicio está en curso.</span>{% else %}<span class="status-note">Este servicio ya fue finalizado.</span>{% endif %}<a class="btnx export-pdf-btn" href="{% url 'exportar_repertorio_servicio_pdf' servicio.id %}"><i class="fa-solid fa-file-pdf"></i> Exportar repertorio</a></div><div class="progress"><div id="progressBar"></div></div>
 </div>
-{% if lectura_liturgica %}
+{% if lectura_liturgica or referencia_liturgica %}
 <section class="song-search" style="margin-top:20px">
 <h2><i class="fa-solid fa-book-bible" style="color:#ff7188"></i> Lecturas de la celebración</h2>
+{% if referencia_liturgica %}
+<p class="status-note">
+{{ referencia_liturgica.celebracion|default:"Lecturas del día" }} · {{ referencia_liturgica.anio_liturgico }} · {{ referencia_liturgica.tiempo_liturgico }}
+{% if referencia_liturgica.semana_liturgica %}· Semana {{ referencia_liturgica.semana_liturgica }}{% endif %}
+{% if referencia_liturgica.ciclo_dominical %}· Ciclo {{ referencia_liturgica.ciclo_dominical }}{% endif %}
+{% if referencia_liturgica.ciclo_ferial %}· Ferial {{ referencia_liturgica.ciclo_ferial }}{% endif %}
+</p>
+<p class="status-note">Fuente: {{ referencia_liturgica.get_fuente_display }} ·
+{% if referencia_liturgica.validada %}<strong>Referencia validada</strong>{% else %}<strong>Pendiente de validación</strong>{% endif %}
+</p>
+{% elif lectura_liturgica %}
 <p class="status-note">{{ lectura_liturgica.nombre_celebracion|default:"Lecturas del día" }} · {{ lectura_liturgica.get_ciclo_display }}</p>
-{% if lectura_liturgica.primera_lectura %}<h3>Primera lectura</h3><div class="lyrics">{{ lectura_liturgica.primera_lectura }}</div>{% endif %}
-{% if lectura_liturgica.salmo %}<h3>Salmo</h3><div class="lyrics">{{ lectura_liturgica.salmo }}</div>{% endif %}
-{% if lectura_liturgica.segunda_lectura %}<h3>Segunda lectura</h3><div class="lyrics">{{ lectura_liturgica.segunda_lectura }}</div>{% endif %}
-{% if lectura_liturgica.aclamacion %}<h3>Aclamación</h3><div class="lyrics">{{ lectura_liturgica.aclamacion }}</div>{% endif %}
-{% if lectura_liturgica.evangelio %}<h3>Evangelio</h3><div class="lyrics">{{ lectura_liturgica.evangelio }}</div>{% endif %}
-{% if lectura_liturgica.url_fuente %}<p class="status-note">Fuente: <a href="{{ lectura_liturgica.url_fuente }}" target="_blank" rel="noopener noreferrer">Misal.mx</a></p>{% endif %}
+{% endif %}
+
+{% if lectura_liturgica.primera_lectura or referencia_liturgica.primera_lectura_ref %}
+<h3>Primera lectura{% if referencia_liturgica.primera_lectura_ref %} <small class="status-note">({{ referencia_liturgica.primera_lectura_ref }})</small>{% endif %}</h3>
+{% if lectura_liturgica.primera_lectura %}<div class="lyrics">{{ lectura_liturgica.primera_lectura }}</div>{% elif referencia_liturgica.primera_lectura_ref %}<p class="status-note">Referencia bíblica; texto no incorporado.</p>{% endif %}
+{% endif %}
+{% if lectura_liturgica.salmo or referencia_liturgica.salmo_ref %}
+<h3>Salmo{% if referencia_liturgica.salmo_ref %} <small class="status-note">({{ referencia_liturgica.salmo_ref }})</small>{% endif %}</h3>
+{% if lectura_liturgica.salmo %}<div class="lyrics">{{ lectura_liturgica.salmo }}</div>{% elif referencia_liturgica.salmo_ref %}<p class="status-note">Referencia bíblica; texto no incorporado.</p>{% endif %}
+{% endif %}
+{% if lectura_liturgica.segunda_lectura or referencia_liturgica.segunda_lectura_ref %}
+<h3>Segunda lectura{% if referencia_liturgica.segunda_lectura_ref %} <small class="status-note">({{ referencia_liturgica.segunda_lectura_ref }})</small>{% endif %}</h3>
+{% if lectura_liturgica.segunda_lectura %}<div class="lyrics">{{ lectura_liturgica.segunda_lectura }}</div>{% elif referencia_liturgica.segunda_lectura_ref %}<p class="status-note">Referencia bíblica; texto no incorporado.</p>{% endif %}
+{% endif %}
+{% if lectura_liturgica.aclamacion or referencia_liturgica.aclamacion_ref %}
+<h3>Aclamación{% if referencia_liturgica.aclamacion_ref %} <small class="status-note">({{ referencia_liturgica.aclamacion_ref }})</small>{% endif %}</h3>
+{% if lectura_liturgica.aclamacion %}<div class="lyrics">{{ lectura_liturgica.aclamacion }}</div>{% elif referencia_liturgica.aclamacion_ref %}<p class="status-note">Referencia bíblica; texto no incorporado.</p>{% endif %}
+{% endif %}
+{% if lectura_liturgica.evangelio or referencia_liturgica.evangelio_ref %}
+<h3>Evangelio{% if referencia_liturgica.evangelio_ref %} <small class="status-note">({{ referencia_liturgica.evangelio_ref }})</small>{% endif %}</h3>
+{% if lectura_liturgica.evangelio %}<div class="lyrics">{{ lectura_liturgica.evangelio }}</div>{% elif referencia_liturgica.evangelio_ref %}<p class="status-note">Referencia bíblica; texto no incorporado.</p>{% endif %}
+{% endif %}
+{% if lectura_liturgica.url_fuente %}<p class="status-note">Fuente del texto: <a href="{{ lectura_liturgica.url_fuente }}" target="_blank" rel="noopener noreferrer">Misal.mx</a></p>{% endif %}
+{% if referencia_liturgica.url_fuente %}<p class="status-note">Fuente de las referencias: <a href="{{ referencia_liturgica.url_fuente }}" target="_blank" rel="noopener noreferrer">{{ referencia_liturgica.get_fuente_display }}</a></p>{% endif %}
 </section>
 {% endif %}
 </header>
