@@ -194,7 +194,8 @@ def datos_dia(fecha):
         semana = ((fecha - adviento).days // 7) + 1
     elif pascua <= fecha <= pentecostes:
         tiempo = NOMBRES_TIEMPOS['PASCUA']
-        semana = ((fecha - pascua).days // 7) + 1
+        # Pentecostés concluye el Tiempo Pascual; no es una octava semana pascual.
+        semana = None if fecha == pentecostes else ((fecha - pascua).days // 7) + 1
     elif jueves_santo <= fecha < pascua:
         tiempo, semana = NOMBRES_TIEMPOS['TRIDUO'], None
     elif ramos <= fecha < jueves_santo:
