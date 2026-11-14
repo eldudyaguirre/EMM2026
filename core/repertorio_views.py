@@ -16,6 +16,7 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Preformatte
 from reportlab.graphics import renderPDF
 from svglib.svglib import svg2rlg
 from .models import Servicio, RepertorioServicio, Cancion
+from .liturgia import lectura_para_fecha, referencia_para_fecha
 
 
 @login_required(login_url='home')
@@ -100,10 +101,14 @@ def repertorio_servicio(request, servicio_id):
     canciones = list(
         servicio.repertorio.select_related('cancion').order_by('orden', 'id')
     )
+    lectura_liturgica = lectura_para_fecha(servicio.fecha)
+    referencia_liturgica = referencia_para_fecha(servicio.fecha)
     return render(request, 'repertorio_servicio.html', {
         'servicio': servicio,
         'canciones': canciones,
         'total_canciones': len(canciones),
+        'lectura_liturgica': lectura_liturgica,
+        'referencia_liturgica': referencia_liturgica,
     })
 
 @login_required(login_url='home')

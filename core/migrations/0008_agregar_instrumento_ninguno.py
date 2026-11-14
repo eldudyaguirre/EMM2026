@@ -14,6 +14,7 @@ def quitar_ninguno(apps, schema_editor):
 class Migration(migrations.Migration):
     dependencies = [
         ('core', '0003_instrumentos_y_perfil_musical'),
+        ('core', '0007_perfil_telefono'),
     ]
 
     operations = [

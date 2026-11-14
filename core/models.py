@@ -241,3 +241,81 @@ class Instrumento(models.Model):
 
     def __str__(self):
         return self.nombre
+
+
+class LecturaLiturgica(models.Model):
+    """Lecturas por día/mes y ciclo litúrgico, con excepciones para fechas móviles."""
+    CICLOS = (('F', 'Celebración fija'), ('I', 'Ferial I'), ('II', 'Ferial II'), ('A', 'Dominical A'), ('B', 'Dominical B'), ('C', 'Dominical C'))
+    dia = models.PositiveSmallIntegerField()
+    mes = models.PositiveSmallIntegerField()
+    ciclo = models.CharField(max_length=2, choices=CICLOS, default='F')
+    fecha_especifica = models.DateField(null=True, blank=True, help_text='Para solemnidades móviles u otras excepciones.')
+    nombre_celebracion = models.CharField(max_length=200, blank=True)
+    primera_lectura = models.TextField(blank=True)
+    salmo = models.TextField(blank=True)
+    segunda_lectura = models.TextField(blank=True)
+    aclamacion = models.TextField(blank=True)
+    evangelio = models.TextField(blank=True)
+    fecha_fuente = models.DateField(null=True, blank=True)
+    url_fuente = models.URLField(max_length=500, blank=True)
+    actualizado = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['mes', 'dia', 'ciclo']
+        verbose_name = 'Lectura litúrgica'
+        verbose_name_plural = 'Lecturas litúrgicas'
+        constraints = [models.UniqueConstraint(fields=['dia', 'mes', 'ciclo'], condition=models.Q(fecha_especifica__isnull=True), name='uniq_lectura_dia_mes_ciclo')]
+        indexes = [models.Index(fields=['fecha_especifica'], name='core_lectur_fecha_e5b6e2_idx'), models.Index(fields=['mes', 'dia'], name='core_lectur_mes_6b5b8f_idx')]
+
+    def __str__(self):
+        return f'{self.dia:02d}/{self.mes:02d} · {self.get_ciclo_display()}'
+
+
+class ReferenciaLecturaLiturgica(models.Model):
+    """Referencia bíblica asignada a una fecha, sin almacenar el texto bíblico."""
+
+    FUENTES = (
+        ('misal_mx', 'Misal.mx'),
+        ('arquidiocesis_cuenca', 'Arquidiócesis de Cuenca'),
+        ('usccb', 'USCCB (referencia comparativa)'),
+        ('manual', 'Carga o validación manual'),
+    )
+
+    fecha = models.DateField()
+    anio_liturgico = models.CharField(max_length=9)
+    tiempo_liturgico = models.CharField(max_length=40)
+    semana_liturgica = models.PositiveSmallIntegerField(null=True, blank=True)
+    dia_semana = models.CharField(max_length=12)
+    ciclo_dominical = models.CharField(max_length=1, blank=True)
+    ciclo_ferial = models.CharField(max_length=2, blank=True)
+    celebracion = models.CharField(max_length=200, blank=True)
+
+    primera_lectura_ref = models.CharField(max_length=250, blank=True)
+    salmo_ref = models.CharField(max_length=250, blank=True)
+    segunda_lectura_ref = models.CharField(max_length=250, blank=True)
+    aclamacion_ref = models.CharField(max_length=250, blank=True)
+    evangelio_ref = models.CharField(max_length=250, blank=True)
+
+    fuente = models.CharField(max_length=30, choices=FUENTES, default='misal_mx')
+    url_fuente = models.URLField(max_length=500, blank=True)
+    validada = models.BooleanField(
+        default=False,
+        help_text='Marcar solo después de contrastar la referencia con una fuente litúrgica aprobada.'
+    )
+    observaciones = models.TextField(blank=True)
+    consultada = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['fecha']
+        verbose_name = 'Referencia de lectura litúrgica'
+        verbose_name_plural = 'Referencias de lecturas litúrgicas'
+        constraints = [
+            models.UniqueConstraint(fields=['fecha', 'fuente'], name='uniq_ref_fecha_fuente'),
+        ]
+        indexes = [
+            models.Index(fields=['anio_liturgico', 'ciclo_dominical'], name='core_ref_anio_ciclo_idx'),
+            models.Index(fields=['tiempo_liturgico', 'semana_liturgica'], name='core_ref_tiempo_sem_idx'),
+        ]
+
+    def __str__(self):
+        return f'{self.fecha:%d/%m/%Y} · {self.celebracion or self.tiempo_liturgico}'
