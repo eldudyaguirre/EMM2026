@@ -46,20 +46,43 @@ def ciclo_fecha(fecha):
 
 
 def extraer_seccion(texto, titulo):
-    patron = r'(?<![A-ZÁÉÍÓÚÜÑ])' + re.escape(titulo) + r'(?![A-ZÁÉÍÓÚÜÑ])'
-    coincidencia = re.search(patron, texto, re.I)
+    """
+    Extrae una sección cuyo encabezado ocupa una línea completa.
+    Así no confunde palabras dentro del contenido, por ejemplo
+    'Del salmo 118' o 'Del santo Evangelio'.
+    """
+    patron_titulo = re.compile(
+        r'^\s*' + re.escape(titulo) + r'\s*$',
+        re.IGNORECASE | re.MULTILINE,
+    )
+    coincidencia = patron_titulo.search(texto)
     if not coincidencia:
         return ''
+
     inicio = coincidencia.end()
     fin = len(texto)
+
     for siguiente in FINES:
-        match = re.search(
-            r'(?<![A-ZÁÉÍÓÚÜÑ])' + re.escape(siguiente) + r'(?![A-ZÁÉÍÓÚÜÑ])',
-            texto[inicio:], re.I
+        patron_siguiente = re.compile(
+            r'^\s*' + re.escape(siguiente) + r'\s*$',
+            re.IGNORECASE | re.MULTILINE,
         )
+        match = patron_siguiente.search(texto, inicio)
         if match:
-            fin = min(fin, inicio + match.start())
-    return texto[inicio:fin].strip(' :-–—\n')
+            fin = min(fin, match.start())
+
+    return texto[inicio:fin].strip(' :-–—\n\r')
+
+
+def extraer_nombre_celebracion(texto):
+    """
+    Misal.mx publica en esta página el santoral bajo 'Santos:'.
+    Se conserva como referencia del día, sin inventar una solemnidad.
+    """
+    match = re.search(r'^\s*Santos:\s*(.+?)\s*$', texto, re.IGNORECASE | re.MULTILINE)
+    if not match:
+        return ''
+    return ('Santos del día: ' + match.group(1).strip())[:200]
 
 
 def obtener_lecturas(fecha):
@@ -70,12 +93,24 @@ def obtener_lecturas(fecha):
             response.headers.get_content_charset() or 'utf-8',
             errors='replace'
         )
+
     parser = TextoHTML()
     parser.feed(html)
     texto = '\n'.join(parser.partes)
+
     datos = {campo: extraer_seccion(texto, titulo) for campo, titulo in SECCIONES}
+    datos['nombre_celebracion'] = extraer_nombre_celebracion(texto)
+
     if not datos['primera_lectura'] or not datos['salmo'] or not datos['evangelio']:
-        raise ValueError('No se encontraron primera lectura, salmo y evangelio; se omitió la fecha.')
+        faltantes = [
+            campo for campo in ('primera_lectura', 'salmo', 'evangelio')
+            if not datos[campo]
+        ]
+        raise ValueError(
+            'No se encontraron secciones obligatorias: ' + ', '.join(faltantes)
+            + '; se omitió la fecha.'
+        )
+
     return url, datos
 
 
@@ -97,11 +132,13 @@ class Command(BaseCommand):
 
         fecha = desde
         nuevas = actualizadas = existentes = errores = 0
+
         while fecha <= hasta:
             ciclo = ciclo_fecha(fecha)
             try:
                 url, datos = obtener_lecturas(fecha)
                 defaults = {**datos, 'fecha_fuente': fecha, 'url_fuente': url}
+
                 with transaction.atomic():
                     registro, creada = LecturaLiturgica.objects.get_or_create(
                         dia=fecha.day,
@@ -110,6 +147,7 @@ class Command(BaseCommand):
                         fecha_especifica__isnull=True,
                         defaults=defaults,
                     )
+
                     if creada:
                         nuevas += 1
                     elif opciones['sobrescribir']:
@@ -119,7 +157,9 @@ class Command(BaseCommand):
                         actualizadas += 1
                     else:
                         existentes += 1
+
                 self.stdout.write(self.style.SUCCESS(f'{fecha} · ciclo {ciclo}: OK'))
+
             except Exception as exc:
                 errores += 1
                 self.stderr.write(self.style.WARNING(f'{fecha}: {exc}'))
