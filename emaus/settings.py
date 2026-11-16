@@ -28,18 +28,25 @@ DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 ALLOWED_HOSTS = [
     host.strip()
-    for host in os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
+    for host in os.getenv(
+        'ALLOWED_HOSTS',
+        'localhost,127.0.0.1'
+    ).split(',')
     if host.strip()
 ]
-# Autorizar el Quick Tunnel vigente para pruebas externas, incluso si .env define ALLOWED_HOSTS.
-QUICK_TUNNEL_HOST = 'alien-experience-heater-feed.trycloudflare.com'
-if QUICK_TUNNEL_HOST not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append(QUICK_TUNNEL_HOST)
 
 CSRF_TRUSTED_ORIGINS = [
+    'https://emausica.org',
+    'https://www.emausica.org',
     'https://ministeriodemusicaemaus.up.railway.app',
-    'https://alien-experience-heater-feed.trycloudflare.com',
 ]
+
+# Cloudflare termina HTTPS y se comunica por HTTP con Django.
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Cookies seguras cuando la petición original llega por HTTPS.
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
 
 # Application definition
 
