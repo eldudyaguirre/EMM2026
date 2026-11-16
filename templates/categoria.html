@@ -200,7 +200,9 @@
                                 <li class="nav-item"><a class="nav-link" href="{% url 'loginin' %}">Inicio</a></li>
                                 <li class="nav-item"><a class="nav-link" href="{% url 'calendario' %}">Calendario</a></li>
                                 {% if request.user.is_authenticated %}
-                                <li class="nav-item"><a class="nav-link" href="#" id="abrirCambioPasswordCalendario">Cambiar contraseña</a></li>
+                                    {% if request.user.is_staff %}
+                                    <li class="nav-item"><a class="nav-link" href="#" id="abrirCambioPasswordCalendario">Cambiar contraseña</a></li>
+                                    {% endif %}
                                 <li class="nav-item calendar-logout-item"><a class="nav-link" href="{% url 'logout' %}">Cerrar sesión</a></li>
                                 {% endif %}
                             </ul>
