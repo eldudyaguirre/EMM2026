@@ -155,15 +155,20 @@ class Command(BaseCommand):
                 for campo, texto in secciones.items():
                     fila[f"{campo}_caracteres"] = len(texto)
 
+                campos_requeridos = list(CAMPOS_OBLIGATORIOS)
+                # En domingos también se espera la segunda lectura.
+                if fecha_obj.weekday() == 6:
+                    campos_requeridos.append("segunda_lectura")
+
                 faltantes = [
-                    campo for campo in CAMPOS_OBLIGATORIOS if not secciones.get(campo)
+                    campo for campo in campos_requeridos if not secciones.get(campo)
                 ]
                 fila["campos_obligatorios_faltantes"] = ";".join(faltantes)
 
                 if faltantes:
                     fila["estado"] = "INCOMPLETA"
                     fila["observacion"] = (
-                        "No se localizaron todas las secciones obligatorias."
+                        "No se localizaron todas las secciones esperadas para esta fecha."
                     )
                 elif (
                     fecha_publicacion
