@@ -321,7 +321,7 @@ def _validar_tesseract(ejecutable, idioma):
         raise CommandError(f"Tesseract no pudo listar idiomas: {detalle}")
 
     disponibles = set(
-        re.findall(r"(?m)^\\s*([A-Za-z0-9_]+)\\s*$", resultado.stdout)
+        re.findall(r"(?m)^\s*([A-Za-z0-9_]+)\s*$", resultado.stdout)
     )
     solicitados = [codigo.strip() for codigo in idioma.split("+") if codigo.strip()]
     faltantes = [codigo for codigo in solicitados if codigo not in disponibles]
@@ -897,8 +897,8 @@ class Command(BaseCommand):
                             f"Falló OCR: {type(exc).__name__}: {str(exc)[:300]}"
                         )
 
-                texto_completo = "\\n\\n".join(
-                    f"========== PÁGINA {numero} ==========\\n{texto.strip()}"
+                texto_completo = "\n\n".join(
+                    f"========== PÁGINA {numero} ==========\n{texto.strip()}"
                     for numero, texto in enumerate(paginas, start=1)
                 ).strip()
                 caracteres = sum(len(texto) for texto in paginas)
@@ -907,7 +907,7 @@ class Command(BaseCommand):
                 fila["metodo_extraccion"] = metodo_extraccion
                 paginas_total += total_paginas
 
-                texto_encabezado = "\\n".join(paginas[:2])
+                texto_encabezado = "\n".join(paginas[:2])
                 datos = _extraer_datos_liturgicos(
                     texto_encabezado,
                     fecha_listado=item["fecha"],
