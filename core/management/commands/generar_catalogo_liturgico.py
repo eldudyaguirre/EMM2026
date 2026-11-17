@@ -217,6 +217,8 @@ def _texto_pdf_por_columnas(ruta_pdf):
             texto_pagina = "\n".join(item[3] for item in ordenados).strip()
             if texto_pagina:
                 paginas.append(texto_pagina)
+    except Exception:
+        return ""
     finally:
         documento.close()
 
