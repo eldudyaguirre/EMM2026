@@ -277,7 +277,7 @@ def _es_prefijo_ocr_encabezado(prefijo):
     """
     return bool(
         re.fullmatch(
-            r"(?:\[EJ\]|\[E|\[ON|\[EX|EEN|EM|EJ|UY|E)",
+            r"(?:\[EJ\]|\[EY|\[E|\[ON|\[EX|110\.\||EEN|EM|EJ|UY|E)",
             (prefijo or "").strip(),
         )
     )
