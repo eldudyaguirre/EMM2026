@@ -235,7 +235,7 @@ def _extraer_contenido_lectura(bloque):
 
 
 def _extraer_secciones_misalmx(html):
-    """Parser del sitio nuevo misalmx.com, cuya estructura usa details#lecturas."""
+    """Parser del sitio nuevo misalmx.com, incluida la Vigilia Pascual."""
     parser = _ArbolMisalParser()
     parser.feed(html)
     parser.close()
@@ -247,8 +247,6 @@ def _extraer_secciones_misalmx(html):
     if lecturas is None:
         return None
 
-    # El contenedor .space-y-4 cuyas ramas directas contienen los h3
-    # identificados como lectura-N es el listado de lecturas del día.
     contenedor = _buscar_nodo(
         lecturas,
         lambda n: (
@@ -268,14 +266,8 @@ def _extraer_secciones_misalmx(html):
     if contenedor is None:
         return None
 
-    secciones = {
-        "primera_lectura": [],
-        "salmo": [],
-        "segunda_lectura": [],
-        "aclamacion": [],
-        "evangelio": [],
-    }
-
+    bloques = []
+    titulos = []
     for bloque in contenedor.children:
         if not isinstance(bloque, _NodoHTML):
             continue
@@ -288,15 +280,67 @@ def _extraer_secciones_misalmx(html):
         if encabezado is None:
             continue
 
-        titulo = _normalizar(encabezado.texto())
-        campo = SECTIONS.get(titulo)
-        if not campo:
-            # Los esquemas especiales (por ejemplo, lecturas numeradas de
-            # la Vigilia Pascual) no se asignan a un campo ordinario a ciegas.
+        titulo_original = encabezado.texto()
+        titulo = _normalizar(titulo_original)
+        texto = _extraer_contenido_lectura(bloque)
+        bloques.append((titulo, titulo_original, texto))
+        titulos.append(titulo)
+
+    if not bloques:
+        return None
+
+    # La Vigilia Pascual se identifica por su secuencia de siete lecturas
+    # del Antiguo Testamento y una Epístola independiente.
+    es_vigilia = (
+        "SEPTIMA LECTURA" in titulos
+        and "EPISTOLA" in titulos
+        and titulos.count("SALMO RESPONSORIAL") >= 8
+    )
+
+    secciones = {
+        "primera_lectura": [],
+        "salmo": [],
+        "segunda_lectura": [],
+        "aclamacion": [],
+        "evangelio": [],
+    }
+
+    numero_salmo = 0
+    for titulo, titulo_original, texto in bloques:
+        if not texto:
             continue
 
-        texto = _extraer_contenido_lectura(bloque)
-        if texto:
+        if es_vigilia:
+            if re.fullmatch(
+                r"(PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|SEPTIMA) LECTURA",
+                titulo,
+            ):
+                secciones["primera_lectura"].append(
+                    f"### {titulo_original.upper()}\n{texto}"
+                )
+                continue
+
+            if titulo == "SALMO RESPONSORIAL":
+                numero_salmo += 1
+                secciones["salmo"].append(
+                    f"### SALMO RESPONSORIAL {numero_salmo}\n{texto}"
+                )
+                continue
+
+            if titulo == "EPISTOLA":
+                secciones["segunda_lectura"].append(
+                    f"### {titulo_original.upper()}\n{texto}"
+                )
+                continue
+
+            campo = SECTIONS.get(titulo)
+            if campo == "evangelio":
+                secciones[campo].append(texto)
+            # En la Vigilia no se fuerza un apartado separado de aclamación.
+            continue
+
+        campo = SECTIONS.get(titulo)
+        if campo:
             secciones[campo].append(texto)
 
     resultado = {
@@ -304,6 +348,44 @@ def _extraer_secciones_misalmx(html):
         for campo, fragmentos in secciones.items()
     }
     return resultado, None
+
+
+def validar_vigilia_pascual(secciones):
+    """Comprueba la estructura mínima esperada para la Vigilia Pascual.
+
+    Devuelve una lista vacía si están las siete lecturas del AT, sus ocho
+    salmos responsoriales, la Epístola y el Evangelio.
+    """
+    primera = secciones.get("primera_lectura", "")
+    salmos = secciones.get("salmo", "")
+    segunda = secciones.get("segunda_lectura", "")
+    evangelio = secciones.get("evangelio", "")
+
+    lecturas_detectadas = len(
+        re.findall(
+            r"(?m)^### (?:PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|SEPTIMA) LECTURA$",
+            primera,
+        )
+    )
+    salmos_detectados = len(
+        re.findall(r"(?m)^### SALMO RESPONSORIAL \d+$", salmos)
+    )
+
+    problemas = []
+    if lecturas_detectadas != 7:
+        problemas.append(
+            f"lecturas_AT_{lecturas_detectadas}_de_7"
+        )
+    if salmos_detectados != 8:
+        problemas.append(
+            f"salmos_responsoriales_{salmos_detectados}_de_8"
+        )
+    if "EPISTOLA" not in _normalizar(segunda):
+        problemas.append("epistola_no_detectada")
+    if not evangelio:
+        problemas.append("evangelio_no_detectado")
+
+    return problemas
 
 
 def extraer_secciones(html):
