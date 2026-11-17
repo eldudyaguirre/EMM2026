@@ -84,6 +84,13 @@ class Command(BaseCommand):
             default=25,
             help="Tiempo máximo por página en segundos.",
         )
+        parser.add_argument(
+            "--fecha-corte",
+            help=(
+                "Fecha usada para marcar fechas futuras como FUTURA_NO_PUBLICADA "
+                "(YYYY-MM-DD). Por defecto usa la fecha local del servidor."
+            ),
+        )
 
     def handle(self, *args, **options):
         ruta_calendario = Path(options["calendario"]).expanduser()
@@ -98,9 +105,14 @@ class Command(BaseCommand):
         try:
             desde = date.fromisoformat(options["desde"]) if options["desde"] else None
             hasta = date.fromisoformat(options["hasta"]) if options["hasta"] else None
+            fecha_corte = (
+                date.fromisoformat(options["fecha_corte"])
+                if options["fecha_corte"]
+                else date.today()
+            )
         except ValueError as exc:
             raise CommandError(
-                "Las fechas --desde y --hasta deben tener formato YYYY-MM-DD."
+                "Las fechas --desde, --hasta y --fecha-corte deben tener formato YYYY-MM-DD."
             ) from exc
 
         if desde and hasta and desde > hasta:
@@ -117,7 +129,14 @@ class Command(BaseCommand):
             raise CommandError("El filtro no dejó fechas para auditar.")
 
         resultados = []
-        estados = ("OK", "INCOMPLETA", "NO_ENCONTRADA", "ERROR", "REVISAR_FECHA")
+        estados = (
+            "OK",
+            "INCOMPLETA",
+            "NO_ENCONTRADA",
+            "ERROR",
+            "REVISAR_FECHA",
+            "FUTURA_NO_PUBLICADA",
+        )
         totales = {estado: 0 for estado in estados}
 
         self.stdout.write(self.style.NOTICE(f"Fechas a revisar: {len(fechas)}"))
@@ -142,6 +161,20 @@ class Command(BaseCommand):
                 "campos_obligatorios_faltantes": "",
                 "observacion": "",
             }
+
+            if fecha_obj > fecha_corte:
+                fila["estado"] = "FUTURA_NO_PUBLICADA"
+                fila["observacion"] = (
+                    f"Fecha posterior a la fecha de corte {fecha_corte.isoformat()}; "
+                    "no se consulta la fuente antes de que llegue ese día."
+                )
+                resultados.append(fila)
+                totales["FUTURA_NO_PUBLICADA"] += 1
+                self.stdout.write(
+                    f"[{indice}/{len(fechas)}] {fila['fecha_calendario']} "
+                    "FUTURA_NO_PUBLICADA (fecha posterior a la fecha de corte)"
+                )
+                continue
 
             try:
                 html, status, url_final = descargar_html(url, options["timeout"])
