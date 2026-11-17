@@ -33,37 +33,34 @@
 	<link href="{% static 'css/custom.css' %}" rel="stylesheet" media="screen">
 
     <style>
-        /* Centrado independiente de las columnas Bootstrap en tabletas. */
+        /* En tabletas, centrar el formulario directamente respecto al viewport.
+           No depender del ancho de las columnas ni del container de Bootstrap. */
         @media (min-width: 768px) and (max-width: 1199.98px) {
-            .hero > .container > .row > .col-xl-6:first-child {
-                display: none !important;
-            }
-
-            .hero > .container > .row > .col-xl-6:last-child {
-                flex: 0 0 100% !important;
-                width: 100% !important;
-                max-width: 100% !important;
-            }
-
             .hero .hero-body {
-                position: relative !important;
-                left: 50% !important;
-                transform: translateX(-50%) !important;
-                width: calc(100vw - 40px) !important;
-                max-width: 100vw !important;
+                position: fixed !important;
+                inset: 0 !important;
+                width: 100vw !important;
+                height: 100vh !important;
+                height: 100dvh !important;
                 display: flex !important;
                 justify-content: center !important;
                 align-items: center !important;
                 margin: 0 !important;
-                padding: 0 !important;
+                padding: 24px !important;
+                transform: none !important;
+                z-index: 200 !important;
+                pointer-events: none !important;
+                box-sizing: border-box !important;
             }
 
             .hero .login-box {
+                position: relative !important;
                 box-sizing: border-box !important;
                 flex: 0 1 650px !important;
                 width: 100% !important;
                 max-width: 650px !important;
                 margin: 0 auto !important;
+                pointer-events: auto !important;
             }
         }
 
