@@ -202,36 +202,59 @@ class Command(BaseCommand):
 
             try:
                 uso_url_nueva = False
-                try:
-                    html, status, url_final = descargar_html(
-                        url_antigua, options["timeout"]
-                    )
-                except HTTPError as exc:
-                    if exc.code != 404:
-                        raise
-                    # El sitio nuevo conserva algunas fechas que ya no existen
-                    # en la ruta antigua.
-                    uso_url_nueva = True
-                    html, status, url_final = descargar_html(
-                        url_nueva, options["timeout"]
-                    )
-
+                html, status, url_final = descargar_html(
+                    url_antigua, options["timeout"]
+                )
                 secciones, fecha_publicacion = extraer_secciones(html)
 
-                # Si la URL antigua responde 200 pero no contiene lecturas
-                # reconocibles, probar la estructura y ruta del sitio nuevo.
-                if not any(secciones.values()) and not uso_url_nueva:
-                    uso_url_nueva = True
-                    html, status, url_final = descargar_html(
-                        url_nueva, options["timeout"]
-                    )
-                    secciones, fecha_publicacion = extraer_secciones(html)
+                campos_requeridos = list(CAMPOS_OBLIGATORIOS)
+                # En domingos también se espera la segunda lectura.
+                if fecha_obj.weekday() == 6:
+                    campos_requeridos.append("segunda_lectura")
+
+                # Un HTTP 200 no garantiza que el sitio antiguo tenga todas las
+                # lecturas. Si faltan apartados, se prueba la ruta nueva y se
+                # conserva la extracción con más campos requeridos disponibles.
+                faltantes_iniciales = [
+                    campo for campo in campos_requeridos if not secciones.get(campo)
+                ]
+                if faltantes_iniciales:
+                    try:
+                        html_nuevo, status_nuevo, url_final_nueva = descargar_html(
+                            url_nueva, options["timeout"]
+                        )
+                        secciones_nuevas, fecha_publicacion_nueva = extraer_secciones(
+                            html_nuevo
+                        )
+                        calidad_actual = (
+                            len(campos_requeridos) - len(faltantes_iniciales),
+                            sum(len(texto) for texto in secciones.values()),
+                        )
+                        faltantes_nuevos = [
+                            campo
+                            for campo in campos_requeridos
+                            if not secciones_nuevas.get(campo)
+                        ]
+                        calidad_nueva = (
+                            len(campos_requeridos) - len(faltantes_nuevos),
+                            sum(len(texto) for texto in secciones_nuevas.values()),
+                        )
+                        if calidad_nueva > calidad_actual:
+                            secciones = secciones_nuevas
+                            fecha_publicacion = fecha_publicacion_nueva
+                            status = status_nuevo
+                            url_final = url_final_nueva
+                            uso_url_nueva = True
+                    except HTTPError:
+                        # La página nueva puede no estar publicada para esa fecha.
+                        pass
 
                 fila["http_status"] = status
                 fila["url_final"] = url_final
                 if uso_url_nueva:
                     fila["observacion"] = (
-                        "Se utilizó la ruta nueva de MISAL Mx como alternativa."
+                        "Se utilizó la ruta nueva de MISAL Mx porque ofreció "
+                        "una extracción más completa."
                     )
 
                 if fecha_publicacion:
