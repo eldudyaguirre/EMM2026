@@ -7,7 +7,7 @@ from urllib.request import Request, urlopen
 
 from django.core.management.base import BaseCommand, CommandError
 
-from core.liturgia import extraer_secciones
+from core.liturgia import extraer_secciones, validar_vigilia_pascual
 
 
 CAMPOS_OBLIGATORIOS = (
@@ -217,10 +217,21 @@ class Command(BaseCommand):
                     secciones, fecha_publicacion = extraer_secciones(html)
                     uso_url_nueva = True
 
-                campos_requeridos = list(CAMPOS_OBLIGATORIOS)
-                # En domingos también se espera la segunda lectura.
-                if fecha_obj.weekday() == 6:
-                    campos_requeridos.append("segunda_lectura")
+                es_vigilia_pascual = fecha_obj.isoformat() == "2026-04-04"
+                if es_vigilia_pascual:
+                    # La Vigilia tiene siete lecturas del AT, ocho salmos,
+                    # Epístola y Evangelio; no usa el campo separado de aclamación.
+                    campos_requeridos = [
+                        "primera_lectura",
+                        "salmo",
+                        "segunda_lectura",
+                        "evangelio",
+                    ]
+                else:
+                    campos_requeridos = list(CAMPOS_OBLIGATORIOS)
+                    # En domingos también se espera la segunda lectura.
+                    if fecha_obj.weekday() == 6:
+                        campos_requeridos.append("segunda_lectura")
 
                 # Un HTTP 200 no garantiza que el sitio antiguo tenga todas las
                 # lecturas. Si faltan apartados, se prueba la ruta nueva y se
@@ -276,6 +287,8 @@ class Command(BaseCommand):
                 faltantes = [
                     campo for campo in campos_requeridos if not secciones.get(campo)
                 ]
+                if es_vigilia_pascual:
+                    faltantes.extend(validar_vigilia_pascual(secciones))
                 fila["campos_obligatorios_faltantes"] = ";".join(faltantes)
 
                 if faltantes:
@@ -295,6 +308,12 @@ class Command(BaseCommand):
                     )
                 else:
                     fila["estado"] = "OK"
+                    if es_vigilia_pascual:
+                        fila["observacion"] = (
+                            "Vigilia Pascual validada: siete lecturas del AT, "
+                            "ocho salmos responsoriales, Epístola y Evangelio. "
+                            "La fuente no presenta una sección separada de aclamación."
+                        )
 
             except HTTPError as exc:
                 fila["http_status"] = exc.code
