@@ -202,10 +202,20 @@ class Command(BaseCommand):
 
             try:
                 uso_url_nueva = False
-                html, status, url_final = descargar_html(
-                    url_antigua, options["timeout"]
-                )
-                secciones, fecha_publicacion = extraer_secciones(html)
+                try:
+                    html, status, url_final = descargar_html(
+                        url_antigua, options["timeout"]
+                    )
+                    secciones, fecha_publicacion = extraer_secciones(html)
+                except HTTPError as exc:
+                    if exc.code != 404:
+                        raise
+                    # Algunas fechas ya no existen en el dominio antiguo.
+                    html, status, url_final = descargar_html(
+                        url_nueva, options["timeout"]
+                    )
+                    secciones, fecha_publicacion = extraer_secciones(html)
+                    uso_url_nueva = True
 
                 campos_requeridos = list(CAMPOS_OBLIGATORIOS)
                 # En domingos también se espera la segunda lectura.
@@ -245,8 +255,8 @@ class Command(BaseCommand):
                             status = status_nuevo
                             url_final = url_final_nueva
                             uso_url_nueva = True
-                    except HTTPError:
-                        # La página nueva puede no estar publicada para esa fecha.
+                    except (HTTPError, URLError, TimeoutError, OSError):
+                        # La página nueva puede no estar disponible para esa fecha.
                         pass
 
                 fila["http_status"] = status
@@ -262,11 +272,6 @@ class Command(BaseCommand):
 
                 for campo, texto in secciones.items():
                     fila[f"{campo}_caracteres"] = len(texto)
-
-                campos_requeridos = list(CAMPOS_OBLIGATORIOS)
-                # En domingos también se espera la segunda lectura.
-                if fecha_obj.weekday() == 6:
-                    campos_requeridos.append("segunda_lectura")
 
                 faltantes = [
                     campo for campo in campos_requeridos if not secciones.get(campo)
