@@ -416,20 +416,20 @@ def _fecha_desde_texto_pdf(texto):
         "septiembre|setiembre|octubre|noviembre|diciembre"
     )
     patrones = (
-        rf"\\b(\\d{{1,2}})\\s+de\\s+({meses})\\s+(?:(?:de|del)\\s*)?(20\\d{{2}})\\b",
-        rf"\\b(\\d{{1,2}})\\s+({meses})\\s+(20\\d{{2}})\\b",
-        r"\\b(\\d{1,2})[/-](\\d{1,2})[/-](20\\d{2})\\b",
+        rf"\b(\d{{1,2}})\s+de\s+({meses})\s+(?:(?:de|del)\s*)?(20\d{{2}})\b",
+        rf"\b(\d{{1,2}})\s+({meses})\s+(20\d{{2}})\b",
+        r"\b(\d{1,2})[/-](\d{1,2})[/-](20\d{2})\b",
     )
     pistas_liturgicas = (
-        r"\\bDOMINGO\\b|\\bSOLEMNIDAD\\b|\\bFIESTA\\b|\\bPASCUA\\b|"
-        r"\\bADVIENTO\\b|\\bCUARESMA\\b|\\bNAVIDAD\\b|\\bCICLO\\s+[ABC]\\b|"
-        r"\\bCRISTO REY\\b|\\bBAUTISMO DEL SENOR\\b|\\bPENTECOSTES\\b|"
-        r"\\bASCENSION\\b|\\bCORPUS CHRISTI\\b|\\bSAGRADA FAMILIA\\b|"
-        r"\\bEPIFANIA\\b"
+        r"\bDOMINGO\b|\bSOLEMNIDAD\b|\bFIESTA\b|\bPASCUA\b|"
+        r"\bADVIENTO\b|\bCUARESMA\b|\bNAVIDAD\b|\bCICLO\s+[ABC]\b|"
+        r"\bCRISTO REY\b|\bBAUTISMO DEL SENOR\b|\bPENTECOSTES\b|"
+        r"\bASCENSION\b|\bCORPUS CHRISTI\b|\bSAGRADA FAMILIA\b|"
+        r"\bEPIFANIA\b"
     )
     referencias_no_validas = (
-        r"\\bCOLECTA\\b|\\bPAPA FRANCISCO\\b|\\bSANTO PADRE\\b|"
-        r"\\bHOMILIA\\b|\\bAUDIENCIA\\b|\\bDISCURSO\\b"
+        r"\bCOLECTA\b|\bPAPA FRANCISCO\b|\bSANTO PADRE\b|"
+        r"\bHOMILIA\b|\bAUDIENCIA\b|\bDISCURSO\b"
     )
 
     lineas = [
@@ -524,7 +524,7 @@ def _extraer_datos_liturgicos(texto, fecha_listado=None):
     ciclo = ""
     ciclo_origen = ""
     coincidencia = re.search(
-        r"\\bCiclo(?:\\s+dominical)?\\s*[:\\-]?\\s*([ABC])\\b",
+        r"\bCiclo(?:\s+dominical)?\s*[:\-]?\s*([ABC])\b",
         encabezado,
         flags=re.IGNORECASE,
     )
@@ -534,7 +534,7 @@ def _extraer_datos_liturgicos(texto, fecha_listado=None):
 
     liturgia_horas = ""
     coincidencia = re.search(
-        r"Liturgia de las Horas\\s*:\\s*([^–\\-\\n]+)",
+        r"Liturgia de las Horas\s*:\s*([^–\-\n]+)",
         encabezado,
         flags=re.IGNORECASE,
     )
@@ -543,7 +543,7 @@ def _extraer_datos_liturgicos(texto, fecha_listado=None):
 
     anio_lh = ""
     coincidencia = re.search(
-        r"\\bAño\\s+([IVXLCDM]+|\\d+)\\b",
+        r"\bAño\s+([IVXLCDM]+|\d+)\b",
         encabezado,
         flags=re.IGNORECASE,
     )
@@ -553,11 +553,11 @@ def _extraer_datos_liturgicos(texto, fecha_listado=None):
     # Buscar encabezados litúrgicos completos antes de aceptar palabras
     # genéricas como "Bautismo" que pueden aparecer en el cuerpo del mensaje.
     patrones_titulo = (
-        r"\\b(?:EL\\s+)?BAUTISMO\\s+DEL\\s+SENOR\\b",
-        r"\\bDOMINGO\\b.{0,100}\\b(?:CICLO\\s+[ABC]|TIEMPO|ORDINARIO|ADVIENTO|CUARESMA|PASCUA)\\b",
-        r"\\bSOLEMNIDAD\\b.{0,100}",
-        r"\\b(?:EPIFANIA|PENTECOSTES|ASCENSION|CORPUS CHRISTI|SAGRADA FAMILIA)\\b.{0,100}",
-        r"\\bNATIVIDAD\\b.{0,80}",
+        r"\b(?:EL\s+)?BAUTISMO\s+DEL\s+SENOR\b",
+        r"\bDOMINGO\b.{0,100}\b(?:CICLO\s+[ABC]|TIEMPO|ORDINARIO|ADVIENTO|CUARESMA|PASCUA)\b",
+        r"\bSOLEMNIDAD\b.{0,100}",
+        r"\b(?:EPIFANIA|PENTECOSTES|ASCENSION|CORPUS CHRISTI|SAGRADA FAMILIA)\b.{0,100}",
+        r"\bNATIVIDAD\b.{0,80}",
     )
     celebracion = ""
     for patron in patrones_titulo:
@@ -573,9 +573,9 @@ def _extraer_datos_liturgicos(texto, fecha_listado=None):
     # palabra suelta del cuerpo del documento.
     contiene_lecturas = bool(
         re.search(
-            r"\\bPRIMERA LECTURA\\b|\\bSEGUNDA LECTURA\\b|"
-            r"\\bSALMO RESPONSORIAL\\b|\\bEVANGELIO\\b|"
-            r"\\bACLAMACION ANTES DEL EVANGELIO\\b",
+            r"\bPRIMERA LECTURA\b|\bSEGUNDA LECTURA\b|"
+            r"\bSALMO RESPONSORIAL\b|\bEVANGELIO\b|"
+            r"\bACLAMACION ANTES DEL EVANGELIO\b",
             encabezado,
             flags=re.IGNORECASE,
         )
