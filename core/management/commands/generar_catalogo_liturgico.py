@@ -100,6 +100,8 @@ MARCADORES_OTRAS_SECCIONES = re.compile(
     r"(?:ORACI[ÓO]N\s+COLECTA|ORACI[ÓO]N\s+DE\s+LOS\s+FIELES|"
     r"ORACI[ÓO]N\s+UNIVERSAL|MONICI[ÓO]N|PRESENTACI[ÓO]N\s+DE\s+OFRENDAS|"
     r"PLEGARIA\s+EUCAR[ÍI]STICA|PADRE\s+NUESTRO|RITO\s+DE\s+COMUNI[ÓO]N|"
+    r"LITURGIA\s+EUCAR[ÍI]STICA|PROFESI[ÓO]N\s+DE\s+FE|"
+    r"ORACI[ÓO]N\s+SOBRE\s+LAS\s+OFRENDAS|ORACI[ÓO]N\s+DESPU[ÉE]S\s+DE\s+LA\s+COMUNI[ÓO]N|"
     r"DESPEDIDA|AVISOS\s+PARROQUIALES)\b",
     re.I,
 )
@@ -152,33 +154,139 @@ def _lineas_documento(texto):
     return lineas
 
 
+
+def _texto_pdf_por_columnas(ruta_pdf):
+    """
+    Recupera el texto del PDF ordenando primero la columna izquierda y luego
+    la derecha cuando la geometría confirma una página a dos columnas.
+    En páginas de una columna conserva el orden vertical habitual.
+    """
+    try:
+        try:
+            import pymupdf as fitz
+        except ImportError:
+            import fitz
+        documento = fitz.open(str(ruta_pdf))
+    except Exception:
+        return ""
+
+    paginas = []
+    try:
+        for pagina in documento:
+            mitad = float(pagina.rect.width) / 2
+            izquierda = []
+            derecha = []
+            centro = []
+            todos = []
+
+            for bloque in pagina.get_text("blocks"):
+                if len(bloque) < 5:
+                    continue
+                x0, y0, x1, _y1, contenido = bloque[:5]
+                contenido = (contenido or "").strip()
+                if not contenido:
+                    continue
+                item = (float(y0), float(x0), float(x1), contenido)
+                todos.append(item)
+
+                if float(x1) <= mitad + 3:
+                    izquierda.append(item)
+                elif float(x0) >= mitad - 3:
+                    derecha.append(item)
+                else:
+                    centro.append(item)
+
+            # Solo aplicar el orden por columnas si hay bloques de texto
+            # claramente ubicados a ambos lados de la página.
+            if len(izquierda) >= 2 and len(derecha) >= 2:
+                centro_izquierda = []
+                centro_derecha = []
+                for item in centro:
+                    if (item[1] + item[2]) / 2 < mitad:
+                        centro_izquierda.append(item)
+                    else:
+                        centro_derecha.append(item)
+
+                ordenados = (
+                    sorted(izquierda + centro_izquierda, key=lambda x: (x[0], x[1]))
+                    + sorted(derecha + centro_derecha, key=lambda x: (x[0], x[1]))
+                )
+            else:
+                ordenados = sorted(todos, key=lambda x: (x[0], x[1]))
+
+            texto_pagina = "\n".join(item[3] for item in ordenados).strip()
+            if texto_pagina:
+                paginas.append(texto_pagina)
+    finally:
+        documento.close()
+
+    return "\n".join(paginas).strip()
+
+
+def _texto_para_catalogo(base, fila, texto_respaldo):
+    """
+    Prioriza el PDF con orden geométrico. Si es escaneado, ilegible o no está
+    disponible, utiliza el TXT generado por el proceso de extracción/OCR.
+    """
+    archivo_pdf = (fila.get("archivo_pdf") or "").strip()
+    if archivo_pdf:
+        ruta_relativa = Path(archivo_pdf.replace("\\", "/"))
+        if not ruta_relativa.is_absolute():
+            ruta_pdf = base / ruta_relativa
+            if ruta_pdf.is_file():
+                texto_pdf = _texto_pdf_por_columnas(ruta_pdf)
+                minimo = max(80, int(len((texto_respaldo or "").strip()) * 0.40))
+                if len(texto_pdf) >= minimo:
+                    return texto_pdf
+    return texto_respaldo or ""
+
+
+def _recortar_fin_lectura(texto):
+    normalizado = _normalizar(texto)
+    coincidencia = re.search(
+        r"\bPALABRA\s+(?:DE\s+DIOS|DEL\s+SENOR)\b",
+        normalizado,
+    )
+    if coincidencia:
+        return texto[:coincidencia.start()].strip(), True
+    return texto, False
+
+
 def _extraer_secciones(texto):
     """
-    Extrae bloques de lectura a partir de sus encabezados explícitos.
-    Conserva el texto fuente; no inventa referencias bíblicas ni completa
-    secciones que no estén presentes en el documento.
+    Extrae bloques de lectura a partir de encabezados explícitos.
+    Reconoce que el encabezado y el primer párrafo pueden compartir un mismo
+    bloque de texto PDF. No completa ni inventa contenido.
     """
     lineas = _lineas_documento(texto)
     detecciones = []
 
     for indice, linea in enumerate(lineas):
+        normalizada = _normalizar(linea)
         for nombre, patron in PATRONES_SECCION:
-            coincidencia = patron.search(_normalizar(linea))
+            coincidencia = patron.search(normalizada)
             if coincidencia:
-                # Exigir encabezado breve para no confundir menciones dentro
-                # del cuerpo de una reflexión con un título de sección.
-                if len(linea) <= 110:
-                    detecciones.append((indice, nombre))
+                # Muchos PDF colocan número, título y comienzo de la lectura
+                # en un mismo bloque largo. En esos casos el número de sección
+                # permite identificar el encabezado sin confundir menciones
+                # dentro de párrafos ordinarios.
+                numerado = bool(
+                    re.match(r"^\s*\d{1,2}\s*[.)]\s*", normalizada)
+                )
+                if len(linea) <= 110 or numerado:
+                    detecciones.append(
+                        (indice, nombre, coincidencia.end())
+                    )
                 break
 
-    # Conservar únicamente la primera aparición de cada sección. Evita que
-    # una segunda versión/opción de una lectura desplace accidentalmente
-    # el inicio de la sección principal.
     primeras = {}
-    for indice, nombre in detecciones:
-        primeras.setdefault(nombre, indice)
+    for indice, nombre, fin_titulo in detecciones:
+        primeras.setdefault(nombre, (indice, fin_titulo))
 
-    posiciones = sorted((indice, nombre) for nombre, indice in primeras.items())
+    posiciones = sorted(
+        (indice, nombre, fin_titulo)
+        for nombre, (indice, fin_titulo) in primeras.items()
+    )
     secciones = {
         "primera_lectura": "",
         "salmo_responsorial": "",
@@ -187,27 +295,56 @@ def _extraer_secciones(texto):
         "evangelio": "",
     }
 
-    for posicion, (inicio, nombre) in enumerate(posiciones):
+    for posicion, (inicio, nombre, fin_titulo) in enumerate(posiciones):
         fin = len(lineas)
         if posicion + 1 < len(posiciones):
             fin = posiciones[posicion + 1][0]
 
-        # La primera lectura, el salmo, la segunda y la aclamación terminan
-        # al comenzar otra sección reconocida. El Evangelio se corta además
-        # en "Palabra del Señor" cuando aparece.
         bloque = []
-        for linea in lineas[inicio + 1:fin]:
-            bloque.append(linea)
-            if FIN_LECTURA.match(_normalizar(linea)):
-                break
-            if MARCADORES_OTRAS_SECCIONES.match(_normalizar(linea)):
-                bloque.pop()
-                break
+        interrumpido_en = None
+        termino_lectura = False
+
+        # El texto del párrafo puede comenzar inmediatamente después del
+        # encabezado, sin salto de línea dentro del bloque PDF.
+        resto_encabezado = lineas[inicio][fin_titulo:].strip()
+        if resto_encabezado:
+            contenido, termino_lectura = _recortar_fin_lectura(resto_encabezado)
+            if contenido:
+                bloque.append(contenido)
+
+        if not termino_lectura:
+            for indice_linea in range(inicio + 1, fin):
+                linea = lineas[indice_linea]
+                contenido, es_fin = _recortar_fin_lectura(linea)
+                if es_fin:
+                    if contenido:
+                        bloque.append(contenido)
+                    termino_lectura = True
+                    break
+
+                if MARCADORES_OTRAS_SECCIONES.match(_normalizar(linea)):
+                    interrumpido_en = indice_linea
+                    break
+
+                bloque.append(linea)
+
+        # En algunos diseños el Evangelio comienza al pie de la columna
+        # izquierda y termina al inicio de la derecha. La columna izquierda
+        # puede mostrar después el encabezado de la Liturgia Eucarística.
+        # Si ocurre, se busca el bloque que contiene "Palabra del Señor" y
+        # se agrega solo su fragmento anterior al marcador.
+        if nombre == "evangelio" and not termino_lectura and interrumpido_en is not None:
+            for linea in lineas[interrumpido_en + 1:]:
+                contenido, es_fin = _recortar_fin_lectura(linea)
+                if es_fin:
+                    if contenido:
+                        bloque.append(contenido)
+                    termino_lectura = True
+                    break
 
         secciones[nombre] = "\n".join(bloque).strip()
 
     return secciones
-
 
 def _clasificar(fila, texto_disponible, tiene_lecturas=False):
     paginas = _int(fila.get("paginas"))
@@ -296,6 +433,7 @@ class Command(BaseCommand):
             if texto_disponible:
                 texto = ruta_txt.read_text(encoding="utf-8", errors="replace")
 
+            texto = _texto_para_catalogo(base, fila, texto)
             secciones = _extraer_secciones(texto) if texto else {}
             tiene_lecturas = any(
                 contenido.strip() for contenido in secciones.values()
