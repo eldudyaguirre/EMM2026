@@ -239,6 +239,9 @@ class Command(BaseCommand):
                 faltantes_iniciales = [
                     campo for campo in campos_requeridos if not secciones.get(campo)
                 ]
+                if es_vigilia_pascual:
+                    faltantes_iniciales.extend(validar_vigilia_pascual(secciones))
+
                 if faltantes_iniciales:
                     try:
                         html_nuevo, status_nuevo, url_final_nueva = descargar_html(
@@ -247,17 +250,34 @@ class Command(BaseCommand):
                         secciones_nuevas, fecha_publicacion_nueva = extraer_secciones(
                             html_nuevo
                         )
-                        calidad_actual = (
-                            len(campos_requeridos) - len(faltantes_iniciales),
-                            sum(len(texto) for texto in secciones.values()),
-                        )
                         faltantes_nuevos = [
                             campo
                             for campo in campos_requeridos
                             if not secciones_nuevas.get(campo)
                         ]
+                        if es_vigilia_pascual:
+                            faltantes_nuevos.extend(
+                                validar_vigilia_pascual(secciones_nuevas)
+                            )
+
+                        calidad_actual = (
+                            len(campos_requeridos)
+                            - sum(
+                                1 for campo in campos_requeridos
+                                if not secciones.get(campo)
+                            ),
+                            -len(validar_vigilia_pascual(secciones))
+                            if es_vigilia_pascual else 0,
+                            sum(len(texto) for texto in secciones.values()),
+                        )
                         calidad_nueva = (
-                            len(campos_requeridos) - len(faltantes_nuevos),
+                            len(campos_requeridos)
+                            - sum(
+                                1 for campo in campos_requeridos
+                                if not secciones_nuevas.get(campo)
+                            ),
+                            -len(validar_vigilia_pascual(secciones_nuevas))
+                            if es_vigilia_pascual else 0,
                             sum(len(texto) for texto in secciones_nuevas.values()),
                         )
                         if calidad_nueva > calidad_actual:
