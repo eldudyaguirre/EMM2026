@@ -198,11 +198,9 @@ def _extraer_secciones(texto):
         bloque = []
         for linea in lineas[inicio + 1:fin]:
             bloque.append(linea)
-            if nombre == "evangelio" and FIN_LECTURA.match(_normalizar(linea)):
+            if FIN_LECTURA.match(_normalizar(linea)):
                 break
-            if nombre != "evangelio" and MARCADORES_OTRAS_SECCIONES.match(
-                _normalizar(linea)
-            ):
+            if MARCADORES_OTRAS_SECCIONES.match(_normalizar(linea)):
                 bloque.pop()
                 break
 
