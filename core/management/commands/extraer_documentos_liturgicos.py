@@ -276,41 +276,80 @@ def _normalizar_busqueda(texto):
 
 
 def _fecha_desde_texto_pdf(texto):
-    """Busca la fecha de la celebración en el encabezado del PDF."""
-    muestra = _normalizar_busqueda((texto or "")[:2500]).lower()
+    """
+    Busca una fecha en las líneas iniciales que forman el encabezado litúrgico.
+
+    No toma fechas de citas, mensajes, colectas o referencias históricas como
+    fecha de celebración. Si no encuentra evidencia suficiente, devuelve None
+    para que el llamador conserve la fecha del catálogo web.
+    """
     meses = (
         "enero|febrero|marzo|abril|mayo|junio|julio|agosto|"
         "septiembre|setiembre|octubre|noviembre|diciembre"
     )
     patrones = (
-        rf"\b(\d{{1,2}})\s+de\s+({meses})\s+(?:(?:de|del)\s+)?(20\d{{2}})\b",
+        rf"\b(\d{{1,2}})\s+de\s+({meses})\s+(?:(?:de|del)\s*)?(20\d{{2}})\b",
         rf"\b(\d{{1,2}})\s+({meses})\s+(20\d{{2}})\b",
+        r"\b(\d{1,2})[/-](\d{1,2})[/-](20\d{2})\b",
+    )
+    pistas_celebracion = (
+        r"\bDOMINGO\b|\bSOLEMNIDAD\b|\bFIESTA\b|\bPASCUA\b|"
+        r"\bADVIENTO\b|\bCUARESMA\b|\bNAVIDAD\b|\bCICLO\s+[ABC]\b|"
+        r"\bCRISTO REY\b|\bBAUTISMO\b|\bPENTECOSTES\b|\bASCENSION\b|"
+        r"\bCORPUS CHRISTI\b|\bSAGRADA FAMILIA\b|\bEPIFANIA\b"
+    )
+    referencias_no_validas = (
+        r"\bCOLECTA\b|\bPAPA FRANCISCO\b|\bS\.?\s*S\.?\b|"
+        r"\bSANTO PADRE\b|\bHOMILIA\b|\bAUDIENCIA\b|\bDISCURSO\b"
     )
 
-    for patron in patrones:
-        coincidencia = re.search(patron, muestra, flags=re.IGNORECASE)
-        if coincidencia:
-            try:
+    lineas = [
+        _normalizar_busqueda(linea).upper()
+        for linea in (texto or "").splitlines()
+        if linea.strip()
+    ]
+
+    # La fecha propia de la celebración suele aparecer en las primeras líneas.
+    for indice, linea in enumerate(lineas[:20]):
+        if re.search(referencias_no_validas, linea):
+            continue
+
+        coincidencia = None
+        formato = None
+        for numero, patron in enumerate(patrones):
+            coincidencia = re.search(patron, linea, flags=re.IGNORECASE)
+            if coincidencia:
+                formato = numero
+                break
+        if not coincidencia:
+            continue
+
+        contexto = " ".join(lineas[max(0, indice - 2):indice + 3])
+        tiene_contexto_liturgico = bool(
+            re.search(pistas_celebracion, contexto, flags=re.IGNORECASE)
+        )
+        es_fecha_sola_en_encabezado = (
+            indice < 10 and len(linea) <= 45 and not re.search(
+                referencias_no_validas, contexto, flags=re.IGNORECASE
+            )
+        )
+        if not tiene_contexto_liturgico and not es_fecha_sola_en_encabezado:
+            continue
+
+        try:
+            if formato in (0, 1):
                 return date(
                     int(coincidencia.group(3)),
                     MESES[coincidencia.group(2).lower()],
                     int(coincidencia.group(1)),
                 )
-            except (ValueError, KeyError):
-                pass
-
-    coincidencia = re.search(
-        r"\b(\d{1,2})[/-](\d{1,2})[/-](20\d{2})\b", muestra
-    )
-    if coincidencia:
-        try:
             return date(
                 int(coincidencia.group(3)),
                 int(coincidencia.group(2)),
                 int(coincidencia.group(1)),
             )
-        except ValueError:
-            pass
+        except (ValueError, KeyError):
+            continue
 
     return None
 
@@ -385,19 +424,41 @@ def _extraer_datos_liturgicos(texto, fecha_listado=None):
                 celebracion = linea
                 break
 
+    # Solo se calcula ciclo cuando el documento presenta señales de contenido
+    # litúrgico. Un aviso o una colecta no debe recibir un ciclo por su fecha web.
+    contiene_lecturas = bool(
+        re.search(
+            r"\bPRIMERA LECTURA\b|\bSEGUNDA LECTURA\b|"
+            r"\bSALMO RESPONSORIAL\b|\bEVANGELIO\b|"
+            r"\bACLAMACION ANTES DEL EVANGELIO\b",
+            encabezado,
+            flags=re.IGNORECASE,
+        )
+    )
+    es_documento_liturgico = bool(ciclo or celebracion or contiene_lecturas)
+
     anio_liturgico = ""
-    if fecha_efectiva:
+    if fecha_efectiva and es_documento_liturgico:
         ciclo_calculado, anio_liturgico = _ciclo_por_fecha(fecha_efectiva)
         if not ciclo:
             ciclo = ciclo_calculado
             if ciclo:
                 ciclo_origen = "CALCULADO_POR_FECHA"
 
-    observacion_fecha = ""
+    observaciones = []
     if fecha_pdf and fecha_listado and fecha_pdf != fecha_listado:
-        observacion_fecha = (
-            "La fecha del encabezado PDF difiere de la fecha del listado web."
+        observaciones.append(
+            "La fecha del encabezado litúrgico PDF difiere de la fecha del listado web."
         )
+    elif not fecha_pdf and fecha_listado:
+        observaciones.append(
+            "No se identificó una fecha válida en el encabezado; se conserva la fecha del listado web."
+        )
+    if not es_documento_liturgico:
+        observaciones.append(
+            "El PDF no presenta encabezado litúrgico ni lecturas reconocibles; no se asigna ciclo."
+        )
+    observacion_fecha = " ".join(observaciones)
 
     return {
         "fecha_documento": fecha_efectiva.isoformat() if fecha_efectiva else "",
