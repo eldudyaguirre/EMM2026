@@ -276,8 +276,18 @@ def _extraer_secciones(texto):
                     re.match(r"^\s*\d{1,2}\s*[.)]\s*", normalizada)
                 )
                 if len(linea) <= 110 or numerado:
+                    # El desplazamiento de una cadena normalizada no siempre
+                    # coincide con el de la línea original: se eliminan tildes
+                    # y se compactan espacios. Para recortar el texto original
+                    # hay que obtener el final del encabezado en esa misma línea.
+                    coincidencia_original = patron.search(linea)
+                    fin_encabezado = (
+                        coincidencia_original.end()
+                        if coincidencia_original
+                        else coincidencia.end()
+                    )
                     detecciones.append(
-                        (indice, nombre, coincidencia.end())
+                        (indice, nombre, fin_encabezado)
                     )
                 break
 
