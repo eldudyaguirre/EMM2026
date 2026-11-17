@@ -408,17 +408,25 @@ def _normalizar_busqueda(texto):
 
 def _fecha_desde_texto_pdf(texto):
     """
-    Reconoce fechas del encabezado litúrgico, incluso cuando proceden de OCR.
-    Descarta fechas de citas, colectas y mensajes que no sean la celebración.
+    Prioriza la fecha escrita con el nombre del mes en el encabezado.
+    Los PDF pueden partir el encabezado entre líneas; por eso primero se
+    analiza el texto inicial unido. Las fechas numéricas se usan solo como
+    respaldo y nunca desplazan una fecha de encabezado ya identificada.
     """
     meses = (
         "enero|febrero|marzo|abril|mayo|junio|julio|agosto|"
         "septiembre|setiembre|octubre|noviembre|diciembre"
     )
-    patrones = (
+    patron_mes = re.compile(
         rf"\b(\d{{1,2}})\s+de\s+({meses})\s+(?:(?:de|del)\s*)?(20\d{{2}})\b",
+        flags=re.IGNORECASE,
+    )
+    patron_mes_sin_de = re.compile(
         rf"\b(\d{{1,2}})\s+({meses})\s+(20\d{{2}})\b",
-        r"\b(\d{1,2})[/-](\d{1,2})[/-](20\d{2})\b",
+        flags=re.IGNORECASE,
+    )
+    patron_numerico = re.compile(
+        r"\b(\d{1,2})[/-](\d{1,2})[/-](20\d{2})\b"
     )
     pistas_liturgicas = (
         r"\bDOMINGO\b|\bSOLEMNIDAD\b|\bFIESTA\b|\bPASCUA\b|"
@@ -427,62 +435,50 @@ def _fecha_desde_texto_pdf(texto):
         r"\bASCENSION\b|\bCORPUS CHRISTI\b|\bSAGRADA FAMILIA\b|"
         r"\bEPIFANIA\b"
     )
-    referencias_no_validas = (
-        r"\bCOLECTA\b|\bPAPA FRANCISCO\b|\bSANTO PADRE\b|"
-        r"\bHOMILIA\b|\bAUDIENCIA\b|\bDISCURSO\b"
-    )
 
     lineas = [
         _normalizar_busqueda(linea).upper()
         for linea in (texto or "").splitlines()
         if linea.strip()
     ]
-    primeras = lineas[:45]
-    hay_contexto_liturgico = bool(
-        re.search(pistas_liturgicas, " ".join(primeras), flags=re.IGNORECASE)
-    )
+    if not lineas:
+        return None
 
-    for indice, linea in enumerate(primeras):
-        if re.search(referencias_no_validas, linea, flags=re.IGNORECASE):
-            continue
+    # Encabezados de Arquidiócesis a veces aparecen partidos por el orden
+    # de lectura de dos columnas o por saltos de línea del propio PDF.
+    encabezado = " ".join(lineas[:45])
 
-        coincidencia = None
-        formato = None
-        for numero, patron in enumerate(patrones):
-            coincidencia = re.search(patron, linea, flags=re.IGNORECASE)
-            if coincidencia:
-                formato = numero
-                break
-
-        if not coincidencia:
-            continue
-
-        contexto_cercano = " ".join(
-            primeras[max(0, indice - 3):min(len(primeras), indice + 3)]
-        )
-        fecha_en_encabezado = (
-            indice < 15
-            and hay_contexto_liturgico
-            and not re.search(
-                referencias_no_validas, contexto_cercano, flags=re.IGNORECASE
-            )
-        )
-        if not fecha_en_encabezado:
-            continue
-
-        try:
-            if formato in (0, 1):
+    for patron in (patron_mes, patron_mes_sin_de):
+        for coincidencia in patron.finditer(encabezado):
+            inicio, fin = coincidencia.span()
+            contexto = encabezado[max(0, inicio - 100):min(len(encabezado), fin + 140)]
+            if not re.search(pistas_liturgicas, contexto, flags=re.IGNORECASE):
+                continue
+            try:
                 return date(
                     int(coincidencia.group(3)),
                     MESES[coincidencia.group(2).lower()],
                     int(coincidencia.group(1)),
                 )
+            except (ValueError, KeyError):
+                continue
+
+    # Respaldo para documentos cuyo encabezado solo imprime números.
+    # Se exige que la fecha esté cerca de un título litúrgico y se limita
+    # al primer tramo del documento para no tomar citas históricas del Papa.
+    encabezado_corto = " ".join(lineas[:12])
+    for coincidencia in patron_numerico.finditer(encabezado_corto):
+        inicio, fin = coincidencia.span()
+        contexto = encabezado_corto[max(0, inicio - 100):min(len(encabezado_corto), fin + 120)]
+        if not re.search(pistas_liturgicas, contexto, flags=re.IGNORECASE):
+            continue
+        try:
             return date(
                 int(coincidencia.group(3)),
                 int(coincidencia.group(2)),
                 int(coincidencia.group(1)),
             )
-        except (ValueError, KeyError):
+        except ValueError:
             continue
 
     return None
