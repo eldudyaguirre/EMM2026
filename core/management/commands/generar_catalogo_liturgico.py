@@ -209,7 +209,7 @@ def _extraer_secciones(texto):
     return secciones
 
 
-def _clasificar(fila, texto_disponible):
+def _clasificar(fila, texto_disponible, tiene_lecturas=False):
     paginas = _int(fila.get("paginas"))
     estado = (fila.get("estado_extraccion") or "").upper()
     caracteres = _int(fila.get("caracteres_extraidos"))
@@ -226,10 +226,10 @@ def _clasificar(fila, texto_disponible):
 
     titulo = (fila.get("titulo_celebracion") or "").strip()
     ciclo = (fila.get("ciclo") or "").strip()
-    if titulo or ciclo:
+    if titulo or ciclo or tiene_lecturas:
         return (
             CATEGORIA_LECTURAS,
-            "El inventario identifica celebración o ciclo litúrgico.",
+            "Se identificó título, ciclo o encabezados de lecturas litúrgicas.",
         )
 
     if caracteres > 0:
@@ -296,8 +296,13 @@ class Command(BaseCommand):
             if texto_disponible:
                 texto = ruta_txt.read_text(encoding="utf-8", errors="replace")
 
-            categoria, motivo = _clasificar(fila, texto_disponible)
             secciones = _extraer_secciones(texto) if texto else {}
+            tiene_lecturas = any(
+                contenido.strip() for contenido in secciones.values()
+            )
+            categoria, motivo = _clasificar(
+                fila, texto_disponible, tiene_lecturas=tiene_lecturas
+            )
 
             archivo_texto = (
                 str(ruta_txt.relative_to(base)).replace("\\", "/")
