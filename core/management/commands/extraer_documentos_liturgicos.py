@@ -50,6 +50,7 @@ CAMPOS_CSV = (
     "estado_descarga",
     "estado_extraccion",
     "observacion",
+    "observacion_fecha",
 )
 
 
