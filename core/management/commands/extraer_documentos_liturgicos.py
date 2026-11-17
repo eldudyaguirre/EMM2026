@@ -228,6 +228,32 @@ def _extraer_pdf(ruta_pdf):
         ) from exc
 
 
+
+def _detectar_motor_pdf():
+    """Verifica antes de descargar que exista un motor de lectura PDF."""
+    try:
+        import fitz  # noqa: F401
+        return "PyMuPDF"
+    except ImportError:
+        pass
+
+    try:
+        from pypdf import PdfReader  # noqa: F401
+        return "pypdf"
+    except ImportError:
+        pass
+
+    try:
+        from PyPDF2 import PdfReader  # noqa: F401
+        return "PyPDF2"
+    except ImportError:
+        pass
+
+    raise CommandError(
+        "No hay un motor PDF instalado en este entorno virtual. "
+        "Ejecuta: .\\\\venv\\\\Scripts\\\\python.exe -m pip install PyMuPDF"
+    )
+
 def _texto_metadato(valor):
     if valor is None:
         return ""
@@ -348,6 +374,13 @@ class Command(BaseCommand):
         if options["pausa"] < 0 or options["reintentos"] < 0:
             raise CommandError("--pausa y --reintentos no pueden ser negativos.")
 
+        motor_pdf = None
+        if not options["solo_inventario"]:
+            motor_pdf = _detectar_motor_pdf()
+            self.stdout.write(
+                self.style.SUCCESS(f"Motor de extracción PDF disponible: {motor_pdf}")
+            )
+
         self.stdout.write(self.style.NOTICE("Consultando el archivo de la Arquidiócesis..."))
         documentos = []
         urls_vistas = set()
@@ -404,8 +437,19 @@ class Command(BaseCommand):
             )
 
         inventario = []
-        registros_json = []
         descargados = extraidos = errores = paginas_total = 0
+        ruta_csv = salida / "inventario_documentos.csv"
+        ruta_jsonl = salida / "documentos_texto_completo.jsonl"
+
+        def guardar_inventario():
+            with ruta_csv.open("w", newline="", encoding="utf-8-sig") as archivo:
+                escritor = csv.DictWriter(archivo, fieldnames=CAMPOS_CSV)
+                escritor.writeheader()
+                escritor.writerows(inventario)
+
+        if not options["solo_inventario"]:
+            # Cada documento procesado se agrega al JSONL de forma incremental.
+            ruta_jsonl.write_text("", encoding="utf-8")
 
         self.stdout.write(
             self.style.NOTICE(
@@ -492,27 +536,29 @@ class Command(BaseCommand):
                 ruta_txt = carpeta_txt / nombre_txt
                 ruta_txt.write_text(texto_completo, encoding="utf-8")
 
-                registros_json.append(
-                    {
-                        "fecha_publicacion": fecha_txt or None,
-                        "titulo_publicacion": item["titulo"],
-                        "url_pdf": fila["url_pdf"],
-                        "archivo_pdf": fila["archivo_pdf"],
-                        "sha256": datos_hash,
-                        "paginas": [
-                            {"pagina": n, "texto": texto}
-                            for n, texto in enumerate(paginas, start=1)
-                        ],
-                        "texto_completo": texto_completo,
-                        "datos_encabezado": datos,
-                        "metadatos_pdf": {
-                            str(k): _texto_metadato(v)
-                            for k, v in dict(metadatos_pdf or {}).items()
-                        },
-                        "motor_extraccion": motor,
-                        "estado_extraccion": fila["estado_extraccion"],
-                    }
-                )
+                registro_json = {
+                    "fecha_publicacion": fecha_txt or None,
+                    "titulo_publicacion": item["titulo"],
+                    "url_pdf": fila["url_pdf"],
+                    "archivo_pdf": fila["archivo_pdf"],
+                    "sha256": datos_hash,
+                    "paginas": [
+                        {"pagina": n, "texto": texto}
+                        for n, texto in enumerate(paginas, start=1)
+                    ],
+                    "texto_completo": texto_completo,
+                    "datos_encabezado": datos,
+                    "metadatos_pdf": {
+                        str(k): _texto_metadato(v)
+                        for k, v in dict(metadatos_pdf or {}).items()
+                    },
+                    "motor_extraccion": motor,
+                    "estado_extraccion": fila["estado_extraccion"],
+                }
+                with ruta_jsonl.open("a", encoding="utf-8") as archivo_jsonl:
+                    archivo_jsonl.write(
+                        json.dumps(registro_json, ensure_ascii=False) + "\n"
+                    )
 
             except Exception as exc:
                 fila["estado_descarga"] = (
@@ -526,27 +572,23 @@ class Command(BaseCommand):
 
             inventario.append(fila)
             if not options["solo_inventario"]:
+                detalle_error = (
+                    f" | {fila['observacion']}" if fila["estado_extraccion"] == "ERROR"
+                    and fila["observacion"] else ""
+                )
                 self.stdout.write(
                     f"[{indice}/{len(documentos)}] {fecha_txt or 'SIN FECHA'} "
                     f"{fila['estado_descarga']} / {fila['estado_extraccion']} "
                     f"({fila['paginas']} páginas, {fila['caracteres_extraidos']} caracteres)"
+                    f"{detalle_error}"
                 )
+                # Guarda el avance en disco tras cada documento; Ctrl+C no
+                # elimina el inventario de los anteriores.
+                guardar_inventario()
                 if indice < len(documentos) and options["pausa"]:
                     time.sleep(options["pausa"])
 
-        ruta_csv = salida / "inventario_documentos.csv"
-        with ruta_csv.open("w", newline="", encoding="utf-8-sig") as archivo:
-            escritor = csv.DictWriter(archivo, fieldnames=CAMPOS_CSV)
-            escritor.writeheader()
-            escritor.writerows(inventario)
-
-        if not options["solo_inventario"]:
-            ruta_jsonl = salida / "documentos_texto_completo.jsonl"
-            with ruta_jsonl.open("w", encoding="utf-8") as archivo:
-                for registro in registros_json:
-                    archivo.write(
-                        json.dumps(registro, ensure_ascii=False) + "\n"
-                    )
+        guardar_inventario()
 
         ruta_resumen = salida / "LEEME.txt"
         lineas = [
