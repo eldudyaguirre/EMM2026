@@ -38,8 +38,30 @@ def descargar_html(url, timeout):
     request = Request(
         url,
         headers={
-            "User-Agent": "Mozilla/5.0 (compatible; EmausLiturgicalAudit/1.0)",
-            "Accept": "text/html,application/xhtml+xml",
+            # Cabeceras de navegación tomadas de la captura HAR real de Chrome
+            # Android que sí obtuvo HTTP 200 desde Misal.mx.
+            "Accept": (
+                "text/html,application/xhtml+xml,application/xml;q=0.9,"
+                "image/avif,image/webp,image/apng,*/*;q=0.8,"
+                "application/signed-exchange;v=b3;q=0.7"
+            ),
+            "Accept-Language": "es-US,es-419;q=0.9,es;q=0.8",
+            "Sec-Fetch-Dest": "document",
+            "Sec-Fetch-Mode": "navigate",
+            "Sec-Fetch-Site": "none",
+            "Sec-Fetch-User": "?1",
+            "Upgrade-Insecure-Requests": "1",
+            "sec-ch-ua": (
+                '"Not-A.Brand";v="99", "Google Chrome";v="157", '
+                '"Chromium";v="157"'
+            ),
+            "sec-ch-ua-mobile": "?1",
+            "sec-ch-ua-platform": '"Android"',
+            "User-Agent": (
+                "Mozilla/5.0 (Linux; Android 16; Pixel 10) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/157.0.0.0 Mobile Safari/537.36"
+            ),
         },
     )
     with urlopen(request, timeout=timeout) as response:
