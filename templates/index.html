@@ -33,53 +33,35 @@
 	<link href="{% static 'css/custom.css' %}" rel="stylesheet" media="screen">
 
     <style>
-        /* En tabletas, centrar el formulario directamente respecto al viewport.
-           No depender del ancho de las columnas ni del container de Bootstrap. */
-        @media (min-width: 768px) and (max-width: 1199.98px) {
+        /* En pantallas de tableta y escritorio, posicionar la caja directamente
+           respecto a la pantalla; no centrarla mediante las columnas Bootstrap. */
+        @media (min-width: 768px) {
             .hero .hero-body {
-                position: fixed !important;
-                inset: 0 !important;
-                width: 100vw !important;
-                height: 100vh !important;
-                height: 100dvh !important;
-                display: flex !important;
-                justify-content: center !important;
-                align-items: center !important;
+                position: static !important;
+                display: block !important;
+                width: auto !important;
+                height: auto !important;
                 margin: 0 !important;
-                padding: 24px !important;
+                padding: 0 !important;
                 transform: none !important;
-                z-index: 200 !important;
                 pointer-events: none !important;
-                box-sizing: border-box !important;
             }
 
             .hero .login-box {
-                position: relative !important;
+                position: fixed !important;
+                top: 50% !important;
+                left: 50% !important;
+                right: auto !important;
+                bottom: auto !important;
+                transform: translate(-50%, -50%) !important;
                 box-sizing: border-box !important;
-                flex: 0 1 650px !important;
-                width: 100% !important;
+                width: calc(100vw - 48px) !important;
                 max-width: 650px !important;
-                margin: 0 auto !important;
+                max-height: calc(100vh - 48px) !important;
+                overflow-y: auto !important;
+                margin: 0 !important;
+                z-index: 300 !important;
                 pointer-events: auto !important;
-            }
-        }
-
-        /* Centrar formulario en escritorio. */
-        @media (min-width: 1200px) {
-            .hero .hero-body {
-                position: fixed;
-                inset: 0;
-                width: 100%;
-                height: 100vh;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                z-index: 10;
-                pointer-events: none;
-            }
-
-            .hero .login-box {
-                pointer-events: auto;
             }
         }
     </style>
