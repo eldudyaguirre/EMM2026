@@ -2,6 +2,10 @@ import csv
 import hashlib
 import json
 import re
+import os
+import shutil
+import subprocess
+import tempfile
 import time
 from datetime import date, timedelta
 import unicodedata
@@ -46,6 +50,7 @@ CAMPOS_CSV = (
     "archivo_pdf",
     "paginas",
     "caracteres_extraidos",
+    "metodo_extraccion",
     "sha256",
     "estado_descarga",
     "estado_extraccion",
@@ -195,15 +200,20 @@ def _leer_listado(url, timeout, reintentos):
 
 
 def _extraer_pdf(ruta_pdf):
-    """Devuelve textos por página y metadatos usando el motor disponible."""
+    """Extrae texto digital por página y metadatos del PDF."""
     try:
-        import fitz  # PyMuPDF
+        try:
+            import pymupdf
+        except ImportError:
+            import fitz as pymupdf
 
-        documento = fitz.open(str(ruta_pdf))
-        paginas = [pagina.get_text("text", sort=True) or "" for pagina in documento]
-        metadatos = documento.metadata or {}
-        total = len(documento)
-        documento.close()
+        with pymupdf.open(str(ruta_pdf)) as documento:
+            paginas = [
+                pagina.get_text("text", sort=True) or ""
+                for pagina in documento
+            ]
+            metadatos = documento.metadata or {}
+            total = len(documento)
         return paginas, total, metadatos, "PyMuPDF"
     except ImportError:
         pass
@@ -230,7 +240,7 @@ def _extraer_pdf(ruta_pdf):
     except ImportError as exc:
         raise CommandError(
             "No está instalado PyMuPDF ni pypdf/PyPDF2. "
-            "Instala uno con: .\\venv\\Scripts\\python.exe -m pip install pymupdf"
+            "Instala PyMuPDF con: .\\venv\\Scripts\\python.exe -m pip install pymupdf"
         ) from exc
 
 
@@ -238,10 +248,14 @@ def _extraer_pdf(ruta_pdf):
 def _detectar_motor_pdf():
     """Verifica antes de descargar que exista un motor de lectura PDF."""
     try:
-        import fitz  # noqa: F401
+        import pymupdf  # noqa: F401
         return "PyMuPDF"
     except ImportError:
-        pass
+        try:
+            import fitz  # noqa: F401
+            return "PyMuPDF"
+        except ImportError:
+            pass
 
     try:
         from pypdf import PdfReader  # noqa: F401
@@ -256,9 +270,126 @@ def _detectar_motor_pdf():
         pass
 
     raise CommandError(
-        "No hay un motor PDF instalado en este entorno virtual. "
-        "Ejecuta: .\\\\venv\\\\Scripts\\\\python.exe -m pip install PyMuPDF"
+        "No hay un motor PDF instalado. "
+        "Ejecuta: .\\venv\\Scripts\\python.exe -m pip install PyMuPDF"
     )
+
+
+def _resolver_tesseract():
+    """Busca Tesseract en PATH, variable de entorno y rutas habituales de Windows."""
+    encontrado = shutil.which("tesseract")
+    if encontrado:
+        return encontrado
+
+    configurado = os.environ.get("TESSERACT_CMD")
+    candidatos = []
+    if configurado:
+        candidatos.append(Path(configurado))
+
+    programas = os.environ.get("ProgramFiles", r"C:\Program Files")
+    programas_x86 = os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")
+    candidatos.extend([
+        Path(programas) / "Tesseract-OCR" / "tesseract.exe",
+        Path(programas_x86) / "Tesseract-OCR" / "tesseract.exe",
+    ])
+
+    for candidato in candidatos:
+        if candidato.is_file():
+            return str(candidato)
+    return None
+
+
+def _validar_tesseract(ejecutable, idioma):
+    """Comprueba que Tesseract y los modelos de idioma solicitados estén disponibles."""
+    try:
+        resultado = subprocess.run(
+            [ejecutable, "--list-langs"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=30,
+            check=False,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise CommandError(
+            f"No se pudo ejecutar Tesseract ({ejecutable}): {exc}"
+        ) from exc
+
+    if resultado.returncode != 0:
+        detalle = (resultado.stderr or resultado.stdout or "sin detalle").strip()
+        raise CommandError(f"Tesseract no pudo listar idiomas: {detalle}")
+
+    disponibles = set(
+        re.findall(r"(?m)^\\s*([A-Za-z0-9_]+)\\s*$", resultado.stdout)
+    )
+    solicitados = [codigo.strip() for codigo in idioma.split("+") if codigo.strip()]
+    faltantes = [codigo for codigo in solicitados if codigo not in disponibles]
+    if faltantes:
+        raise CommandError(
+            "Faltan modelos de idioma en Tesseract: "
+            + ", ".join(faltantes)
+            + ". Instala los archivos .traineddata en la carpeta tessdata "
+              "y comprueba nuevamente con 'tesseract --list-langs'."
+        )
+    return sorted(disponibles)
+
+
+def _ocr_pdf(ruta_pdf, ejecutable, idioma="spa", dpi=300):
+    """
+    Reconoce texto de un PDF escaneado página por página.
+
+    Renderiza cada página temporalmente con PyMuPDF y ejecuta Tesseract.
+    El PDF original nunca se modifica.
+    """
+    try:
+        import pymupdf
+    except ImportError:
+        import fitz as pymupdf
+
+    escala = dpi / 72.0
+    textos = []
+
+    with tempfile.TemporaryDirectory(prefix="emaus_ocr_") as temporal:
+        carpeta_temporal = Path(temporal)
+        with pymupdf.open(str(ruta_pdf)) as documento:
+            for indice, pagina in enumerate(documento, start=1):
+                pixmap = pagina.get_pixmap(
+                    matrix=pymupdf.Matrix(escala, escala),
+                    colorspace=pymupdf.csRGB,
+                    alpha=False,
+                )
+                imagen = carpeta_temporal / f"pagina_{indice:04d}.png"
+                pixmap.save(str(imagen))
+
+                comando = [
+                    ejecutable,
+                    str(imagen),
+                    "stdout",
+                    "-l",
+                    idioma,
+                    "--oem",
+                    "1",
+                    "--psm",
+                    "3",
+                ]
+                resultado = subprocess.run(
+                    comando,
+                    capture_output=True,
+                    text=True,
+                    encoding="utf-8",
+                    errors="replace",
+                    timeout=300,
+                    check=False,
+                )
+                if resultado.returncode != 0:
+                    detalle = (resultado.stderr or resultado.stdout or "").strip()
+                    raise RuntimeError(
+                        f"Tesseract falló en la página {indice}: {detalle[:500]}"
+                    )
+                textos.append((resultado.stdout or "").strip())
+
+    return textos
 
 def _texto_metadato(valor):
     if valor is None:
@@ -527,6 +658,22 @@ class Command(BaseCommand):
             action="store_true",
             help="Vuelve a descargar los PDF aunque ya existan localmente.",
         )
+        parser.add_argument(
+            "--sin-ocr",
+            action="store_true",
+            help="Desactiva el OCR automático de los PDF escaneados.",
+        )
+        parser.add_argument(
+            "--ocr-idioma",
+            default="spa",
+            help="Idioma de Tesseract (por defecto: spa; admite spa+eng).",
+        )
+        parser.add_argument(
+            "--ocr-dpi",
+            type=int,
+            default=300,
+            help="Resolución de renderizado para OCR (150 a 600 DPI; por defecto 300).",
+        )
 
     def handle(self, *args, **options):
         salida = Path(options["salida"]).expanduser().resolve()
@@ -547,6 +694,30 @@ class Command(BaseCommand):
             raise CommandError("--max-paginas debe ser mayor que cero.")
         if options["pausa"] < 0 or options["reintentos"] < 0:
             raise CommandError("--pausa y --reintentos no pueden ser negativos.")
+        if not 150 <= options["ocr_dpi"] <= 600:
+            raise CommandError("--ocr-dpi debe estar entre 150 y 600.")
+
+        tesseract = None
+        if not options["sin_ocr"]:
+            tesseract = _resolver_tesseract()
+            if not tesseract:
+                raise CommandError(
+                    "No se encontró Tesseract OCR. Instálalo en Windows y "
+                    "comprueba que 'tesseract --list-langs' muestre spa. "
+                    "Para ejecutar sin OCR utiliza --sin-ocr."
+                )
+            idiomas_disponibles = _validar_tesseract(
+                tesseract, options["ocr_idioma"]
+            )
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"OCR disponible: {tesseract}; idioma={options['ocr_idioma']}; "
+                    f"DPI={options['ocr_dpi']}"
+                )
+            )
+            self.stdout.write(
+                f"Idiomas Tesseract instalados: {', '.join(idiomas_disponibles)}"
+            )
 
         motor_pdf = None
         if not options["solo_inventario"]:
@@ -611,7 +782,7 @@ class Command(BaseCommand):
             )
 
         inventario = []
-        descargados = extraidos = errores = paginas_total = 0
+        descargados = extraidos = extraidos_ocr = errores = paginas_total = 0
         ruta_csv = salida / "inventario_documentos.csv"
         ruta_jsonl = salida / "documentos_texto_completo.jsonl"
 
@@ -656,6 +827,7 @@ class Command(BaseCommand):
                 "archivo_pdf": str(ruta_pdf.relative_to(salida)),
                 "paginas": 0,
                 "caracteres_extraidos": 0,
+                "metodo_extraccion": "",
                 "sha256": "",
                 "estado_descarga": "PENDIENTE",
                 "estado_extraccion": "PENDIENTE",
@@ -688,31 +860,86 @@ class Command(BaseCommand):
                 fila["sha256"] = datos_hash
 
                 paginas, total_paginas, metadatos_pdf, motor = _extraer_pdf(ruta_pdf)
-                texto_completo = "\n\n".join(
-                    f"========== PÁGINA {numero} ==========\n{texto.strip()}"
+                metodo_extraccion = "TEXTO_PDF"
+                observaciones_documento = []
+
+                # Si el PDF tiene páginas-imagen y no posee capa de texto,
+                # aplicamos OCR en español sin alterar el archivo original.
+                if (
+                    not any(texto.strip() for texto in paginas)
+                    and total_paginas > 0
+                    and tesseract
+                ):
+                    try:
+                        paginas_ocr = _ocr_pdf(
+                            ruta_pdf,
+                            tesseract,
+                            idioma=options["ocr_idioma"],
+                            dpi=options["ocr_dpi"],
+                        )
+                        if any(texto.strip() for texto in paginas_ocr):
+                            paginas = paginas_ocr
+                            metodo_extraccion = "OCR_TESSERACT"
+                            motor = (
+                                f"PyMuPDF + Tesseract "
+                                f"({options['ocr_idioma']}, {options['ocr_dpi']} DPI)"
+                            )
+                            observaciones_documento.append(
+                                "Texto recuperado mediante OCR automático; "
+                                "revisar nombres, signos y referencias bíblicas."
+                            )
+                        else:
+                            observaciones_documento.append(
+                                "Se ejecutó OCR, pero no se reconoció texto."
+                            )
+                    except Exception as exc:
+                        observaciones_documento.append(
+                            f"Falló OCR: {type(exc).__name__}: {str(exc)[:300]}"
+                        )
+
+                texto_completo = "\\n\\n".join(
+                    f"========== PÁGINA {numero} ==========\\n{texto.strip()}"
                     for numero, texto in enumerate(paginas, start=1)
                 ).strip()
                 caracteres = sum(len(texto) for texto in paginas)
                 fila["paginas"] = total_paginas
                 fila["caracteres_extraidos"] = caracteres
+                fila["metodo_extraccion"] = metodo_extraccion
                 paginas_total += total_paginas
 
-                texto_encabezado = "\n".join(paginas[:2])
+                texto_encabezado = "\\n".join(paginas[:2])
                 datos = _extraer_datos_liturgicos(
                     texto_encabezado,
                     fecha_listado=item["fecha"],
                 )
                 fila.update(datos)
+
                 if datos.get("observacion_fecha"):
-                    fila["observacion"] = datos["observacion_fecha"]
+                    observaciones_documento.append(datos["observacion_fecha"])
+
                 if caracteres:
-                    fila["estado_extraccion"] = "EXTRAIDO"
+                    if metodo_extraccion == "OCR_TESSERACT":
+                        fila["estado_extraccion"] = "EXTRAIDO_OCR"
+                        extraidos_ocr += 1
+                    else:
+                        fila["estado_extraccion"] = "EXTRAIDO"
                     extraidos += 1
                 else:
                     fila["estado_extraccion"] = "SIN_TEXTO"
-                    fila["observacion"] = (
-                        "El PDF no contiene texto extraíble; requiere revisión visual/OCR."
-                    )
+                    if total_paginas == 0:
+                        observaciones_documento.append(
+                            "PDF sin páginas válidas; requiere recuperar o reparar el archivo original."
+                        )
+                    elif options["sin_ocr"]:
+                        observaciones_documento.append(
+                            "PDF sin capa de texto; OCR desactivado."
+                        )
+                    if not observaciones_documento:
+                        observaciones_documento.append(
+                            "No se pudo extraer ni reconocer texto del PDF."
+                        )
+
+                fila["observacion"] = " ".join(observaciones_documento)
 
                 nombre_txt = ruta_pdf.stem + ".txt"
                 ruta_txt = carpeta_txt / nombre_txt
@@ -735,6 +962,7 @@ class Command(BaseCommand):
                         for k, v in dict(metadatos_pdf or {}).items()
                     },
                     "motor_extraccion": motor,
+                    "metodo_extraccion": metodo_extraccion,
                     "estado_extraccion": fila["estado_extraccion"],
                 }
                 with ruta_jsonl.open("a", encoding="utf-8") as archivo_jsonl:
@@ -780,6 +1008,7 @@ class Command(BaseCommand):
             f"Publicaciones inventariadas: {len(inventario)}",
             f"PDF descargados en esta ejecución: {descargados}",
             f"Documentos con texto extraído en esta ejecución: {extraidos}",
+            f"Documentos recuperados mediante OCR: {extraidos_ocr}",
             f"Errores: {errores}",
             f"Páginas PDF procesadas: {paginas_total}",
             "",
@@ -789,7 +1018,8 @@ class Command(BaseCommand):
             "- texto_por_documento/: texto completo separado por documento y página.",
             "- documentos_texto_completo.jsonl: corpus completo en formato JSON Lines.",
             "",
-            "Los documentos SIN_TEXTO requieren OCR/revisión visual.",
+            "Los documentos EXTRAIDO_OCR contienen reconocimiento automático y requieren revisión.",
+            "Los documentos SIN_TEXTO requieren revisar integridad del PDF o aplicar OCR manual.",
             "Este proceso no escribe ni modifica datos de PostgreSQL.",
         ]
         ruta_resumen.write_text("\n".join(lineas), encoding="utf-8")
@@ -804,8 +1034,8 @@ class Command(BaseCommand):
         else:
             self.stdout.write(
                 f"Resumen: inventariados={len(inventario)}, descargados={descargados}, "
-                f"extraídos={extraidos}, errores={errores}, "
-                f"páginas_pdf={paginas_total}"
+                f"extraídos={extraidos}, OCR={extraidos_ocr}, "
+                f"errores={errores}, páginas_pdf={paginas_total}"
             )
         self.stdout.write(
             self.style.WARNING(
