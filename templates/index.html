@@ -33,36 +33,34 @@
 	<link href="{% static 'css/custom.css' %}" rel="stylesheet" media="screen">
 
     <style>
-        /* En pantallas de tableta y escritorio, posicionar la caja directamente
-           respecto a la pantalla; no centrarla mediante las columnas Bootstrap. */
-        @media (min-width: 768px) {
-            .hero .hero-body {
-                position: static !important;
-                display: block !important;
-                width: auto !important;
-                height: auto !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                transform: none !important;
-                pointer-events: none !important;
-            }
+        /* Centrar la caja de acceso en cualquier tamaño y orientación de pantalla.
+           Se posiciona la propia caja, sin depender de columnas ni breakpoints. */
+        .hero .hero-body {
+            position: static !important;
+            display: block !important;
+            width: auto !important;
+            height: auto !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            transform: none !important;
+            pointer-events: none !important;
+        }
 
-            .hero .login-box {
-                position: fixed !important;
-                top: 50% !important;
-                left: 50% !important;
-                right: auto !important;
-                bottom: auto !important;
-                transform: translate(-50%, -50%) !important;
-                box-sizing: border-box !important;
-                width: calc(100vw - 48px) !important;
-                max-width: 650px !important;
-                max-height: calc(100vh - 48px) !important;
-                overflow-y: auto !important;
-                margin: 0 !important;
-                z-index: 300 !important;
-                pointer-events: auto !important;
-            }
+        .hero .login-box {
+            position: fixed !important;
+            top: 50% !important;
+            left: 50% !important;
+            right: auto !important;
+            bottom: auto !important;
+            transform: translate(-50%, -50%) !important;
+            box-sizing: border-box !important;
+            width: calc(100vw - 32px) !important;
+            max-width: 650px !important;
+            max-height: calc(100vh - 32px) !important;
+            overflow-y: auto !important;
+            margin: 0 !important;
+            z-index: 300 !important;
+            pointer-events: auto !important;
         }
     </style>
 </head>
@@ -139,7 +137,7 @@
                     <!-- Hero Body Start -->
                 <div class="hero-body">
                     
-                    <div class="login-box wow fadeInUp">
+                    <div class="login-box">
                         
                         <div class="login-header">
                             <h3>Iniciar Sesión</h3>
