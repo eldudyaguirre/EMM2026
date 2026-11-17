@@ -408,30 +408,28 @@ def _normalizar_busqueda(texto):
 
 def _fecha_desde_texto_pdf(texto):
     """
-    Busca una fecha en las líneas iniciales que forman el encabezado litúrgico.
-
-    No toma fechas de citas, mensajes, colectas o referencias históricas como
-    fecha de celebración. Si no encuentra evidencia suficiente, devuelve None
-    para que el llamador conserve la fecha del catálogo web.
+    Reconoce fechas del encabezado litúrgico, incluso cuando proceden de OCR.
+    Descarta fechas de citas, colectas y mensajes que no sean la celebración.
     """
     meses = (
         "enero|febrero|marzo|abril|mayo|junio|julio|agosto|"
         "septiembre|setiembre|octubre|noviembre|diciembre"
     )
     patrones = (
-        rf"\b(\d{{1,2}})\s+de\s+({meses})\s+(?:(?:de|del)\s*)?(20\d{{2}})\b",
-        rf"\b(\d{{1,2}})\s+({meses})\s+(20\d{{2}})\b",
-        r"\b(\d{1,2})[/-](\d{1,2})[/-](20\d{2})\b",
+        rf"\\b(\\d{{1,2}})\\s+de\\s+({meses})\\s+(?:(?:de|del)\\s*)?(20\\d{{2}})\\b",
+        rf"\\b(\\d{{1,2}})\\s+({meses})\\s+(20\\d{{2}})\\b",
+        r"\\b(\\d{1,2})[/-](\\d{1,2})[/-](20\\d{2})\\b",
     )
-    pistas_celebracion = (
-        r"\bDOMINGO\b|\bSOLEMNIDAD\b|\bFIESTA\b|\bPASCUA\b|"
-        r"\bADVIENTO\b|\bCUARESMA\b|\bNAVIDAD\b|\bCICLO\s+[ABC]\b|"
-        r"\bCRISTO REY\b|\bBAUTISMO\b|\bPENTECOSTES\b|\bASCENSION\b|"
-        r"\bCORPUS CHRISTI\b|\bSAGRADA FAMILIA\b|\bEPIFANIA\b"
+    pistas_liturgicas = (
+        r"\\bDOMINGO\\b|\\bSOLEMNIDAD\\b|\\bFIESTA\\b|\\bPASCUA\\b|"
+        r"\\bADVIENTO\\b|\\bCUARESMA\\b|\\bNAVIDAD\\b|\\bCICLO\\s+[ABC]\\b|"
+        r"\\bCRISTO REY\\b|\\bBAUTISMO DEL SENOR\\b|\\bPENTECOSTES\\b|"
+        r"\\bASCENSION\\b|\\bCORPUS CHRISTI\\b|\\bSAGRADA FAMILIA\\b|"
+        r"\\bEPIFANIA\\b"
     )
     referencias_no_validas = (
-        r"\bCOLECTA\b|\bPAPA FRANCISCO\b|\bS\.?\s*S\.?\b|"
-        r"\bSANTO PADRE\b|\bHOMILIA\b|\bAUDIENCIA\b|\bDISCURSO\b"
+        r"\\bCOLECTA\\b|\\bPAPA FRANCISCO\\b|\\bSANTO PADRE\\b|"
+        r"\\bHOMILIA\\b|\\bAUDIENCIA\\b|\\bDISCURSO\\b"
     )
 
     lineas = [
@@ -439,10 +437,13 @@ def _fecha_desde_texto_pdf(texto):
         for linea in (texto or "").splitlines()
         if linea.strip()
     ]
+    primeras = lineas[:45]
+    hay_contexto_liturgico = bool(
+        re.search(pistas_liturgicas, " ".join(primeras), flags=re.IGNORECASE)
+    )
 
-    # La fecha propia de la celebración suele aparecer en las primeras líneas.
-    for indice, linea in enumerate(lineas[:20]):
-        if re.search(referencias_no_validas, linea):
+    for indice, linea in enumerate(primeras):
+        if re.search(referencias_no_validas, linea, flags=re.IGNORECASE):
             continue
 
         coincidencia = None
@@ -452,19 +453,21 @@ def _fecha_desde_texto_pdf(texto):
             if coincidencia:
                 formato = numero
                 break
+
         if not coincidencia:
             continue
 
-        contexto = " ".join(lineas[max(0, indice - 2):indice + 3])
-        tiene_contexto_liturgico = bool(
-            re.search(pistas_celebracion, contexto, flags=re.IGNORECASE)
+        contexto_cercano = " ".join(
+            primeras[max(0, indice - 3):min(len(primeras), indice + 3)]
         )
-        es_fecha_sola_en_encabezado = (
-            indice < 10 and len(linea) <= 45 and not re.search(
-                referencias_no_validas, contexto, flags=re.IGNORECASE
+        fecha_en_encabezado = (
+            indice < 15
+            and hay_contexto_liturgico
+            and not re.search(
+                referencias_no_validas, contexto_cercano, flags=re.IGNORECASE
             )
         )
-        if not tiene_contexto_liturgico and not es_fecha_sola_en_encabezado:
+        if not fecha_en_encabezado:
             continue
 
         try:
@@ -483,6 +486,7 @@ def _fecha_desde_texto_pdf(texto):
             continue
 
     return None
+
 
 
 def _ciclo_por_fecha(fecha_documento):
@@ -508,7 +512,10 @@ def _extraer_datos_liturgicos(texto, fecha_listado=None):
     primeras_lineas = [
         linea.strip() for linea in (texto or "").splitlines() if linea.strip()
     ]
-    encabezado = " ".join(primeras_lineas[:30])
+    primeras_normalizadas = [
+        _normalizar_busqueda(linea).upper() for linea in primeras_lineas
+    ]
+    encabezado = " ".join(primeras_normalizadas[:45])
 
     fecha_pdf = _fecha_desde_texto_pdf(texto)
     fecha_efectiva = fecha_pdf or fecha_listado
@@ -517,7 +524,7 @@ def _extraer_datos_liturgicos(texto, fecha_listado=None):
     ciclo = ""
     ciclo_origen = ""
     coincidencia = re.search(
-        r"\bCiclo(?:\s+dominical)?\s*[:\-]?\s*([ABC])\b",
+        r"\\bCiclo(?:\\s+dominical)?\\s*[:\\-]?\\s*([ABC])\\b",
         encabezado,
         flags=re.IGNORECASE,
     )
@@ -527,7 +534,7 @@ def _extraer_datos_liturgicos(texto, fecha_listado=None):
 
     liturgia_horas = ""
     coincidencia = re.search(
-        r"Liturgia de las Horas\s*:\s*([^–\-\n]+)",
+        r"Liturgia de las Horas\\s*:\\s*([^–\\-\\n]+)",
         encabezado,
         flags=re.IGNORECASE,
     )
@@ -536,32 +543,39 @@ def _extraer_datos_liturgicos(texto, fecha_listado=None):
 
     anio_lh = ""
     coincidencia = re.search(
-        r"\bAño\s+([IVXLCDM]+|\d+)\b",
+        r"\\bAño\\s+([IVXLCDM]+|\\d+)\\b",
         encabezado,
         flags=re.IGNORECASE,
     )
     if coincidencia:
         anio_lh = coincidencia.group(1).upper()
 
+    # Buscar encabezados litúrgicos completos antes de aceptar palabras
+    # genéricas como "Bautismo" que pueden aparecer en el cuerpo del mensaje.
+    patrones_titulo = (
+        r"\\b(?:EL\\s+)?BAUTISMO\\s+DEL\\s+SENOR\\b",
+        r"\\bDOMINGO\\b.{0,100}\\b(?:CICLO\\s+[ABC]|TIEMPO|ORDINARIO|ADVIENTO|CUARESMA|PASCUA)\\b",
+        r"\\bSOLEMNIDAD\\b.{0,100}",
+        r"\\b(?:EPIFANIA|PENTECOSTES|ASCENSION|CORPUS CHRISTI|SAGRADA FAMILIA)\\b.{0,100}",
+        r"\\bNATIVIDAD\\b.{0,80}",
+    )
     celebracion = ""
-    for linea in primeras_lineas[:30]:
-        normalizada = _normalizar_busqueda(linea).upper()
-        if re.search(
-            r"\bDOMINGO\b|\bSOLEMNIDAD\b|\bFIESTA\b|\bBAUTISMO\b|"
-            r"\bASCENSION\b|\bPENTECOSTES\b|\bCORPUS CHRISTI\b",
-            normalizada,
-        ):
-            if "DOMINGO DIA DEL SENOR" not in normalizada:
-                celebracion = linea
+    for patron in patrones_titulo:
+        for indice, normalizada in enumerate(primeras_normalizadas[:45]):
+            coincidencia = re.search(patron, normalizada, flags=re.IGNORECASE)
+            if coincidencia:
+                celebracion = primeras_lineas[indice]
                 break
+        if celebracion:
+            break
 
-    # Solo se calcula ciclo cuando el documento presenta señales de contenido
-    # litúrgico. Un aviso o una colecta no debe recibir un ciclo por su fecha web.
+    # No convertir avisos o mensajes pastorales en celebraciones por una
+    # palabra suelta del cuerpo del documento.
     contiene_lecturas = bool(
         re.search(
-            r"\bPRIMERA LECTURA\b|\bSEGUNDA LECTURA\b|"
-            r"\bSALMO RESPONSORIAL\b|\bEVANGELIO\b|"
-            r"\bACLAMACION ANTES DEL EVANGELIO\b",
+            r"\\bPRIMERA LECTURA\\b|\\bSEGUNDA LECTURA\\b|"
+            r"\\bSALMO RESPONSORIAL\\b|\\bEVANGELIO\\b|"
+            r"\\bACLAMACION ANTES DEL EVANGELIO\\b",
             encabezado,
             flags=re.IGNORECASE,
         )
@@ -589,7 +603,6 @@ def _extraer_datos_liturgicos(texto, fecha_listado=None):
         observaciones.append(
             "El PDF no presenta encabezado litúrgico ni lecturas reconocibles; no se asigna ciclo."
         )
-    observacion_fecha = " ".join(observaciones)
 
     return {
         "fecha_documento": fecha_efectiva.isoformat() if fecha_efectiva else "",
@@ -600,8 +613,9 @@ def _extraer_datos_liturgicos(texto, fecha_listado=None):
         "anio_liturgico": anio_liturgico,
         "liturgia_horas": liturgia_horas,
         "anio_liturgia_horas": anio_lh,
-        "observacion_fecha": observacion_fecha,
+        "observacion_fecha": " ".join(observaciones),
     }
+
 
 
 class Command(BaseCommand):
@@ -865,8 +879,9 @@ class Command(BaseCommand):
 
                 # Si el PDF tiene páginas-imagen y no posee capa de texto,
                 # aplicamos OCR en español sin alterar el archivo original.
+                caracteres_digitales = sum(len(texto.strip()) for texto in paginas)
                 if (
-                    not any(texto.strip() for texto in paginas)
+                    caracteres_digitales < 120
                     and total_paginas > 0
                     and tesseract
                 ):
