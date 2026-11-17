@@ -167,11 +167,13 @@ class Command(BaseCommand):
         )
 
         for indice, fecha_obj in enumerate(fechas, start=1):
-            url = f"https://misal.mx/{fecha_obj.isoformat()}"
+            url_antigua = f"https://misal.mx/{fecha_obj.isoformat()}"
+            url_nueva = f"https://misalmx.com/misal/{fecha_obj.isoformat()}"
+            url = url_antigua
             fila = {
                 "fecha_calendario": fecha_obj.isoformat(),
                 "fecha_publicacion_fuente": "",
-                "url_solicitada": url,
+                "url_solicitada": url_antigua,
                 "url_final": "",
                 "http_status": "",
                 "estado": "ERROR",
@@ -199,10 +201,38 @@ class Command(BaseCommand):
                 continue
 
             try:
-                html, status, url_final = descargar_html(url, options["timeout"])
+                uso_url_nueva = False
+                try:
+                    html, status, url_final = descargar_html(
+                        url_antigua, options["timeout"]
+                    )
+                except HTTPError as exc:
+                    if exc.code != 404:
+                        raise
+                    # El sitio nuevo conserva algunas fechas que ya no existen
+                    # en la ruta antigua.
+                    uso_url_nueva = True
+                    html, status, url_final = descargar_html(
+                        url_nueva, options["timeout"]
+                    )
+
                 secciones, fecha_publicacion = extraer_secciones(html)
+
+                # Si la URL antigua responde 200 pero no contiene lecturas
+                # reconocibles, probar la estructura y ruta del sitio nuevo.
+                if not any(secciones.values()) and not uso_url_nueva:
+                    uso_url_nueva = True
+                    html, status, url_final = descargar_html(
+                        url_nueva, options["timeout"]
+                    )
+                    secciones, fecha_publicacion = extraer_secciones(html)
+
                 fila["http_status"] = status
                 fila["url_final"] = url_final
+                if uso_url_nueva:
+                    fila["observacion"] = (
+                        "Se utilizó la ruta nueva de MISAL Mx como alternativa."
+                    )
 
                 if fecha_publicacion:
                     fila["fecha_publicacion_fuente"] = fecha_publicacion.isoformat()
