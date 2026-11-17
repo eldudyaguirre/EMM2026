@@ -316,7 +316,7 @@ def _extraer_secciones_misalmx(html):
                 titulo,
             ):
                 secciones["primera_lectura"].append(
-                    f"### {titulo_original.upper()}\n{texto}"
+                    f"### {titulo}\n{texto}"
                 )
                 continue
 
