@@ -3,7 +3,8 @@ import hashlib
 import json
 import re
 import time
-from datetime import date
+from datetime import date, timedelta
+import unicodedata
 from html.parser import HTMLParser
 from pathlib import Path
 from urllib.error import HTTPError, URLError
@@ -32,9 +33,13 @@ MESES = {
 
 CAMPOS_CSV = (
     "fecha_publicacion",
+    "fecha_documento",
+    "origen_fecha",
     "titulo_publicacion",
     "titulo_celebracion",
     "ciclo",
+    "ciclo_origen",
+    "anio_liturgico",
     "liturgia_horas",
     "anio_liturgia_horas",
     "url_pdf",
@@ -260,15 +265,94 @@ def _texto_metadato(valor):
     return str(valor).strip()
 
 
-def _extraer_datos_liturgicos(texto):
-    """Lee datos visibles del encabezado sin inferirlos por la fecha."""
-    primeras_lineas = [linea.strip() for linea in texto.splitlines() if linea.strip()]
-    encabezado = " ".join(primeras_lineas[:18])
+def _normalizar_busqueda(texto):
+    texto = unicodedata.normalize("NFD", texto or "")
+    texto = "".join(
+        caracter for caracter in texto
+        if unicodedata.category(caracter) != "Mn"
+    )
+    return re.sub(r"\s+", " ", texto).strip()
+
+
+def _fecha_desde_texto_pdf(texto):
+    """Busca la fecha de la celebración en el encabezado del PDF."""
+    muestra = _normalizar_busqueda((texto or "")[:2500]).lower()
+    meses = (
+        "enero|febrero|marzo|abril|mayo|junio|julio|agosto|"
+        "septiembre|setiembre|octubre|noviembre|diciembre"
+    )
+    patrones = (
+        rf"\b(\d{{1,2}})\s+de\s+({meses})\s+(?:(?:de|del)\s+)?(20\d{{2}})\b",
+        rf"\b(\d{{1,2}})\s+({meses})\s+(20\d{{2}})\b",
+    )
+
+    for patron in patrones:
+        coincidencia = re.search(patron, muestra, flags=re.IGNORECASE)
+        if coincidencia:
+            try:
+                return date(
+                    int(coincidencia.group(3)),
+                    MESES[coincidencia.group(2).lower()],
+                    int(coincidencia.group(1)),
+                )
+            except (ValueError, KeyError):
+                pass
+
+    coincidencia = re.search(
+        r"\b(\d{1,2})[/-](\d{1,2})[/-](20\d{2})\b", muestra
+    )
+    if coincidencia:
+        try:
+            return date(
+                int(coincidencia.group(3)),
+                int(coincidencia.group(2)),
+                int(coincidencia.group(1)),
+            )
+        except ValueError:
+            pass
+
+    return None
+
+
+def _ciclo_por_fecha(fecha_documento):
+    """Calcula el ciclo dominical usando el inicio del año litúrgico."""
+    if not fecha_documento:
+        return "", ""
+
+    tres_diciembre = date(fecha_documento.year, 12, 3)
+    primer_domingo_adviento = tres_diciembre - timedelta(
+        days=(tres_diciembre.weekday() + 1) % 7
+    )
+
+    anio_liturgico = fecha_documento.year
+    if fecha_documento >= primer_domingo_adviento:
+        anio_liturgico += 1
+
+    ciclos = {0: "C", 1: "A", 2: "B"}
+    return ciclos[anio_liturgico % 3], str(anio_liturgico)
+
+
+def _extraer_datos_liturgicos(texto, fecha_listado=None):
+    """Extrae datos del encabezado y completa ciclos con reglas de calendario."""
+    primeras_lineas = [
+        linea.strip() for linea in (texto or "").splitlines() if linea.strip()
+    ]
+    encabezado = " ".join(primeras_lineas[:30])
+
+    fecha_pdf = _fecha_desde_texto_pdf(texto)
+    fecha_efectiva = fecha_pdf or fecha_listado
+    origen_fecha = "PDF" if fecha_pdf else ("LISTADO_WEB" if fecha_listado else "")
 
     ciclo = ""
-    coincidencia = re.search(r"\bCiclo\s+([ABC])\b", encabezado, flags=re.IGNORECASE)
+    ciclo_origen = ""
+    coincidencia = re.search(
+        r"\bCiclo(?:\s+dominical)?\s*[:\-]?\s*([ABC])\b",
+        encabezado,
+        flags=re.IGNORECASE,
+    )
     if coincidencia:
         ciclo = coincidencia.group(1).upper()
+        ciclo_origen = "PDF_EXPLICITO"
 
     liturgia_horas = ""
     coincidencia = re.search(
@@ -280,22 +364,50 @@ def _extraer_datos_liturgicos(texto):
         liturgia_horas = coincidencia.group(1).strip()
 
     anio_lh = ""
-    coincidencia = re.search(r"\bAño\s+([IVXLCDM]+|\d+)\b", encabezado, flags=re.IGNORECASE)
+    coincidencia = re.search(
+        r"\bAño\s+([IVXLCDM]+|\d+)\b",
+        encabezado,
+        flags=re.IGNORECASE,
+    )
     if coincidencia:
         anio_lh = coincidencia.group(1).upper()
 
     celebracion = ""
-    for linea in primeras_lineas[:20]:
-        if re.search(r"\bDOMINGO\b|\bSOLEMNIDAD\b|\bFIESTA\b", linea, re.IGNORECASE):
-            if re.search(r"\b20\d{2}\b", linea):
+    for linea in primeras_lineas[:30]:
+        normalizada = _normalizar_busqueda(linea).upper()
+        if re.search(
+            r"\bDOMINGO\b|\bSOLEMNIDAD\b|\bFIESTA\b|\bBAUTISMO\b|"
+            r"\bASCENSION\b|\bPENTECOSTES\b|\bCORPUS CHRISTI\b",
+            normalizada,
+        ):
+            if "DOMINGO DIA DEL SENOR" not in normalizada:
                 celebracion = linea
                 break
 
+    anio_liturgico = ""
+    if fecha_efectiva:
+        ciclo_calculado, anio_liturgico = _ciclo_por_fecha(fecha_efectiva)
+        if not ciclo:
+            ciclo = ciclo_calculado
+            if ciclo:
+                ciclo_origen = "CALCULADO_POR_FECHA"
+
+    observacion_fecha = ""
+    if fecha_pdf and fecha_listado and fecha_pdf != fecha_listado:
+        observacion_fecha = (
+            "La fecha del encabezado PDF difiere de la fecha del listado web."
+        )
+
     return {
+        "fecha_documento": fecha_efectiva.isoformat() if fecha_efectiva else "",
+        "origen_fecha": origen_fecha,
         "titulo_celebracion": celebracion,
         "ciclo": ciclo,
+        "ciclo_origen": ciclo_origen,
+        "anio_liturgico": anio_liturgico,
         "liturgia_horas": liturgia_horas,
         "anio_liturgia_horas": anio_lh,
+        "observacion_fecha": observacion_fecha,
     }
 
 
@@ -469,9 +581,13 @@ class Command(BaseCommand):
 
             fila = {
                 "fecha_publicacion": fecha_txt,
+                "fecha_documento": fecha_txt,
+                "origen_fecha": "LISTADO_WEB" if fecha_txt else "",
                 "titulo_publicacion": item["titulo"],
                 "titulo_celebracion": "",
                 "ciclo": "",
+                "ciclo_origen": "",
+                "anio_liturgico": "",
                 "liturgia_horas": "",
                 "anio_liturgia_horas": "",
                 "url_pdf": url_pdf,
@@ -519,10 +635,14 @@ class Command(BaseCommand):
                 fila["caracteres_extraidos"] = caracteres
                 paginas_total += total_paginas
 
+                texto_encabezado = "\n".join(paginas[:2])
                 datos = _extraer_datos_liturgicos(
-                    paginas[0] if paginas else ""
+                    texto_encabezado,
+                    fecha_listado=item["fecha"],
                 )
                 fila.update(datos)
+                if datos.get("observacion_fecha"):
+                    fila["observacion"] = datos["observacion_fecha"]
                 if caracteres:
                     fila["estado_extraccion"] = "EXTRAIDO"
                     extraidos += 1
