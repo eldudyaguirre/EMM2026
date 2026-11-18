@@ -62,7 +62,7 @@ PATRONES_SECCION = (
     (
         "primera_lectura",
         re.compile(
-            r"(?<![A-ZÁÉÍÓÚÑ])(?P<numero>\d{1,3}\s*[.)]{0,2}\s*)?"
+            r"(?<![A-ZÁÉÍÓÚÑ])(?P<numero>\d{1,3}\s*[,.)|!]{0,3}\s*)?"
             r"(?P<titulo>PRIMERA\s+LECTURA\b)",
             re.I,
         ),
@@ -70,7 +70,7 @@ PATRONES_SECCION = (
     (
         "salmo_responsorial",
         re.compile(
-            r"(?<![A-ZÁÉÍÓÚÑ])(?P<numero>\d{1,3}\s*[.)]{0,2}\s*)?"
+            r"(?<![A-ZÁÉÍÓÚÑ])(?P<numero>\d{1,3}\s*[,.)|!]{0,3}\s*)?"
             r"(?P<titulo>SALMO\s+RESPONSORIAL\b)",
             re.I,
         ),
@@ -78,7 +78,7 @@ PATRONES_SECCION = (
     (
         "segunda_lectura",
         re.compile(
-            r"(?<![A-ZÁÉÍÓÚÑ])(?P<numero>\d{1,3}\s*[.)]{0,2}\s*)?"
+            r"(?<![A-ZÁÉÍÓÚÑ])(?P<numero>\d{1,3}\s*[,.)|!]{0,3}\s*)?"
             r"(?P<titulo>SEGUNDA\s+LECTURA\b)",
             re.I,
         ),
@@ -86,15 +86,15 @@ PATRONES_SECCION = (
     (
         "aclamacion",
         re.compile(
-            r"(?<![A-ZÁÉÍÓÚÑ])(?P<numero>\d{1,3}\s*[.)]{0,2}\s*)?"
-            r"(?P<titulo>ACLAMACI[ÓO]N(?:\s+ANTES\s+DEL\s+EVANGELIO)?|ALELUYA)\b",
+            r"(?<![A-ZÁÉÍÓÚÑ])(?P<numero>\d{1,3}\s*[,.)|!]{0,3}\s*)?"
+            r"(?P<titulo>AC[CLT]AMACI[ÓO]N(?:\s+ANTES\s+DEL\s+EVANGELIO)?|ALELUYA)\b",
             re.I,
         ),
     ),
     (
         "evangelio",
         re.compile(
-            r"(?<![A-ZÁÉÍÓÚÑ])(?P<numero>\d{1,3}\s*[.)]{0,2}\s*)?"
+            r"(?<![A-ZÁÉÍÓÚÑ])(?P<numero>\d{1,3}\s*[,.)|!]{0,3}\s*)?"
             r"(?P<titulo>EVANGELIO\b|LECTURA\s+DEL\s+(?:SANTO\s+)?EVANGELIO\b)",
             re.I,
         ),
