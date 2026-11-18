@@ -239,9 +239,14 @@ def _texto_pdf_por_columnas(ruta_pdf):
 
 def _texto_para_catalogo(base, fila, texto_respaldo):
     """
-    Prioriza el PDF con orden geométrico. Si es escaneado, ilegible o no está
-    disponible, utiliza el TXT generado por el proceso de extracción/OCR.
+    Prioriza el TXT cuando contiene OCR (incluidos PDF mixtos), porque puede
+    incorporar páginas escaneadas que no tienen capa de texto digital.
+    Para PDF exclusivamente digitales aplica el orden geométrico por columnas.
     """
+    metodo = (fila.get("metodo_extraccion") or "").upper()
+    if "OCR_TESSERACT" in metodo:
+        return texto_respaldo or ""
+
     archivo_pdf = (fila.get("archivo_pdf") or "").strip()
     if archivo_pdf:
         ruta_relativa = Path(archivo_pdf.replace("\\", "/"))
@@ -277,7 +282,8 @@ def _es_prefijo_ocr_encabezado(prefijo):
     """
     return bool(
         re.fullmatch(
-            r"(?:\[EJ\]|\[EY|\[E|\[ON|\[EX|110\.\||EEN|EM|EJ|UY|E)",
+            r"(?:\[EJ\]|\[EY|\[E|\[ON|\[EX|110\.\||EEN|EM|EJ|UY|E|"
+            r"\(O\)|\(0\)|\[O\]|\[0\]|\(O|\[O)",
             (prefijo or "").strip(),
         )
     )
