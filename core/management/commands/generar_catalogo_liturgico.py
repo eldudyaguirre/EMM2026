@@ -358,10 +358,17 @@ def _extraer_secciones(texto):
         partes = []
 
         # El encabezado y el contenido pueden compartir la misma línea.
+        # Cuando OCR pega la primera palabra al final del título (por ejemplo,
+        # "LECTURASobre"), suele ser texto de la columna vecina; se descarta
+        # ese resto de línea y se continúa con las líneas siguientes.
+        resto_encabezado = lineas[linea_inicio][fin_encabezado:]
+        if resto_encabezado and resto_encabezado[0].isalnum():
+            resto_encabezado = ""
+
         if linea_inicio == linea_fin:
-            partes.append(lineas[linea_inicio][fin_encabezado:inicio_siguiente])
+            partes.append(resto_encabezado[:max(0, inicio_siguiente - fin_encabezado)])
         else:
-            partes.append(lineas[linea_inicio][fin_encabezado:])
+            partes.append(resto_encabezado)
             for indice_linea in range(linea_inicio + 1, linea_fin):
                 partes.append(lineas[indice_linea])
             if linea_fin < len(lineas):
