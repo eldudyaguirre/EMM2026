@@ -892,9 +892,10 @@ class Command(BaseCommand):
                 # texto digital y páginas de celebración que son solo imágenes.
                 # Se aplica OCR únicamente a las páginas con menos de 120
                 # caracteres, conservando la capa digital de las demás.
+                paginas_texto_digital = list(paginas)
                 indices_paginas_ocr = [
                     indice
-                    for indice, texto_pagina in enumerate(paginas)
+                    for indice, texto_pagina in enumerate(paginas_texto_digital)
                     if len((texto_pagina or "").strip()) < 120
                 ]
                 if indices_paginas_ocr and total_paginas > 0 and tesseract:
@@ -922,7 +923,7 @@ class Command(BaseCommand):
                         if paginas_recuperadas:
                             hay_texto_digital = any(
                                 len((texto_pagina or "").strip()) >= 120
-                                for texto_pagina in paginas
+                                for texto_pagina in paginas_texto_digital
                             )
                             metodo_extraccion = (
                                 "TEXTO_PDF+OCR_TESSERACT"
