@@ -79,7 +79,7 @@ PATRONES_SECCION = (
         "segunda_lectura",
         re.compile(
             r"(?<![A-ZÁÉÍÓÚÑ])(?P<numero>\d{1,3}\s*[,.)|!]{0,3}\s*)?"
-            r"(?P<titulo>SEGUNDA\s+LECTURA\b)",
+            r"(?P<titulo>SE[GC]UN[DO]A\s+LECTURA)",
             re.I,
         ),
     ),
@@ -282,8 +282,8 @@ def _es_prefijo_ocr_encabezado(prefijo):
     """
     return bool(
         re.fullmatch(
-            r"(?:\[EJ\]|\[EY|\[E|\[ON|\[EX|110\.\||EEN|EM|EJ|UY|E|"
-            r"\(O\)|\(0\)|\[O\]|\[0\]|\(O|\[O|Q)",
+            r"(?:\[[0-9sSoO., )|!]{1,6}\]|\[EJ\]|\[EY|\[E|\[ON|\[EX|"
+            r"110\.\||EEN|EM|EJ|UY|EN|E|\(O\)|\(0\)|\[O\]|\[0\]|\(O|\[O|Q)",
             (prefijo or "").strip(),
         )
     )
