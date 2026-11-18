@@ -547,7 +547,7 @@ class Command(BaseCommand):
                 observacion_revision = (
                     f"{observacion_revision} {nota}".strip()
                 )
-            if (fila.get("metodo_extraccion") or "") == "OCR_TESSERACT":
+            if "OCR_TESSERACT" in (fila.get("metodo_extraccion") or ""):
                 observacion_revision = (
                     f"{observacion_revision} Texto OCR: requiere cotejo humano."
                 ).strip()
