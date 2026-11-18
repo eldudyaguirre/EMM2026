@@ -335,12 +335,18 @@ def _validar_tesseract(ejecutable, idioma):
     return sorted(disponibles)
 
 
-def _ocr_pdf(ruta_pdf, ejecutable, idioma="spa", dpi=300):
+def _ocr_pdf(
+    ruta_pdf,
+    ejecutable,
+    idioma="spa",
+    dpi=300,
+    indices_paginas=None,
+):
     """
-    Reconoce texto de un PDF escaneado página por página.
+    Reconoce todas las páginas o solo las páginas indicadas (índice base cero).
 
-    Renderiza cada página temporalmente con PyMuPDF y ejecuta Tesseract.
-    El PDF original nunca se modifica.
+    Renderiza las páginas seleccionadas temporalmente con PyMuPDF y ejecuta
+    Tesseract. El PDF original nunca se modifica.
     """
     try:
         import pymupdf
@@ -349,17 +355,26 @@ def _ocr_pdf(ruta_pdf, ejecutable, idioma="spa", dpi=300):
 
     escala = dpi / 72.0
     textos = []
+    seleccion = (
+        None
+        if indices_paginas is None
+        else {int(indice) for indice in indices_paginas}
+    )
 
     with tempfile.TemporaryDirectory(prefix="emaus_ocr_") as temporal:
         carpeta_temporal = Path(temporal)
         with pymupdf.open(str(ruta_pdf)) as documento:
-            for indice, pagina in enumerate(documento, start=1):
+            for indice, pagina in enumerate(documento):
+                if seleccion is not None and indice not in seleccion:
+                    continue
+
+                numero_pagina = indice + 1
                 pixmap = pagina.get_pixmap(
                     matrix=pymupdf.Matrix(escala, escala),
                     colorspace=pymupdf.csRGB,
                     alpha=False,
                 )
-                imagen = carpeta_temporal / f"pagina_{indice:04d}.png"
+                imagen = carpeta_temporal / f"pagina_{numero_pagina:04d}.png"
                 pixmap.save(str(imagen))
 
                 comando = [
@@ -385,7 +400,7 @@ def _ocr_pdf(ruta_pdf, ejecutable, idioma="spa", dpi=300):
                 if resultado.returncode != 0:
                     detalle = (resultado.stderr or resultado.stdout or "").strip()
                     raise RuntimeError(
-                        f"Tesseract falló en la página {indice}: {detalle[:500]}"
+                        f"Tesseract falló en la página {numero_pagina}: {detalle[:500]}"
                     )
                 textos.append((resultado.stdout or "").strip())
 
@@ -873,35 +888,60 @@ class Command(BaseCommand):
                 metodo_extraccion = "TEXTO_PDF"
                 observaciones_documento = []
 
-                # Si el PDF tiene páginas-imagen y no posee capa de texto,
-                # aplicamos OCR en español sin alterar el archivo original.
-                caracteres_digitales = sum(len(texto.strip()) for texto in paginas)
-                if (
-                    caracteres_digitales < 120
-                    and total_paginas > 0
-                    and tesseract
-                ):
+                # OCR por página: algunos PDF mezclan páginas editoriales con
+                # texto digital y páginas de celebración que son solo imágenes.
+                # Se aplica OCR únicamente a las páginas con menos de 120
+                # caracteres, conservando la capa digital de las demás.
+                indices_paginas_ocr = [
+                    indice
+                    for indice, texto_pagina in enumerate(paginas)
+                    if len((texto_pagina or "").strip()) < 120
+                ]
+                if indices_paginas_ocr and total_paginas > 0 and tesseract:
                     try:
                         paginas_ocr = _ocr_pdf(
                             ruta_pdf,
                             tesseract,
                             idioma=options["ocr_idioma"],
                             dpi=options["ocr_dpi"],
+                            indices_paginas=indices_paginas_ocr,
                         )
-                        if any(texto.strip() for texto in paginas_ocr):
-                            paginas = paginas_ocr
-                            metodo_extraccion = "OCR_TESSERACT"
+                        paginas_recuperadas = []
+                        for indice_pagina, texto_ocr in zip(
+                            indices_paginas_ocr, paginas_ocr
+                        ):
+                            texto_ocr = (texto_ocr or "").strip()
+                            texto_digital = (paginas[indice_pagina] or "").strip()
+
+                            # Sustituir el texto escaso solo cuando el OCR aporta
+                            # una recuperación claramente más completa.
+                            if len(texto_ocr) > max(40, len(texto_digital) + 20):
+                                paginas[indice_pagina] = texto_ocr
+                                paginas_recuperadas.append(indice_pagina + 1)
+
+                        if paginas_recuperadas:
+                            hay_texto_digital = any(
+                                len((texto_pagina or "").strip()) >= 120
+                                for texto_pagina in paginas
+                            )
+                            metodo_extraccion = (
+                                "TEXTO_PDF+OCR_TESSERACT"
+                                if hay_texto_digital
+                                else "OCR_TESSERACT"
+                            )
                             motor = (
                                 f"PyMuPDF + Tesseract "
                                 f"({options['ocr_idioma']}, {options['ocr_dpi']} DPI)"
                             )
                             observaciones_documento.append(
-                                "Texto recuperado mediante OCR automático; "
-                                "revisar nombres, signos y referencias bíblicas."
+                                "OCR aplicado a las páginas: "
+                                + ", ".join(str(n) for n in paginas_recuperadas)
+                                + ". Revisar nombres, signos y referencias bíblicas."
                             )
                         else:
                             observaciones_documento.append(
-                                "Se ejecutó OCR, pero no se reconoció texto."
+                                "Se ejecutó OCR en páginas con poco texto digital, "
+                                "pero no se obtuvo una recuperación suficiente."
                             )
                     except Exception as exc:
                         observaciones_documento.append(
@@ -929,7 +969,7 @@ class Command(BaseCommand):
                     observaciones_documento.append(datos["observacion_fecha"])
 
                 if caracteres:
-                    if metodo_extraccion == "OCR_TESSERACT":
+                    if "OCR_TESSERACT" in metodo_extraccion:
                         fila["estado_extraccion"] = "EXTRAIDO_OCR"
                         extraidos_ocr += 1
                     else:
