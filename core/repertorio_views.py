@@ -136,6 +136,7 @@ def repertorio_servicio(request, servicio_id):
         'servicio': servicio,
         'canciones': canciones,
         'total_canciones': len(canciones),
+        'trastes_capodastro': range(1, 13),
     })
 
 @login_required(login_url='home')
