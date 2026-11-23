@@ -49,16 +49,48 @@ def gestionar_cancion_repertorio(request, servicio_id):
         else:
             messages.info(request, f'«{cancion.titulo}» ya estaba en este repertorio.')
     elif accion == 'editar':
-        entrada = get_object_or_404(RepertorioServicio, pk=request.POST.get('repertorio_id'), servicio=servicio)
+        entrada = get_object_or_404(
+            RepertorioServicio,
+            pk=request.POST.get('repertorio_id'),
+            servicio=servicio,
+        )
         titulo = request.POST.get('titulo_snapshot', '').strip()
         letra = request.POST.get('letra_snapshot', '')
+        usa_capodastro = request.POST.get('usa_capodastro') in {'1', 'on', 'true'}
+        traste_capodastro = None
+
+        if usa_capodastro:
+            try:
+                traste_capodastro = int(request.POST.get('traste_capodastro', ''))
+            except (TypeError, ValueError):
+                traste_capodastro = None
+
+            if traste_capodastro is None or not 1 <= traste_capodastro <= 12:
+                messages.error(
+                    request,
+                    'Selecciona un traste válido del 1 al 12 para el capodastro.',
+                )
+                return redirect('repertorio_servicio', servicio_id=servicio.pk)
+
         if not titulo or not letra.strip():
             messages.error(request, 'El título y la letra con acordes no pueden quedar vacíos.')
         else:
+            # Estos valores pertenecen a la copia de esta canción dentro del
+            # servicio; nunca modifican la canción original del cancionero.
             entrada.titulo_snapshot = titulo[:200]
             entrada.letra_snapshot = letra
-            entrada.save(update_fields=['titulo_snapshot', 'letra_snapshot'])
-            messages.success(request, f'La versión de «{entrada.titulo_snapshot}» para este servicio fue guardada.')
+            entrada.usa_capodastro = usa_capodastro
+            entrada.traste_capodastro = traste_capodastro
+            entrada.save(update_fields=[
+                'titulo_snapshot',
+                'letra_snapshot',
+                'usa_capodastro',
+                'traste_capodastro',
+            ])
+            messages.success(
+                request,
+                f'La versión de «{entrada.titulo_snapshot}» para este servicio fue guardada.',
+            )
     elif accion == 'quitar':
         entrada = get_object_or_404(RepertorioServicio, pk=request.POST.get('repertorio_id'), servicio=servicio)
         titulo = entrada.titulo_snapshot
