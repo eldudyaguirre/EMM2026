@@ -342,6 +342,49 @@ def _texto_para_catalogo(base, fila, texto_respaldo):
 
 
 
+def _limpiar_rotulos_pagina(texto):
+    """
+    Elimina rótulos editoriales que aparecen como líneas independientes dentro
+    de una lectura cuando el texto continúa en otra columna/página. No recorta
+    el texto posterior: solo elimina la línea del rótulo y fechas de cabecera.
+    """
+    resultado = []
+    meses = (
+        "ENERO|FEBRERO|MARZO|ABRIL|MAYO|JUNIO|JULIO|AGOSTO|"
+        "SEPTIEMBRE|SETIEMBRE|OCTUBRE|NOVIEMBRE|DICIEMBRE"
+    )
+    fecha_cabecera = re.compile(
+        rf"^\s*\d{{1,2}}\s+DE\s+(?:{meses})\s+DE\s+20\d{{2}}\s*$",
+        re.I,
+    )
+
+    for linea in (texto or "").splitlines():
+        normalizada = _normalizar(linea)
+        compacta = re.sub(r"[^A-Z0-9 ]+", " ", normalizada)
+        compacta = re.sub(r"\s+", " ", compacta).strip()
+
+        if fecha_cabecera.fullmatch(linea.strip()):
+            continue
+        if compacta in {
+            "CELEBRACION DE LA EUCARISTIA",
+            "RITOS INICIALES",
+            "LITURGIA DE LA PALABRA",
+            "LITURGIA EUCARISTICA",
+            "LITURGIA EUCARI",
+            "LITURGIA EUCAR",
+            "DOMINGO DIA DEL SENOR",
+        }:
+            continue
+        if "LITURGIA EUCAR" in compacta and len(compacta) <= 55:
+            continue
+        if "LITURGIA DE LA PALAB" in compacta and len(compacta) <= 55:
+            continue
+
+        resultado.append(linea)
+
+    return "\n".join(resultado).strip()
+
+
 def _recortar_fin_lectura(texto):
     """
     Recorta solo la fórmula final "Palabra de Dios" cuando aparece como
@@ -368,7 +411,7 @@ def _es_prefijo_ocr_encabezado(prefijo):
     return bool(
         re.fullmatch(
             r"(?:\[[0-9sSoO., )|!]{1,6}\]?|\[EJ\]|\[EY|\[E|\[ON|\[EX|"
-            r"110\.\||EEN|EM|EJ|UY|EN|E|\(O\)|\(0\)|\[O\]|\[0\]|\(O|\[O|Q)",
+            r"110\.\||EEN|EM|EJ|UY|EN|E|KN|Y|\(O\)|\(0\)|\[O\]|\[0\]|\(O|\[O|Q)",
             (prefijo or "").strip(),
         )
     )
@@ -513,7 +556,27 @@ def _extraer_secciones(texto):
                 if not numerado:
                     if prefijo and not _es_prefijo_ocr_encabezado(prefijo):
                         continue
-                    if len(linea) > 110:
+
+                    titulo_detectado = coincidencia.group("titulo").upper()
+                    encabezado_evangelio_completo = (
+                        nombre == "evangelio"
+                        and titulo_detectado.startswith("LECTURA DEL")
+                    )
+
+                    # La palabra "Evangelio" aparece también dentro de las
+                    # moniciones ("...contemplar en el Evangelio, cómo...").
+                    # Solo aceptar el encabezado simple si está aislado o
+                    # precedido por ruido OCR; la fórmula "Lectura del santo
+                    # Evangelio" puede ser más larga.
+                    if (
+                        nombre == "evangelio"
+                        and titulo_detectado == "EVANGELIO"
+                        and not prefijo
+                        and len(linea) > 28
+                    ):
+                        continue
+
+                    if len(linea) > 110 and not encabezado_evangelio_completo:
                         continue
 
                 candidatos.append(
@@ -593,6 +656,7 @@ def _extraer_secciones(texto):
                 break
 
         texto_seccion = "\n".join(bloque).strip()
+        texto_seccion = _limpiar_rotulos_pagina(texto_seccion)
         texto_seccion, _ancla_encontrada = _recortar_inicio_seccion(
             nombre,
             texto_seccion,
