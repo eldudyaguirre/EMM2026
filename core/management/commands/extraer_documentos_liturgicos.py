@@ -499,9 +499,12 @@ def _es_dos_columnas(imagen):
     """
     ancho, alto = imagen.size
     y0, y1 = int(alto * 0.20), int(alto * 0.92)
+    # Usar un canal central estrecho: en algunos misales las columnas
+    # llegan casi hasta el centro y una banda azul transversal cruza la página.
+    # El rango 47%-53% incluye parte de ambos textos y puede ocultar las columnas.
     zonas = {
         "izquierda": (int(ancho * 0.08), y0, int(ancho * 0.45), y1),
-        "canal": (int(ancho * 0.47), y0, int(ancho * 0.53), y1),
+        "canal": (int(ancho * 0.49), y0, int(ancho * 0.51), y1),
         "derecha": (int(ancho * 0.55), y0, int(ancho * 0.92), y1),
     }
     densidad_izquierda = _densidad_tinta(imagen, zonas["izquierda"])
@@ -547,51 +550,100 @@ def _tesseract(imagen, ejecutable, idioma="spa", psm="4", salida="text"):
 
 def _limite_banda_liturgia(archivo_imagen, ejecutable, idioma):
     """
-    Localiza con TSV la banda transversal "Liturgia de la Palabra" en la
-    página completa. Devuelve la coordenada inferior en píxeles o None si no
-    se reconoce.
+    Localiza la banda transversal "Liturgia de la Palabra" con Tesseract TSV.
+    Agrupa palabras por altura, no por bloque/columna, porque el rótulo puede
+    cruzar el centro y Tesseract puede dividirlo en bloques independientes.
+    Devuelve la coordenada inferior en píxeles o None si no se reconoce.
     """
-    try:
-        resultado = _tesseract(
-            archivo_imagen,
-            ejecutable,
-            idioma=idioma,
-            psm="4",
-            salida="tsv",
-        )
-        lector = csv.DictReader(io.StringIO(resultado), delimiter="\t")
-        lineas = {}
-        for fila in lector:
-            if fila.get("level") != "5":
-                continue
-            texto = (fila.get("text") or "").strip()
-            if not texto:
-                continue
-            clave = (
-                fila.get("block_num"),
-                fila.get("par_num"),
-                fila.get("line_num"),
+    intentos = ("4", "11", "6")
+    for psm in intentos:
+        try:
+            resultado = _tesseract(
+                archivo_imagen,
+                ejecutable,
+                idioma=idioma,
+                psm=psm,
+                salida="tsv",
             )
-            lineas.setdefault(clave, []).append(fila)
+            lector = csv.DictReader(
+                io.StringIO(resultado),
+                delimiter="\t",
+            )
+            palabras = []
+            for fila in lector:
+                if fila.get("level") != "5":
+                    continue
+                texto = (fila.get("text") or "").strip()
+                if not texto:
+                    continue
+                try:
+                    izquierda = int(fila.get("left", 0))
+                    arriba = int(fila.get("top", 0))
+                    ancho = int(fila.get("width", 0))
+                    alto = int(fila.get("height", 0))
+                except (TypeError, ValueError):
+                    continue
+                palabras.append({
+                    "x": izquierda,
+                    "y": arriba,
+                    "x1": izquierda + ancho,
+                    "y1": arriba + alto,
+                    "texto": texto,
+                })
 
-        for palabras in lineas.values():
-            texto_linea = " ".join(
-                palabra.get("text", "") for palabra in palabras
-            )
-            normalizado = (
-                unicodedata.normalize("NFD", texto_linea)
-                .encode("ascii", "ignore")
-                .decode("ascii")
-                .upper()
-            )
-            if re.search(r"LITURGIA\s+DE\s+LA\s+PALAB", normalizado):
-                return max(
-                    int(palabra.get("top", 0))
-                    + int(palabra.get("height", 0))
-                    for palabra in palabras
+            if not palabras:
+                continue
+
+            palabras.sort(key=lambda p: (p["y"], p["x"]))
+            filas = []
+            for palabra in palabras:
+                centro_y = (palabra["y"] + palabra["y1"]) / 2
+                fila = next(
+                    (
+                        actual for actual in reversed(filas)
+                        if abs(actual["centro_y"] - centro_y) <= 14
+                    ),
+                    None,
                 )
-    except Exception:
-        return None
+                if fila is None:
+                    fila = {
+                        "centro_y": centro_y,
+                        "palabras": [],
+                    }
+                    filas.append(fila)
+                fila["palabras"].append(palabra)
+                fila["centro_y"] = sum(
+                    (p["y"] + p["y1"]) / 2
+                    for p in fila["palabras"]
+                ) / len(fila["palabras"])
+
+            for fila in filas:
+                elementos = sorted(
+                    fila["palabras"],
+                    key=lambda p: p["x"],
+                )
+                texto_linea = " ".join(
+                    p["texto"] for p in elementos
+                )
+                normalizado = (
+                    unicodedata.normalize("NFD", texto_linea)
+                    .encode("ascii", "ignore")
+                    .decode("ascii")
+                    .upper()
+                )
+                normalizado = re.sub(
+                    r"[^A-Z ]+",
+                    " ",
+                    normalizado,
+                )
+                normalizado = re.sub(r"\s+", " ", normalizado).strip()
+                if re.search(
+                    r"LITURGIA\s+DE\s+LA\s+PALAB",
+                    normalizado,
+                ):
+                    return max(p["y1"] for p in elementos)
+        except Exception:
+            continue
     return None
 
 
@@ -796,6 +848,7 @@ def _ocr_pdf(
     escala = dpi / 72.0
     textos = []
     paginas_dos_columnas = []
+    paginas_banda_liturgia = []
     textos_encabezado_completo = {}
     seleccion = (
         None
@@ -863,6 +916,7 @@ def _ocr_pdf(
 
                     inicio_vertical_lecturas = 0
                     if limite_banda is not None:
+                        paginas_banda_liturgia.append(numero_pagina)
                         # El bloque superior contiene Ritos Iniciales en ambas
                         # columnas. La Liturgia de la Palabra comienza debajo
                         # de la banda transversal, así que ambas columnas deben
@@ -941,7 +995,12 @@ def _ocr_pdf(
                     textos.append(texto)
                     paginas_dos_columnas.append(numero_pagina)
 
-    return textos, paginas_dos_columnas, textos_encabezado_completo
+    return (
+        textos,
+        paginas_dos_columnas,
+        textos_encabezado_completo,
+        paginas_banda_liturgia,
+    )
 
 
 def _texto_metadato(valor):
@@ -1463,6 +1522,7 @@ class Command(BaseCommand):
                             paginas_ocr,
                             paginas_ocr_columnas,
                             paginas_ocr_encabezado,
+                            paginas_ocr_banda_liturgia,
                         ) = _ocr_pdf(
                             ruta_pdf,
                             tesseract,
@@ -1510,7 +1570,18 @@ class Command(BaseCommand):
                                 observaciones_documento.append(
                                     "OCR por columnas separadas en las páginas: "
                                     + ", ".join(str(n) for n in columnas_recuperadas)
-                                    + ". Se separaron las bandas de Ritos Iniciales y Liturgia de la Palabra cuando fue posible."
+                                    + "."
+                                )
+                            bandas_recuperadas = [
+                                n for n in paginas_banda_liturgia
+                                if n in paginas_recuperadas
+                            ]
+                            if bandas_recuperadas:
+                                observaciones_documento.append(
+                                    "Banda Liturgia de la Palabra detectada y "
+                                    "recorte aplicado en las páginas: "
+                                    + ", ".join(str(n) for n in bandas_recuperadas)
+                                    + "."
                                 )
                         else:
                             observaciones_documento.append(
