@@ -423,6 +423,7 @@ class Command(BaseCommand):
             if any(
                 alerta.startswith("FALTA_")
                 or alerta.startswith("POSIBLE_MEZCLA_")
+                or alerta.startswith("POSIBLE_DUPLICADO_ENTRE_SECCIONES_")
                 or alerta.startswith("TEXTO_CORTO_CRITICO_")
                 or alerta in {
                     "TXT_NO_ENCONTRADO",
@@ -599,7 +600,7 @@ class Command(BaseCommand):
             f"Documentos sin ciclo identificado: {cantidad_con_ciclo_vacio}",
             f"Documentos con carácter de reemplazo OCR: {cantidad_texto_sospechoso}",
             f"Documentos con prioridad ALTA: {sum(1 for fila in filas_reporte if fila['prioridad_revision'] == 'ALTA')}",
-            f"Secciones con posible mezcla de contenido: {sum(len(fila['secciones_sospechosas'].split(';')) for fila in filas_reporte if fila['secciones_sospechosas'])}",
+            f"Secciones con posible mezcla o duplicado: {sum(len(fila['secciones_sospechosas'].split(';')) for fila in filas_reporte if fila['secciones_sospechosas'])}",
             f"Secciones con texto críticamente corto: {sum(cantidad for alerta, cantidad in resumen_alertas.items() if alerta.startswith('TEXTO_CORTO_CRITICO_'))}",
             f"Filas en revisión de fechas: {len(filas_revision_fechas)}",
             "",
