@@ -1,5 +1,6 @@
 import csv
 import hashlib
+import io
 import json
 import re
 import os
@@ -249,6 +250,40 @@ def _texto_pagina_por_columnas(pagina):
         if b["x0"] < mitad - 8 and b["x1"] > mitad + 8
     ]
 
+    # En varios misales la página está organizada por bandas: los ritos
+    # iniciales aparecen arriba a la derecha, mientras que las lecturas
+    # comienzan después de la banda "Liturgia de la Palabra". Al concatenar
+    # toda la columna derecha se mezclaban los ritos con el salmo.
+    marcador_palabra = re.compile(
+        r"LITURGIA\s+DE\s+LA\s+PALAB",
+        re.IGNORECASE,
+    )
+    bandas_palabra = [
+        b["y1"] for b in bloques
+        if marcador_palabra.search(
+            unicodedata.normalize("NFD", b["texto"])
+            .encode("ascii", "ignore")
+            .decode("ascii")
+            .upper()
+        )
+    ]
+    if bandas_palabra:
+        limite_lecturas = max(bandas_palabra)
+        derecha = [
+            b for b in derecha
+            if b["y0"] >= limite_lecturas - 2
+        ]
+        transversales = [
+            b for b in transversales
+            if b["y0"] >= limite_lecturas - 2
+            or marcador_palabra.search(
+                unicodedata.normalize("NFD", b["texto"])
+                .encode("ascii", "ignore")
+                .decode("ascii")
+                .upper()
+            )
+        ]
+
     caracteres_izquierda = sum(len(b["texto"]) for b in izquierda)
     caracteres_derecha = sum(len(b["texto"]) for b in derecha)
 
@@ -434,6 +469,124 @@ def _validar_tesseract(ejecutable, idioma):
     return sorted(disponibles)
 
 
+def _densidad_tinta(imagen, caja):
+    """
+    Calcula la proporción de píxeles oscuros en una zona de la página.
+    Se usa solo para distinguir páginas escaneadas a dos columnas.
+    """
+    try:
+        from PIL import Image
+        zona = imagen.crop(caja).convert("L")
+        histograma = zona.histogram()
+        pixeles_oscuros = sum(histograma[:220])
+        total = max(1, zona.width * zona.height)
+        return pixeles_oscuros / total
+    except Exception:
+        return 0.0
+
+
+def _es_dos_columnas(imagen):
+    """
+    Detecta dos columnas con un canal central relativamente despejado.
+    No depende de que el PDF tenga capa de texto digital.
+    """
+    ancho, alto = imagen.size
+    y0, y1 = int(alto * 0.20), int(alto * 0.92)
+    zonas = {
+        "izquierda": (int(ancho * 0.08), y0, int(ancho * 0.45), y1),
+        "canal": (int(ancho * 0.47), y0, int(ancho * 0.53), y1),
+        "derecha": (int(ancho * 0.55), y0, int(ancho * 0.92), y1),
+    }
+    densidad_izquierda = _densidad_tinta(imagen, zonas["izquierda"])
+    densidad_canal = _densidad_tinta(imagen, zonas["canal"])
+    densidad_derecha = _densidad_tinta(imagen, zonas["derecha"])
+
+    if min(densidad_izquierda, densidad_derecha) < 0.08:
+        return False
+    return densidad_canal / max(
+        0.001,
+        min(densidad_izquierda, densidad_derecha),
+    ) < 0.72
+
+
+def _tesseract(imagen, ejecutable, idioma="spa", psm="4", salida="text"):
+    comando = [
+        ejecutable,
+        str(imagen),
+        "stdout",
+        "-l",
+        idioma,
+        "--oem",
+        "1",
+        "--psm",
+        str(psm),
+    ]
+    if salida == "tsv":
+        comando.append("tsv")
+    resultado = subprocess.run(
+        comando,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        errors="replace",
+        timeout=300,
+        check=False,
+    )
+    if resultado.returncode != 0:
+        detalle = (resultado.stderr or resultado.stdout or "").strip()
+        raise RuntimeError(f"Tesseract falló: {detalle[:500]}")
+    return resultado.stdout or ""
+
+
+def _limite_banda_liturgia(archivo_imagen, ejecutable, idioma):
+    """
+    Localiza con TSV la banda "Liturgia de la Palabra" en la columna izquierda.
+    Devuelve la coordenada inferior en píxeles o None si no se reconoce.
+    """
+    try:
+        resultado = _tesseract(
+            archivo_imagen,
+            ejecutable,
+            idioma=idioma,
+            psm="4",
+            salida="tsv",
+        )
+        lector = csv.DictReader(io.StringIO(resultado), delimiter="\t")
+        lineas = {}
+        for fila in lector:
+            if fila.get("level") != "5":
+                continue
+            texto = (fila.get("text") or "").strip()
+            if not texto:
+                continue
+            clave = (
+                fila.get("block_num"),
+                fila.get("par_num"),
+                fila.get("line_num"),
+            )
+            lineas.setdefault(clave, []).append(fila)
+
+        for palabras in lineas.values():
+            texto_linea = " ".join(
+                palabra.get("text", "") for palabra in palabras
+            )
+            normalizado = (
+                unicodedata.normalize("NFD", texto_linea)
+                .encode("ascii", "ignore")
+                .decode("ascii")
+                .upper()
+            )
+            if re.search(r"LITURGIA\s+DE\s+LA\s+PALAB", normalizado):
+                return max(
+                    int(palabra.get("top", 0))
+                    + int(palabra.get("height", 0))
+                    for palabra in palabras
+                )
+    except Exception:
+        return None
+    return None
+
+
 def _ocr_pdf(
     ruta_pdf,
     ejecutable,
@@ -444,16 +597,26 @@ def _ocr_pdf(
     """
     Reconoce todas las páginas o solo las páginas indicadas (índice base cero).
 
-    Renderiza las páginas seleccionadas temporalmente con PyMuPDF y ejecuta
-    Tesseract. El PDF original nunca se modifica.
+    Si la página escaneada tiene dos columnas, las procesa por separado. En
+    páginas con el rótulo "Liturgia de la Palabra", recorta el inicio superior
+    de la columna derecha para no mezclar los ritos iniciales con las lecturas.
+    El PDF original nunca se modifica.
+
+    Devuelve (textos_por_pagina, numeros_de_pagina_ocr_por_columnas).
     """
     try:
         import pymupdf
     except ImportError:
         import fitz as pymupdf
 
+    try:
+        from PIL import Image
+    except ImportError:
+        Image = None
+
     escala = dpi / 72.0
     textos = []
+    paginas_dos_columnas = []
     seleccion = (
         None
         if indices_paginas is None
@@ -476,34 +639,89 @@ def _ocr_pdf(
                 imagen = carpeta_temporal / f"pagina_{numero_pagina:04d}.png"
                 pixmap.save(str(imagen))
 
-                comando = [
-                    ejecutable,
-                    str(imagen),
-                    "stdout",
-                    "-l",
-                    idioma,
-                    "--oem",
-                    "1",
-                    "--psm",
-                    "3",
-                ]
-                resultado = subprocess.run(
-                    comando,
-                    capture_output=True,
-                    text=True,
-                    encoding="utf-8",
-                    errors="replace",
-                    timeout=300,
-                    check=False,
-                )
-                if resultado.returncode != 0:
-                    detalle = (resultado.stderr or resultado.stdout or "").strip()
-                    raise RuntimeError(
-                        f"Tesseract falló en la página {numero_pagina}: {detalle[:500]}"
-                    )
-                textos.append((resultado.stdout or "").strip())
+                if Image is None:
+                    texto = _tesseract(
+                        imagen,
+                        ejecutable,
+                        idioma=idioma,
+                        psm="3",
+                    ).strip()
+                    textos.append(texto)
+                    continue
 
-    return textos
+                with Image.open(imagen) as imagen_pagina:
+                    imagen_pagina = imagen_pagina.convert("RGB")
+                    if not _es_dos_columnas(imagen_pagina):
+                        texto = _tesseract(
+                            imagen,
+                            ejecutable,
+                            idioma=idioma,
+                            psm="3",
+                        ).strip()
+                        textos.append(texto)
+                        continue
+
+                    ancho, alto = imagen_pagina.size
+                    corte_izquierdo = int(ancho * 0.505)
+                    inicio_derecho = int(ancho * 0.495)
+
+                    imagen_izquierda = carpeta_temporal / (
+                        f"pagina_{numero_pagina:04d}_izquierda.png"
+                    )
+                    imagen_derecha = carpeta_temporal / (
+                        f"pagina_{numero_pagina:04d}_derecha.png"
+                    )
+
+                    imagen_pagina.crop(
+                        (0, 0, corte_izquierdo, alto)
+                    ).save(imagen_izquierda)
+
+                    limite_banda = _limite_banda_liturgia(
+                        imagen_izquierda,
+                        ejecutable,
+                        idioma,
+                    )
+
+                    inicio_vertical_derecha = 0
+                    if limite_banda is not None:
+                        # Deja un pequeño solapamiento bajo la banda para no
+                        # cortar la primera línea del salmo o de la lectura.
+                        inicio_vertical_derecha = max(
+                            0,
+                            limite_banda - int(alto * 0.004),
+                        )
+
+                    imagen_pagina.crop(
+                        (
+                            inicio_derecho,
+                            inicio_vertical_derecha,
+                            ancho,
+                            alto,
+                        )
+                    ).save(imagen_derecha)
+
+                    texto_izquierda = _tesseract(
+                        imagen_izquierda,
+                        ejecutable,
+                        idioma=idioma,
+                        psm="4",
+                    ).strip()
+                    texto_derecha = _tesseract(
+                        imagen_derecha,
+                        ejecutable,
+                        idioma=idioma,
+                        psm="4",
+                    ).strip()
+
+                    texto = "\n\n".join(
+                        parte for parte in (texto_izquierda, texto_derecha)
+                        if parte
+                    )
+                    textos.append(texto)
+                    paginas_dos_columnas.append(numero_pagina)
+
+    return textos, paginas_dos_columnas
+
 
 def _texto_metadato(valor):
     if valor is None:
@@ -1019,7 +1237,7 @@ class Command(BaseCommand):
                 ]
                 if indices_paginas_ocr and total_paginas > 0 and tesseract:
                     try:
-                        paginas_ocr = _ocr_pdf(
+                        paginas_ocr, paginas_ocr_columnas = _ocr_pdf(
                             ruta_pdf,
                             tesseract,
                             idioma=options["ocr_idioma"],
@@ -1058,6 +1276,16 @@ class Command(BaseCommand):
                                 + ", ".join(str(n) for n in paginas_recuperadas)
                                 + ". Revisar nombres, signos y referencias bíblicas."
                             )
+                            columnas_recuperadas = [
+                                n for n in paginas_dos_columnas
+                                if n in paginas_recuperadas
+                            ]
+                            if columnas_recuperadas:
+                                observaciones_documento.append(
+                                    "OCR por columnas separadas en las páginas: "
+                                    + ", ".join(str(n) for n in columnas_recuperadas)
+                                    + ". Se separaron las bandas de Ritos Iniciales y Liturgia de la Palabra cuando fue posible."
+                                )
                         else:
                             observaciones_documento.append(
                                 "Se ejecutó OCR en páginas con poco texto digital, "
