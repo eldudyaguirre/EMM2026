@@ -522,10 +522,9 @@ def _normalizar_busqueda(texto):
 
 def _fecha_desde_texto_pdf(texto):
     """
-    Prioriza la fecha escrita con el nombre del mes en el encabezado.
-    Los PDF pueden partir el encabezado entre líneas; por eso primero se
-    analiza el texto inicial unido. Las fechas numéricas se usan solo como
-    respaldo y nunca desplazan una fecha de encabezado ya identificada.
+    Detecta únicamente fechas impresas en el encabezado litúrgico.
+    No acepta fechas citadas en mensajes, colectas o artículos editoriales.
+    Cuando la fecha no es inequívoca devuelve None y se conserva el listado web.
     """
     meses = (
         "enero|febrero|marzo|abril|mayo|junio|julio|agosto|"
@@ -533,43 +532,59 @@ def _fecha_desde_texto_pdf(texto):
     )
     patron_mes = re.compile(
         rf"\b(\d{{1,2}})\s+de\s+({meses})\s+(?:(?:de|del)\s*)?(20\d{{2}})\b",
-        flags=re.IGNORECASE,
+        re.IGNORECASE,
     )
     patron_mes_sin_de = re.compile(
         rf"\b(\d{{1,2}})\s+({meses})\s+(20\d{{2}})\b",
-        flags=re.IGNORECASE,
+        re.IGNORECASE,
     )
     patron_numerico = re.compile(
         r"\b(\d{1,2})[/-](\d{1,2})[/-](20\d{2})\b"
     )
-    pistas_liturgicas = (
+    pista_liturgica = re.compile(
         r"\bDOMINGO\b|\bSOLEMNIDAD\b|\bFIESTA\b|\bPASCUA\b|"
         r"\bADVIENTO\b|\bCUARESMA\b|\bNAVIDAD\b|\bCICLO\s+[ABC]\b|"
-        r"\bCRISTO REY\b|\bBAUTISMO DEL SENOR\b|\bPENTECOSTES\b|"
-        r"\bASCENSION\b|\bCORPUS CHRISTI\b|\bSAGRADA FAMILIA\b|"
-        r"\bEPIFANIA\b"
+        r"\bCRISTO\s+REY\b|\bBAUTISMO\s+DEL\s+SEÑOR\b|"
+        r"\bBAUTISMO\s+DEL\s+SENOR\b|\bPENTECOST[EÉ]S\b|"
+        r"\bASCENSI[ÓO]N\b|\bCORPUS\s+CHRISTI\b|\bSAGRADA\s+FAMILIA\b|"
+        r"\bEPIFAN[IÍ]A\b",
+        re.IGNORECASE,
+    )
+    pistas_editoriales = re.compile(
+        r"\bCOLECTA\b|\bMENSAJE\b|\bPAPA\b|\bFRANCISCO\b|"
+        r"\bS\.?\s*S\.?\b|\bCITA\b|\bHOMIL[IÍ]A\b|"
+        r"\bVOZ\s+DEL\s+PASTOR\b",
+        re.IGNORECASE,
     )
 
     lineas = [
         _normalizar_busqueda(linea).upper()
         for linea in (texto or "").splitlines()
         if linea.strip()
-    ]
+    ][:24]
+
     if not lineas:
         return None
 
-    # Encabezados de Arquidiócesis a veces aparecen partidos por el orden
-    # de lectura de dos columnas o por saltos de línea del propio PDF.
-    encabezado = " ".join(lineas[:45])
+    # Primero se buscan fechas con nombre de mes. El contexto está limitado
+    # a dos líneas antes/después; nunca se concatena toda la página, para no
+    # asociar una fecha de una cita editorial con el título litúrgico.
+    for indice, linea in enumerate(lineas):
+        if pistas_editoriales.search(linea):
+            continue
 
-    for patron in (patron_mes, patron_mes_sin_de):
-        for coincidencia in patron.finditer(encabezado):
-            inicio, fin = coincidencia.span()
-            contexto = encabezado[max(0, inicio - 100):min(len(encabezado), fin + 140)]
-            if not re.search(pistas_liturgicas, contexto, flags=re.IGNORECASE):
+        contexto = " ".join(
+            lineas[max(0, indice - 2):min(len(lineas), indice + 3)]
+        )
+        if not pista_liturgica.search(contexto):
+            continue
+
+        for patron in (patron_mes, patron_mes_sin_de):
+            coincidencia = patron.search(linea)
+            if not coincidencia:
                 continue
             try:
-                return date(
+                fecha = date(
                     int(coincidencia.group(3)),
                     MESES[coincidencia.group(2).lower()],
                     int(coincidencia.group(1)),
@@ -577,14 +592,19 @@ def _fecha_desde_texto_pdf(texto):
             except (ValueError, KeyError):
                 continue
 
-    # Respaldo para documentos cuyo encabezado solo imprime números.
-    # Se exige que la fecha esté cerca de un título litúrgico y se limita
-    # al primer tramo del documento para no tomar citas históricas del Papa.
-    encabezado_corto = " ".join(lineas[:12])
-    for coincidencia in patron_numerico.finditer(encabezado_corto):
-        inicio, fin = coincidencia.span()
-        contexto = encabezado_corto[max(0, inicio - 100):min(len(encabezado_corto), fin + 120)]
-        if not re.search(pistas_liturgicas, contexto, flags=re.IGNORECASE):
+            # El día y mes deben aparecer literalmente en una línea del
+            # encabezado; solo se usa el contexto adyacente para confirmar
+            # que esa línea corresponde a una celebración litúrgica.
+            return fecha
+
+    # Fechas numéricas: solo se aceptan si la propia línea contiene también
+    # un marcador de celebración. Así no se confunden citas como 24-11-2013
+    # con la fecha del misal.
+    for linea in lineas[:12]:
+        if pistas_editoriales.search(linea) or not pista_liturgica.search(linea):
+            continue
+        coincidencia = patron_numerico.search(linea)
+        if not coincidencia:
             continue
         try:
             return date(
