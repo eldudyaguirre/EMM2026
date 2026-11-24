@@ -49,7 +49,7 @@ NOMBRES_REFERENCIA = LIBROS_BIBLICOS + ABREVIATURAS_BIBLICAS
 PATRON_REFERENCIA = re.compile(
     r"(?<![A-ZÁÉÍÓÚÑ])(?:[1-3]\s*)?(?:"
     + "|".join(re.escape(nombre) for nombre in sorted(NOMBRES_REFERENCIA, key=len, reverse=True))
-    + r")\s+\d{1,3}\b(?:\s*[,.:]\s*\d{1,3}(?:[-–]\d{1,3})?)?",
+    + r")\s+\d{1,3}\b(?:\s*[,.:]\s*\d{1,3}(?:[-–]\d{1,3})?)*",
     re.IGNORECASE,
 )
 
