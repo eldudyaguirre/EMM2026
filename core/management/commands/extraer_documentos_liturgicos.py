@@ -289,10 +289,25 @@ def _texto_pagina_por_columnas(pagina):
 
     filas = []
     bandas = []
-    patron_banda = re.compile(
-        r"LITURGIA\s+(?:DE\s+LA\s+PALAB|EUCAR)",
-        re.I,
-    )
+    def _es_rotulo_banda(texto):
+        normalizado = (
+            unicodedata.normalize("NFD", texto or "")
+            .encode("ascii", "ignore")
+            .decode("ascii")
+            .upper()
+        )
+        normalizado = re.sub(r"[^A-Z0-9 ]+", " ", normalizado)
+        normalizado = re.sub(r"\s+", " ", normalizado).strip()
+        return bool(
+            re.fullmatch(
+                r"(?:\d{1,2}\s+)?LITURGIA\s+DE\s+LA\s+PALAB(?:RA)?",
+                normalizado,
+            )
+            or re.fullmatch(
+                r"(?:\d{1,2}\s+)?LITURGIA\s+EUCAR(?:ISTICA|I)?",
+                normalizado,
+            )
+        )
 
     for grupo in filas_por_y.values():
         izquierda = " ".join(
@@ -320,13 +335,13 @@ def _texto_pagina_por_columnas(pagina):
 
         y0 = min(grupo["y0"])
         y1 = max(grupo["y1"])
-        normalizado = (
-            unicodedata.normalize("NFD", combinado)
-            .encode("ascii", "ignore")
-            .decode("ascii")
-            .upper()
+        # La banda debe ser un rótulo independiente en una de las columnas.
+        # No clasificar como banda una frase editorial que solo menciona
+        # "liturgia de la Palabra" dentro de un párrafo.
+        es_banda = (
+            _es_rotulo_banda(izquierda)
+            or _es_rotulo_banda(derecha)
         )
-        es_banda = bool(patron_banda.search(normalizado))
         filas.append({
             "y0": y0,
             "y1": y1,
