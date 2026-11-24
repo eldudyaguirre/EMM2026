@@ -94,7 +94,7 @@ UMBRAL_CRITICO = {
     "salmo_responsorial": 25,
     "segunda_lectura": 80,
     "aclamacion": 35,
-    "evangelio": 50,
+    "evangelio": 100,
 }
 
 CAMPOS_REPORTE = [
