@@ -194,11 +194,11 @@ def _texto_pdf_por_columnas(ruta_pdf):
             for bloque in pagina.get_text("blocks"):
                 if len(bloque) < 5:
                     continue
-                x0, y0, x1, _y1, contenido = bloque[:5]
+                x0, y0, x1, y1, contenido = bloque[:5]
                 contenido = (contenido or "").strip()
                 if not contenido:
                     continue
-                item = (float(y0), float(x0), float(x1), contenido)
+                item = (float(y0), float(x0), float(x1), float(y1), contenido)
                 todos.append(item)
 
                 if float(x1) <= mitad + 3:
@@ -207,6 +207,41 @@ def _texto_pdf_por_columnas(ruta_pdf):
                     derecha.append(item)
                 else:
                     centro.append(item)
+
+            # En algunos misales los ritos iniciales ocupan la parte superior
+            # derecha y la Liturgia de la Palabra empieza más abajo. Se descarta
+            # solo el contenido derecho anterior a esa banda para que no se
+            # inserte la oración colecta dentro del salmo.
+            def normalizar_bloque(valor):
+                return (
+                    unicodedata.normalize("NFD", valor or "")
+                    .encode("ascii", "ignore")
+                    .decode("ascii")
+                    .upper()
+                )
+
+            bandas_palabra = [
+                item[3]
+                for item in todos
+                if re.search(
+                    r"LITURGIA\s+DE\s+LA\s+PALAB",
+                    normalizar_bloque(item[4]),
+                )
+            ]
+            if bandas_palabra:
+                limite_lecturas = max(bandas_palabra)
+                derecha = [
+                    item for item in derecha
+                    if item[0] >= limite_lecturas - 2
+                ]
+                centro = [
+                    item for item in centro
+                    if item[0] >= limite_lecturas - 2
+                    or re.search(
+                        r"LITURGIA\s+DE\s+LA\s+PALAB",
+                        normalizar_bloque(item[4]),
+                    )
+                ]
 
             # Solo aplicar el orden por columnas si hay bloques de texto
             # claramente ubicados a ambos lados de la página.
@@ -226,7 +261,7 @@ def _texto_pdf_por_columnas(ruta_pdf):
             else:
                 ordenados = sorted(todos, key=lambda x: (x[0], x[1]))
 
-            texto_pagina = "\n".join(item[3] for item in ordenados).strip()
+            texto_pagina = "\n".join(item[4] for item in ordenados).strip()
             if texto_pagina:
                 paginas.append(texto_pagina)
     except Exception:
