@@ -203,10 +203,13 @@ def _leer_listado(url, timeout, reintentos):
 
 def _texto_pagina_por_columnas(pagina):
     """
-    Extrae texto digital por palabras y coordenadas, no por bloques completos.
-    Esto separa líneas que PyMuPDF puede haber agrupado con texto de las dos
-    columnas. Las bandas de Liturgia de la Palabra/Eucarística delimitan zonas;
-    cada zona se lee por columnas y se comprueba la continuación del Evangelio.
+    Extrae texto digital respetando columnas físicas, incluso cuando no existe
+    una banda legible de "Liturgia de la Palabra". Evita unir en una sola línea
+    el encabezado de la columna izquierda con el de la derecha.
+
+    En páginas de dos columnas se conserva el orden por columna: izquierda y
+    después derecha. Si la estructura incluye bandas transversales, se separan
+    las zonas delimitadas por dichas bandas antes de ordenar las columnas.
     """
     try:
         palabras = pagina.get_text("words", sort=False)
@@ -217,9 +220,16 @@ def _texto_pagina_por_columnas(pagina):
         return pagina.get_text("text", sort=True) or ""
 
     ancho = float(pagina.rect.width)
+    alto = float(pagina.rect.height)
     mitad = ancho / 2.0
-    lineas = defaultdict(lambda: {"izquierda": [], "derecha": [], "y0": [], "y1": []})
+    filas_por_y = defaultdict(lambda: {
+        "izquierda": [],
+        "derecha": [],
+        "y0": [],
+        "y1": [],
+    })
 
+    palabras_cuerpo = []
     for palabra in palabras:
         if len(palabra) < 5:
             continue
@@ -227,15 +237,51 @@ def _texto_pagina_por_columnas(pagina):
         token = (token or "").strip()
         if not token:
             continue
-        clave = round(float(y0) / 2.5)
-        columna = (
-            "izquierda"
-            if (float(x0) + float(x1)) / 2 < mitad
-            else "derecha"
-        )
-        lineas[clave][columna].append((float(x0), token))
-        lineas[clave]["y0"].append(float(y0))
-        lineas[clave]["y1"].append(float(y1))
+
+        x0 = float(x0)
+        x1 = float(x1)
+        y0 = float(y0)
+        y1 = float(y1)
+        centro_x = (x0 + x1) / 2.0
+
+        if alto * 0.12 <= y0 <= alto * 0.92:
+            palabras_cuerpo.append((centro_x, x0, x1, y0, y1, token))
+
+        clave = round(y0 / 2.5)
+        columna = "izquierda" if centro_x < mitad else "derecha"
+        filas_por_y[clave][columna].append((x0, token))
+        filas_por_y[clave]["y0"].append(y0)
+        filas_por_y[clave]["y1"].append(y1)
+
+    if not filas_por_y:
+        return pagina.get_text("text", sort=True) or ""
+
+    # Detectar el canal físico entre columnas. Un PDF de una sola columna
+    # normalmente contiene muchas palabras alrededor del centro; en una página
+    # a dos columnas, el canal central queda prácticamente vacío.
+    total_cuerpo = max(1, len(palabras_cuerpo))
+    cuenta_izquierda = sum(
+        1 for centro, *_resto in palabras_cuerpo
+        if centro < ancho * 0.45
+    )
+    cuenta_derecha = sum(
+        1 for centro, *_resto in palabras_cuerpo
+        if centro > ancho * 0.55
+    )
+    cuenta_canal = sum(
+        1 for centro, *_resto in palabras_cuerpo
+        if ancho * 0.45 <= centro <= ancho * 0.55
+    )
+    proporcion_canal = cuenta_canal / total_cuerpo
+
+    hay_dos_columnas = (
+        cuenta_izquierda >= 18
+        and cuenta_derecha >= 18
+        and proporcion_canal <= 0.055
+    )
+
+    if not hay_dos_columnas:
+        return pagina.get_text("text", sort=True) or ""
 
     filas = []
     bandas = []
@@ -244,20 +290,30 @@ def _texto_pagina_por_columnas(pagina):
         re.I,
     )
 
-    for clave, grupo in lineas.items():
+    for grupo in filas_por_y.values():
         izquierda = " ".join(
-            token for _x, token in sorted(grupo["izquierda"], key=lambda x: x[0])
+            token for _x, token in sorted(
+                grupo["izquierda"],
+                key=lambda elemento: elemento[0],
+            )
         ).strip()
         derecha = " ".join(
-            token for _x, token in sorted(grupo["derecha"], key=lambda x: x[0])
+            token for _x, token in sorted(
+                grupo["derecha"],
+                key=lambda elemento: elemento[0],
+            )
         ).strip()
         combinado = " ".join(
             token
             for _x, token in sorted(
                 grupo["izquierda"] + grupo["derecha"],
-                key=lambda x: x[0],
+                key=lambda elemento: elemento[0],
             )
         ).strip()
+
+        if not izquierda and not derecha:
+            continue
+
         y0 = min(grupo["y0"])
         y1 = max(grupo["y1"])
         normalizado = (
@@ -277,66 +333,79 @@ def _texto_pagina_por_columnas(pagina):
         if es_banda:
             bandas.append((y0, y1))
 
-    # Solo modificar páginas litúrgicas reconocibles. En portadas y páginas
-    # editoriales conservar la extracción estándar de PyMuPDF.
-    if (
-        len([f for f in filas if f["izquierda"]]) < 3
-        or len([f for f in filas if f["derecha"]]) < 3
-        or not bandas
-    ):
-        return pagina.get_text("text", sort=True) or ""
-
-    bandas.sort()
-    bandas_combinadas = []
-    for y0, y1 in bandas:
-        if bandas_combinadas and y0 <= bandas_combinadas[-1][1] + 3:
-            bandas_combinadas[-1] = (
-                bandas_combinadas[-1][0],
-                max(bandas_combinadas[-1][1], y1),
-            )
-        else:
-            bandas_combinadas.append((y0, y1))
-
-    zonas = []
-    limite_superior = float("-inf")
-    for y0, y1 in bandas_combinadas:
-        zonas.append((limite_superior, y0))
-        limite_superior = max(limite_superior, y1)
-    zonas.append((limite_superior, float("inf")))
-
     salida = []
-    for numero_zona, (y_inicio, y_fin) in enumerate(zonas):
-        filas_zona = [
-            fila for fila in filas
-            if not fila["banda"]
-            and y_inicio <= fila["y0"] < y_fin
-        ]
+
+    if bandas:
+        bandas.sort()
+        bandas_combinadas = []
+        for y0, y1 in bandas:
+            if bandas_combinadas and y0 <= bandas_combinadas[-1][1] + 3:
+                bandas_combinadas[-1] = (
+                    bandas_combinadas[-1][0],
+                    max(bandas_combinadas[-1][1], y1),
+                )
+            else:
+                bandas_combinadas.append((y0, y1))
+
+        zonas = []
+        limite_superior = float("-inf")
+        for y0, y1 in bandas_combinadas:
+            zonas.append((limite_superior, y0))
+            limite_superior = max(limite_superior, y1)
+        zonas.append((limite_superior, float("inf")))
+
+        for y_inicio, y_fin in zonas:
+            filas_zona = [
+                fila for fila in filas
+                if not fila["banda"]
+                and y_inicio <= fila["y0"] < y_fin
+            ]
+            izquierda = "\n".join(
+                fila["izquierda"]
+                for fila in sorted(filas_zona, key=lambda fila: fila["y0"])
+                if fila["izquierda"]
+            ).strip()
+            derecha = "\n".join(
+                fila["derecha"]
+                for fila in sorted(filas_zona, key=lambda fila: fila["y0"])
+                if fila["derecha"]
+            ).strip()
+
+            if not izquierda and not derecha:
+                continue
+
+            texto_zona, _continuidad = _reordenar_continuacion_evangelio(
+                izquierda,
+                derecha,
+            )
+            texto_zona = _limpiar_rotulos_banda_ocr(texto_zona)
+            if texto_zona.strip():
+                salida.append(texto_zona.strip())
+    else:
+        # En páginas a dos columnas sin banda transversal, no volver al orden
+        # por filas: ese orden mezcla las lecturas de ambas columnas.
         izquierda = "\n".join(
             fila["izquierda"]
-            for fila in sorted(filas_zona, key=lambda x: x["y0"])
+            for fila in sorted(filas, key=lambda fila: fila["y0"])
             if fila["izquierda"]
         ).strip()
         derecha = "\n".join(
             fila["derecha"]
-            for fila in sorted(filas_zona, key=lambda x: x["y0"])
+            for fila in sorted(filas, key=lambda fila: fila["y0"])
             if fila["derecha"]
         ).strip()
 
-        if not izquierda and not derecha:
-            continue
-
-        texto_zona, _continuidad = _reordenar_continuacion_evangelio(
+        texto_pagina, _continuidad = _reordenar_continuacion_evangelio(
             izquierda,
             derecha,
         )
-        texto_zona = _limpiar_rotulos_banda_ocr(texto_zona)
-        if texto_zona.strip():
-            salida.append(texto_zona.strip())
+        texto_pagina = _limpiar_rotulos_banda_ocr(texto_pagina)
+        if texto_pagina.strip():
+            salida.append(texto_pagina.strip())
 
     texto_ordenado = "\n\n".join(salida).strip()
-    texto_original = pagina.get_text("text", sort=True) or ""
-    if not texto_ordenado or len(texto_ordenado) < len(texto_original) * 0.65:
-        return texto_original
+    if not texto_ordenado:
+        return pagina.get_text("text", sort=True) or ""
     return texto_ordenado
 
 
