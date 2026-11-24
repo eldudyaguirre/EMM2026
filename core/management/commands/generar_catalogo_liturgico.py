@@ -436,6 +436,15 @@ def _extraer_secciones(texto):
                         nombre == "evangelio"
                         and titulo_detectado.startswith("LECTURA DEL")
                     )
+                    titulo_evangelio_simple = (
+                        nombre == "evangelio"
+                        and titulo_detectado in {
+                            "EVANGELIO",
+                            "EVANCELIO",
+                            "EVANCELO",
+                            "EVANCEIO",
+                        }
+                    )
 
                     # La palabra "Evangelio" aparece también dentro de las
                     # moniciones ("...contemplar en el Evangelio, cómo...").
@@ -443,8 +452,7 @@ def _extraer_secciones(texto):
                     # precedido por ruido OCR; la fórmula "Lectura del santo
                     # Evangelio" puede ser más larga.
                     if (
-                        nombre == "evangelio"
-                        and titulo_detectado == "EVANGELIO"
+                        titulo_evangelio_simple
                         and not prefijo
                         and len(linea) > 28
                     ):
