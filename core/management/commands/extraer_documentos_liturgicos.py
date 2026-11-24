@@ -611,6 +611,55 @@ def _limpiar_rotulos_banda_ocr(texto):
     return "\n".join(resultado).strip()
 
 
+def _limite_banda_eucaristica(archivo_imagen, ejecutable, idioma):
+    """
+    Localiza la banda transversal "Liturgia Eucarística" con Tesseract TSV.
+    Devuelve la coordenada inferior en píxeles o None si no se reconoce.
+    """
+    try:
+        resultado = _tesseract(
+            archivo_imagen,
+            ejecutable,
+            idioma=idioma,
+            psm="3",
+            salida="tsv",
+        )
+        lector = csv.DictReader(io.StringIO(resultado), delimiter="\t")
+        lineas = {}
+        for fila in lector:
+            if fila.get("level") != "5":
+                continue
+            palabra = (fila.get("text") or "").strip()
+            if not palabra:
+                continue
+            clave = (
+                fila.get("block_num"),
+                fila.get("par_num"),
+                fila.get("line_num"),
+            )
+            lineas.setdefault(clave, []).append(fila)
+
+        for palabras in lineas.values():
+            texto_linea = " ".join(
+                palabra.get("text", "") for palabra in palabras
+            )
+            normalizado = (
+                unicodedata.normalize("NFD", texto_linea)
+                .encode("ascii", "ignore")
+                .decode("ascii")
+                .upper()
+            )
+            if re.search(r"LITURGIA\s+EUCAR", normalizado):
+                return max(
+                    int(palabra.get("top", 0))
+                    + int(palabra.get("height", 0))
+                    for palabra in palabras
+                )
+    except Exception:
+        return None
+    return None
+
+
 def _ocr_pdf(
     ruta_pdf,
     ejecutable,
@@ -736,29 +785,99 @@ def _ocr_pdf(
                         psm="3",
                     ).strip()
 
-                    texto_izquierda = _tesseract(
-                        imagen_izquierda,
+                    limite_eucaristica = _limite_banda_eucaristica(
+                        imagen,
                         ejecutable,
-                        idioma=idioma,
-                        psm="4",
-                    ).strip()
-                    texto_derecha = _tesseract(
-                        imagen_derecha,
-                        ejecutable,
-                        idioma=idioma,
-                        psm="4",
-                    ).strip()
+                        idioma,
+                    )
 
-                    texto_izquierda = _limpiar_rotulos_banda_ocr(
-                        texto_izquierda
-                    )
-                    texto_derecha = _limpiar_rotulos_banda_ocr(
-                        texto_derecha
-                    )
-                    texto = "\n\n".join(
-                        parte for parte in (texto_izquierda, texto_derecha)
-                        if parte
-                    )
+                    if (
+                        limite_eucaristica is not None
+                        and limite_eucaristica > inicio_vertical_derecha + int(alto * 0.10)
+                    ):
+                        # La página tiene dos bloques litúrgicos transversales.
+                        # Leer por bandas: izquierda+d erecha antes de la banda
+                        # eucarística y luego izquierda+derecha después de ella.
+                        solapamiento = int(alto * 0.004)
+                        regiones = [
+                            (
+                                "izquierda_pre",
+                                (0, 0, corte_izquierdo, limite_eucaristica),
+                            ),
+                            (
+                                "derecha_pre",
+                                (
+                                    inicio_derecho,
+                                    inicio_vertical_derecha,
+                                    ancho,
+                                    limite_eucaristica,
+                                ),
+                            ),
+                            (
+                                "izquierda_post",
+                                (
+                                    0,
+                                    max(0, limite_eucaristica - solapamiento),
+                                    corte_izquierdo,
+                                    alto,
+                                ),
+                            ),
+                            (
+                                "derecha_post",
+                                (
+                                    inicio_derecho,
+                                    max(
+                                        inicio_vertical_derecha,
+                                        limite_eucaristica - solapamiento,
+                                    ),
+                                    ancho,
+                                    alto,
+                                ),
+                            ),
+                        ]
+                        partes_ocr = []
+                        for nombre_region, caja in regiones:
+                            archivo_region = carpeta_temporal / (
+                                f"pagina_{numero_pagina:04d}_{nombre_region}.png"
+                            )
+                            imagen_pagina.crop(caja).save(archivo_region)
+                            texto_region = _tesseract(
+                                archivo_region,
+                                ejecutable,
+                                idioma=idioma,
+                                psm="4",
+                            ).strip()
+                            texto_region = _limpiar_rotulos_banda_ocr(
+                                texto_region
+                            )
+                            if texto_region:
+                                partes_ocr.append(texto_region)
+                        texto = "\n\n".join(partes_ocr)
+                    else:
+                        texto_izquierda = _tesseract(
+                            imagen_izquierda,
+                            ejecutable,
+                            idioma=idioma,
+                            psm="4",
+                        ).strip()
+                        texto_derecha = _tesseract(
+                            imagen_derecha,
+                            ejecutable,
+                            idioma=idioma,
+                            psm="4",
+                        ).strip()
+
+                        texto_izquierda = _limpiar_rotulos_banda_ocr(
+                            texto_izquierda
+                        )
+                        texto_derecha = _limpiar_rotulos_banda_ocr(
+                            texto_derecha
+                        )
+                        texto = "\n\n".join(
+                            parte for parte in (texto_izquierda, texto_derecha)
+                            if parte
+                        )
+
                     textos.append(texto)
                     paginas_dos_columnas.append(numero_pagina)
 
