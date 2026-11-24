@@ -205,7 +205,15 @@ class Command(BaseCommand):
             for fila in indice
             if (fila.get("fecha_documento") or "").strip()
         )
+        publicaciones_por_fecha = {}
+        for fila in catalogo:
+            fecha_publicada = (fila.get("fecha_publicacion") or "").strip()
+            if fecha_publicada:
+                publicaciones_por_fecha.setdefault(fecha_publicada, []).append(
+                    nombre_archivo(fila.get("archivo_pdf"))
+                )
 
+        filas_revision_fechas = []
         filas_reporte = []
         detalle_revision = []
         resumen_alertas = Counter()
@@ -246,6 +254,10 @@ class Command(BaseCommand):
             categoria = (catalogo_fila.get("categoria") or "").strip()
             alertas = []
             secciones_faltantes = []
+            secciones_sospechosas = []
+            estados_seccion = {}
+            discrepancias_fecha = []
+            fecha_nombre = ""
 
             if not ruta_txt or not ruta_txt.is_file():
                 agregar_alerta(alertas, "TXT_NO_ENCONTRADO")
@@ -260,11 +272,27 @@ class Command(BaseCommand):
                 agregar_alerta(alertas, "FECHA_DOCUMENTO_DIFIERE_DE_PUBLICACION")
 
             coincidencia_nombre = re.match(r"^(\d{4}-\d{2}-\d{2})_", archivo)
-            if coincidencia_nombre and fecha_doc:
-                fecha_nombre = fecha_iso(coincidencia_nombre.group(1))
-                if fecha_nombre and fecha_nombre != fecha_doc:
+            if coincidencia_nombre:
+                fecha_nombre = coincidencia_nombre.group(1)
+                if fecha_doc and fecha_nombre != fecha_documento:
                     cantidad_fecha_nombre_distinta += 1
                     agregar_alerta(alertas, "FECHA_NOMBRE_DIFIERE_DE_DOCUMENTO")
+                    discrepancias_fecha.append("NOMBRE_ARCHIVO_DIFIERE_DE_FECHA_DOCUMENTAL")
+
+            if fecha_doc and fecha_publicacion and fecha_doc != fecha_pub:
+                discrepancias_fecha.append("FECHA_DOCUMENTAL_DIFIERE_DE_PUBLICACION")
+
+            if fecha_doc and fecha_doc.year != (fecha_pub.year if fecha_pub else fecha_doc.year):
+                agregar_alerta(alertas, "ANIO_DOCUMENTAL_DIFIERE_DE_PUBLICACION")
+
+            otros_archivos_misma_publicacion = [
+                otro
+                for otro in publicaciones_por_fecha.get(fecha_documento, [])
+                if otro and otro != archivo
+            ]
+            if otros_archivos_misma_publicacion:
+                agregar_alerta(alertas, "FECHA_DOCUMENTAL_COINCIDE_CON_PUBLICACION_DE_OTRO_PDF")
+                discrepancias_fecha.append("POSIBLE_INTERCAMBIO_O_ASIGNACION_DE_PDF")
 
             if fecha_documento and conteo_fechas[fecha_documento] > 1:
                 agregar_alerta(alertas, "FECHA_DUPLICADA_EN_INDICE")
@@ -300,18 +328,37 @@ class Command(BaseCommand):
                 longitudes[campo] = longitud
                 referencia = referencia_biblica(contenido)
                 referencias[campo] = referencia
+                estado_seccion = "TEXTO_PRESENTE" if contenido else "VACIA"
 
                 if es_registro_lectura and not contenido:
                     if es_secuencia_pascual_2020 and campo == "aclamacion":
+                        estado_seccion = "NO_APLICA"
                         agregar_alerta(alertas, "ACLAMACION_NO_APLICA_SECUENCIA_PASCUAL")
                     else:
+                        estado_seccion = "FALTA"
                         secciones_faltantes.append(campo)
                         total_faltantes[campo] += 1
                         agregar_alerta(alertas, f"FALTA_{campo.upper()}")
                 elif es_registro_lectura and contenido and longitud < minimo:
+                    estado_seccion = "TEXTO_CORTO"
                     agregar_alerta(alertas, f"TEXTO_CORTO_{campo.upper()}")
+
+                if es_registro_lectura and contenido and longitud < UMBRAL_CRITICO[campo]:
+                    estado_seccion = "MUY_CORTA"
+                    agregar_alerta(alertas, f"TEXTO_CORTO_CRITICO_{campo.upper()}")
+
+                if es_registro_lectura and contenido:
+                    patron_mezcla = PATRONES_MEZCLA[campo]
+                    coincidencia_mezcla = patron_mezcla.search(contenido)
+                    if coincidencia_mezcla:
+                        estado_seccion = "POSIBLE_MEZCLA"
+                        secciones_sospechosas.append(campo)
+                        agregar_alerta(alertas, f"POSIBLE_MEZCLA_{campo.upper()}")
+
                 if es_registro_lectura and contenido and not referencia:
                     agregar_alerta(alertas, f"REFERENCIA_NO_DETECTADA_{campo.upper()}")
+
+                estados_seccion[campo] = estado_seccion
 
             if es_ocr and secciones_faltantes:
                 cantidad_ocr_incompleta += 1
@@ -331,7 +378,13 @@ class Command(BaseCommand):
             prioridad = "BAJA"
             if any(
                 alerta.startswith("FALTA_")
-                or alerta in {"TXT_NO_ENCONTRADO", "FECHA_DOCUMENTAL_INVALIDA", "CARACTER_REEMPLAZO_EN_TEXTO"}
+                or alerta.startswith("POSIBLE_MEZCLA_")
+                or alerta.startswith("TEXTO_CORTO_CRITICO_")
+                or alerta in {
+                    "TXT_NO_ENCONTRADO",
+                    "FECHA_DOCUMENTAL_INVALIDA",
+                    "CARACTER_REEMPLAZO_EN_TEXTO",
+                }
                 or alerta.startswith("ESTADO_EXTRACCION_")
                 for alerta in alertas
             ):
@@ -340,7 +393,9 @@ class Command(BaseCommand):
                 alerta.startswith("TEXTO_CORTO_")
                 or alerta.startswith("REFERENCIA_NO_DETECTADA_")
                 or alerta.startswith("FECHA_")
+                or alerta.startswith("ANIO_DOCUMENTAL_")
                 or alerta == "TITULO_CELEBRACION_VACIO"
+                or alerta == "CICLO_NO_IDENTIFICADO"
                 for alerta in alertas
             ):
                 prioridad = "MEDIA"
@@ -361,13 +416,29 @@ class Command(BaseCommand):
                 "paginas": catalogo_fila.get("paginas", ""),
                 "caracteres_extraidos": catalogo_fila.get("caracteres_extraidos", ""),
                 "secciones_faltantes": ";".join(secciones_faltantes),
+                "secciones_sospechosas": ";".join(secciones_sospechosas),
                 "alertas": ";".join(alertas),
                 "prioridad_revision": prioridad,
             }
             for campo, _etiqueta, _minimo in SECCIONES:
                 fila_salida[f"{campo}_caracteres"] = longitudes[campo]
                 fila_salida[f"{campo}_referencia"] = referencias[campo]
+                fila_salida[f"{campo}_estado"] = estados_seccion[campo]
             filas_reporte.append(fila_salida)
+
+            if discrepancias_fecha:
+                filas_revision_fechas.append({
+                    "archivo_pdf": catalogo_fila.get("archivo_pdf", ""),
+                    "fecha_publicacion": fecha_publicacion,
+                    "fecha_en_nombre": fecha_nombre,
+                    "fecha_documental": fecha_documento,
+                    "titulo_celebracion": titulo,
+                    "ciclo": ciclo,
+                    "metodo_extraccion": metodo,
+                    "discrepancias": ";".join(dict.fromkeys(discrepancias_fecha)),
+                    "posibles_archivos_con_fecha_publicada": ";".join(otros_archivos_misma_publicacion),
+                    "decision": "REVISAR_PDF_ORIGINAL; NO_CORREGIR_AUTOMATICAMENTE",
+                })
 
             if es_ocr:
                 detalle_revision.extend([
