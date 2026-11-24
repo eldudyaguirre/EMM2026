@@ -329,6 +329,7 @@ def _texto_pagina_por_columnas(pagina):
             izquierda,
             derecha,
         )
+        texto_zona = _limpiar_rotulos_banda_ocr(texto_zona)
         if texto_zona.strip():
             salida.append(texto_zona.strip())
 
