@@ -1,6 +1,7 @@
 import csv
 import hashlib
 import io
+from collections import defaultdict
 import json
 import re
 import os
@@ -202,142 +203,138 @@ def _leer_listado(url, timeout, reintentos):
 
 def _texto_pagina_por_columnas(pagina):
     """
-    Extrae texto digital respetando la lectura por columnas y las bandas
-    transversales "Liturgia de la Palabra" y "Liturgia Eucarística".
-
-    Cada zona delimitada por una banda se lee primero a la izquierda y luego
-    a la derecha. Así se conserva la continuidad cuando una lectura comienza
-    en una columna y termina en la otra.
+    Extrae texto digital por palabras y coordenadas, no por bloques completos.
+    Esto separa líneas que PyMuPDF puede haber agrupado con texto de las dos
+    columnas. Las bandas de Liturgia de la Palabra/Eucarística delimitan zonas;
+    cada zona se lee por columnas y se comprueba la continuación del Evangelio.
     """
     try:
-        bloques_pdf = pagina.get_text("blocks")
+        palabras = pagina.get_text("words", sort=False)
     except Exception:
-        bloques_pdf = []
+        palabras = []
 
-    if not bloques_pdf:
+    if not palabras:
         return pagina.get_text("text", sort=True) or ""
 
     ancho = float(pagina.rect.width)
     mitad = ancho / 2.0
-    bloques = []
+    lineas = defaultdict(lambda: {"izquierda": [], "derecha": [], "y0": [], "y1": []})
 
-    def normalizar(valor):
-        return (
-            unicodedata.normalize("NFD", valor or "")
-            .encode("ascii", "ignore")
-            .decode("ascii")
-            .upper()
+    for palabra in palabras:
+        if len(palabra) < 5:
+            continue
+        x0, y0, x1, y1, token = palabra[:5]
+        token = (token or "").strip()
+        if not token:
+            continue
+        clave = round(float(y0) / 2.5)
+        columna = (
+            "izquierda"
+            if (float(x0) + float(x1)) / 2 < mitad
+            else "derecha"
         )
+        lineas[clave][columna].append((float(x0), token))
+        lineas[clave]["y0"].append(float(y0))
+        lineas[clave]["y1"].append(float(y1))
 
+    filas = []
+    bandas = []
     patron_banda = re.compile(
         r"LITURGIA\s+(?:DE\s+LA\s+PALAB|EUCAR)",
         re.I,
     )
-    patron_fragmento = re.compile(r"^\s*ISTICA\s*$", re.I)
 
-    for bloque in bloques_pdf:
-        if len(bloque) < 5:
-            continue
-        x0, y0, x1, y1, texto = bloque[:5]
-        texto = (texto or "").strip()
-        if not texto:
-            continue
-        item = {
-            "x0": float(x0),
-            "y0": float(y0),
-            "x1": float(x1),
-            "y1": float(y1),
-            "texto": texto,
-        }
-        item["banda"] = bool(patron_banda.search(normalizar(texto)))
-        bloques.append(item)
+    for clave, grupo in lineas.items():
+        izquierda = " ".join(
+            token for _x, token in sorted(grupo["izquierda"], key=lambda x: x[0])
+        ).strip()
+        derecha = " ".join(
+            token for _x, token in sorted(grupo["derecha"], key=lambda x: x[0])
+        ).strip()
+        combinado = " ".join(
+            token
+            for _x, token in sorted(
+                grupo["izquierda"] + grupo["derecha"],
+                key=lambda x: x[0],
+            )
+        ).strip()
+        y0 = min(grupo["y0"])
+        y1 = max(grupo["y1"])
+        normalizado = (
+            unicodedata.normalize("NFD", combinado)
+            .encode("ascii", "ignore")
+            .decode("ascii")
+            .upper()
+        )
+        es_banda = bool(patron_banda.search(normalizado))
+        filas.append({
+            "y0": y0,
+            "y1": y1,
+            "izquierda": izquierda,
+            "derecha": derecha,
+            "banda": es_banda,
+        })
+        if es_banda:
+            bandas.append((y0, y1))
 
-    izquierda = []
-    derecha = []
-    centro = []
-    bandas = [item for item in bloques if item["banda"]]
-
-    for item in bloques:
-        if item["banda"]:
-            continue
-        if patron_fragmento.fullmatch(item["texto"]):
-            # A veces "Liturgia Eucarística" se parte entre columnas:
-            # "Liturgia Eucari" a la izquierda e "istica" a la derecha.
-            if any(abs(item["y0"] - b["y0"]) < 18 for b in bandas):
-                continue
-
-        centro_x = (item["x0"] + item["x1"]) / 2
-        if item["x0"] < mitad - 8 and item["x1"] > mitad + 8:
-            centro.append(item)
-        elif centro_x < mitad:
-            izquierda.append(item)
-        else:
-            derecha.append(item)
-
-    if len(izquierda) < 2 or len(derecha) < 2:
+    # Solo modificar páginas litúrgicas reconocibles. En portadas y páginas
+    # editoriales conservar la extracción estándar de PyMuPDF.
+    if (
+        len([f for f in filas if f["izquierda"]]) < 3
+        or len([f for f in filas if f["derecha"]]) < 3
+        or not bandas
+    ):
         return pagina.get_text("text", sort=True) or ""
 
-    def ordenar(items):
-        return sorted(items, key=lambda b: (b["y0"], b["x0"]))
-
-    # Combina bandas que Tesseract/PyMuPDF haya fragmentado a la misma altura.
-    bandas_ordenadas = sorted(bandas, key=lambda b: (b["y0"], b["x0"]))
+    bandas.sort()
     bandas_combinadas = []
-    for banda in bandas_ordenadas:
-        if bandas_combinadas and banda["y0"] <= bandas_combinadas[-1]["y1"] + 18:
-            bandas_combinadas[-1]["y1"] = max(
-                bandas_combinadas[-1]["y1"],
-                banda["y1"],
+    for y0, y1 in bandas:
+        if bandas_combinadas and y0 <= bandas_combinadas[-1][1] + 3:
+            bandas_combinadas[-1] = (
+                bandas_combinadas[-1][0],
+                max(bandas_combinadas[-1][1], y1),
             )
         else:
-            bandas_combinadas.append({
-                "y0": banda["y0"],
-                "y1": banda["y1"],
-            })
+            bandas_combinadas.append((y0, y1))
+
+    zonas = []
+    limite_superior = float("-inf")
+    for y0, y1 in bandas_combinadas:
+        zonas.append((limite_superior, y0))
+        limite_superior = max(limite_superior, y1)
+    zonas.append((limite_superior, float("inf")))
 
     salida = []
-    limite_superior = float("-inf")
-    for banda in bandas_combinadas:
-        y_inicio = banda["y0"]
-        zona_izquierda = [
-            b for b in izquierda
-            if limite_superior <= b["y0"] < y_inicio
+    for numero_zona, (y_inicio, y_fin) in enumerate(zonas):
+        filas_zona = [
+            fila for fila in filas
+            if not fila["banda"]
+            and y_inicio <= fila["y0"] < y_fin
         ]
-        zona_derecha = [
-            b for b in derecha
-            if limite_superior <= b["y0"] < y_inicio
-        ]
-        zona_centro = [
-            b for b in centro
-            if limite_superior <= b["y0"] < y_inicio
-        ]
-        salida.extend(b["texto"] for b in ordenar(zona_izquierda))
-        salida.extend(b["texto"] for b in ordenar(zona_derecha))
-        salida.extend(b["texto"] for b in ordenar(zona_centro))
-        limite_superior = max(limite_superior, banda["y1"])
+        izquierda = "\n".join(
+            fila["izquierda"]
+            for fila in sorted(filas_zona, key=lambda x: x["y0"])
+            if fila["izquierda"]
+        ).strip()
+        derecha = "\n".join(
+            fila["derecha"]
+            for fila in sorted(filas_zona, key=lambda x: x["y0"])
+            if fila["derecha"]
+        ).strip()
 
-    restantes_izquierda = [
-        b for b in izquierda if b["y0"] >= limite_superior
-    ]
-    restantes_derecha = [
-        b for b in derecha if b["y0"] >= limite_superior
-    ]
-    restantes_centro = [
-        b for b in centro if b["y0"] >= limite_superior
-    ]
+        if not izquierda and not derecha:
+            continue
 
-    if not bandas_combinadas:
-        restantes_izquierda = izquierda
-        restantes_derecha = derecha
-        restantes_centro = centro
+        texto_zona, _continuidad = _reordenar_continuacion_evangelio(
+            izquierda,
+            derecha,
+        )
+        if texto_zona.strip():
+            salida.append(texto_zona.strip())
 
-    salida.extend(b["texto"] for b in ordenar(restantes_izquierda))
-    salida.extend(b["texto"] for b in ordenar(restantes_derecha))
-    salida.extend(b["texto"] for b in ordenar(restantes_centro))
-
-    texto_ordenado = "\n".join(salida).strip()
+    texto_ordenado = "\n\n".join(salida).strip()
     texto_original = pagina.get_text("text", sort=True) or ""
-    if len(texto_ordenado) < len(texto_original) * 0.75:
+    if not texto_ordenado or len(texto_ordenado) < len(texto_original) * 0.65:
         return texto_original
     return texto_ordenado
 
