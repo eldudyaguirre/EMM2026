@@ -232,7 +232,7 @@ def _texto_pdf_por_columnas(ruta_pdf):
             for item in todos:
                 if item["banda"]:
                     continue
-                if re.fullmatch(r"\\s*ISTICA\\s*", item["texto"], re.I):
+                if re.fullmatch(r"\s*ISTICA\s*", item["texto"], re.I):
                     if any(abs(item["y0"] - banda["y0"]) < 18 for banda in bandas):
                         continue
                 centro_x = (item["x0"] + item["x1"]) / 2
