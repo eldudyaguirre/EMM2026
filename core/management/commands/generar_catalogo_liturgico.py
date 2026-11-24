@@ -239,13 +239,14 @@ def _texto_pdf_por_columnas(ruta_pdf):
 
 def _texto_para_catalogo(base, fila, texto_respaldo):
     """
-    Prioriza el TXT cuando contiene OCR (incluidos PDF mixtos), porque puede
-    incorporar páginas escaneadas que no tienen capa de texto digital.
-    Para PDF exclusivamente digitales aplica el orden geométrico por columnas.
+    Usa como fuente principal el TXT creado por extraer_documentos_liturgicos.
+    Ese TXT ya aplica el orden geométrico de columnas por página y mezcla
+    correctamente texto digital con OCR selectivo. El PDF solo se usa como
+    respaldo cuando falta el TXT.
     """
-    metodo = (fila.get("metodo_extraccion") or "").upper()
-    if "OCR_TESSERACT" in metodo:
-        return texto_respaldo or ""
+    texto_respaldo = (texto_respaldo or "").strip()
+    if texto_respaldo:
+        return texto_respaldo
 
     archivo_pdf = (fila.get("archivo_pdf") or "").strip()
     if archivo_pdf:
@@ -253,11 +254,9 @@ def _texto_para_catalogo(base, fila, texto_respaldo):
         if not ruta_relativa.is_absolute():
             ruta_pdf = base / ruta_relativa
             if ruta_pdf.is_file():
-                texto_pdf = _texto_pdf_por_columnas(ruta_pdf)
-                minimo = max(80, int(len((texto_respaldo or "").strip()) * 0.40))
-                if len(texto_pdf) >= minimo:
-                    return texto_pdf
-    return texto_respaldo or ""
+                return _texto_pdf_por_columnas(ruta_pdf)
+    return ""
+
 
 
 def _recortar_fin_lectura(texto):
