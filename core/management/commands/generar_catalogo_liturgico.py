@@ -95,7 +95,7 @@ PATRONES_SECCION = (
         "evangelio",
         re.compile(
             r"(?<![A-ZÁÉÍÓÚÑ])(?P<numero>\d{1,3}(?:\s*[,.)|!]){0,3}\s*)?"
-            r"(?P<titulo>EVANGELIO\b|LECTURA\s+DEL\s+(?:SANTO\s+)?EVANGELIO\b)",
+            r"(?P<titulo>EVANGELIO\b|EVANCE(?:LIO|LO|IO)\b|LECTURA\s+DEL\s+(?:SANTO\s+)?(?:EVANGELIO|EVANCE(?:LIO|LO|IO))\b)",
             re.I,
         ),
     ),
