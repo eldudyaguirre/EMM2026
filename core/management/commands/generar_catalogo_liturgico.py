@@ -409,7 +409,7 @@ def _recortar_fin_seccion(nombre, texto):
     elif nombre == "aclamacion":
         patrones = [
             re.compile(
-                r"(?im)^\s*(?:\([OD0]\)\s*)?(?:EVANGELIO|EVANCE[LI]O)\b"
+                r"(?im)^\s*(?:\([OD0]\)\s*)?(?:EVANGELIO|EVANCE(?:LIO|LO|IO))\b"
             ),
             re.compile(
                 r"\b(?:LECTURA\s+DEL\s+(?:SANTO\s+)?EVANGELIO|"
