@@ -464,7 +464,7 @@ def _extraer_secciones(texto):
                                 lineas[indice + 1:indice + 7]
                             )
                             if not re.search(
-                                r"\\bCANTOR\\s*:",
+                                r"\bCANTOR\s*:",
                                 contexto_siguiente,
                                 re.I,
                             ):
