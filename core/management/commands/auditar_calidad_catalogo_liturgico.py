@@ -57,26 +57,31 @@ PATRONES_MEZCLA = {
     "primera_lectura": re.compile(
         r"\b(?:SALMISTA\s*:|SALMO\s+RESPONSORIAL|ACLAMACI[ÓO]N|"
         r"LECTURA\s+DEL\s+(?:SANTO\s+)?EVANGELIO|"
-        r"ASAMBLEA\s*:\s*ALELUYA)\b",
+        r"ASAMBLEA\s*:\s*ALELUYA|"
+        r"ORACI[ÓO]N\s+COLECTA|MONICI[ÓO]N\s+A\s+LAS\s+LECTURAS)\b",
         re.I,
     ),
     "salmo_responsorial": re.compile(
         r"\b(?:MONICI[ÓO]N\s+A\s+LAS\s+LECTURAS|RITOS\s+INICIALES|"
-        r"ORACI[ÓO]N\s+COLECTA|LECTURA\s+(?:DEL|DE\s+LA)|"
-        r"PALABRA\s+DE\s+DIOS|PALABRA\s+DEL\s+SE[ÑN]OR|"
-        r"ACLAMACI[ÓO]N|ORACI[ÓO]N\s+UNIVERSAL)\b",
+        r"ORACI[ÓO]N\s+COLECTA|PRIMERA\s+LECTURA|SEGUNDA\s+LECTURA|"
+        r"LECTURA\s+(?:DEL|DE\s+LA)|PALABRA\s+DE\s+DIOS|"
+        r"PALABRA\s+DEL\s+SE[ÑN]OR|ACLAMACI[ÓO]N|"
+        r"LECTURA\s+DEL\s+(?:SANTO\s+)?EVANGELIO|"
+        r"ORACI[ÓO]N\s+UNIVERSAL)\b",
         re.I,
     ),
     "segunda_lectura": re.compile(
         r"\b(?:SALMISTA\s*:|SALMO\s+RESPONSORIAL|ACLAMACI[ÓO]N|"
         r"LECTURA\s+DEL\s+(?:SANTO\s+)?EVANGELIO|"
-        r"ASAMBLEA\s*:\s*ALELUYA)\b",
+        r"ASAMBLEA\s*:\s*ALELUYA|"
+        r"ORACI[ÓO]N\s+COLECTA|MONICI[ÓO]N\s+A\s+LAS\s+LECTURAS)\b",
         re.I,
     ),
     "aclamacion": re.compile(
         r"\b(?:ORACI[ÓO]N\s+UNIVERSAL|PROFESI[ÓO]N\s+DE\s+FE|"
         r"LECTURA\s+DEL\s+(?:SANTO\s+)?EVANGELIO|"
-        r"PALABRA\s+DEL\s+SE[ÑN]OR|"
+        r"PALABRA\s+DEL\s+SE[ÑN]OR|ORACI[ÓO]N\s+COLECTA|"
+        r"RITOS\s+INICIALES|"
         r"\d{1,2}\s*[.)]\s*POR\s+(?:EL\s+PAPA|LA\s+IGLESIA|LOS\s+GOBERNANTES))\b",
         re.I,
     ),
