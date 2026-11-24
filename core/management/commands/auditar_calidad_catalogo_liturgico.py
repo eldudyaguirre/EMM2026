@@ -390,7 +390,7 @@ class Command(BaseCommand):
             "- Las alertas automáticas son indicios para revisión, no correcciones.",
             "- La detección de referencias bíblicas es orientativa; no valida la cita contra una edición bíblica.",
             "- La diferencia entre fecha de publicación, nombre del PDF y fecha documental requiere cotejo con la portada/encabezado original.",
-            "- La aclamación del 12-04-2020 queda marcada como sección faltante; no se sustituye por la Secuencia de Pascua.",
+            "- La aclamación del 12-04-2020 se trata como excepción: la fuente presenta una Secuencia de Pascua y no se registra como aclamación.",
             "",
             "No se modificaron PostgreSQL, el calendario litúrgico ni los PDF originales.",
         ])
