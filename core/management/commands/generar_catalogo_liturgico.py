@@ -289,6 +289,116 @@ def _es_prefijo_ocr_encabezado(prefijo):
     )
 
 
+def _recortar_inicio_seccion(nombre, texto):
+    """
+    El OCR y la lectura de columnas pueden dejar al inicio de una sección
+    texto de otro bloque. Recorta hasta el ancla propia de cada lectura.
+    Si no encuentra un ancla fiable, conserva el texto original para revisión.
+    """
+    anclas = {
+        "primera_lectura": re.compile(
+            r"\bLECTURA\s+(?:DEL|DE\s+LA|DE\s+LOS|DE\s+LAS)\b",
+            re.I,
+        ),
+        "salmo_responsorial": re.compile(r"\bSALMISTA\s*:", re.I),
+        "segunda_lectura": re.compile(
+            r"\bLECTURA\s+(?:DEL|DE\s+LA|DE\s+LOS|DE\s+LAS)\b",
+            re.I,
+        ),
+        "aclamacion": re.compile(
+            r"\b(?:ASAMBLEA\s*:\s*(?:R\.?\s*)?ALELUYA|"
+            r"R\.?\s*ALELUYA|CANTOR\s*:)",
+            re.I,
+        ),
+        "evangelio": re.compile(
+            r"\b(?:LECTURA\s+DEL\s+(?:SANTO\s+)?EVANGELIO|"
+            r"DEL\s+SANTO\s+EVANGELIO|SEG[ÚU]N\s+SAN\s+"
+            r"(?:MATEO|MARCOS|LUCAS|JUAN))\b",
+            re.I,
+        ),
+    }
+    patron = anclas.get(nombre)
+    if not patron:
+        return texto, False
+
+    coincidencia = patron.search(texto or "")
+    if not coincidencia:
+        return texto, False
+
+    inicio = coincidencia.start()
+
+    # Conserva la referencia del salmo que suele aparecer entre el título
+    # y "Salmista:", sin conservar el material anterior de otra columna.
+    if nombre == "salmo_responsorial":
+        prefijo = (texto or "")[:inicio].strip()
+        referencia = re.search(r"\(?\s*SALMO\s+\d{1,3}\s*\)?", prefijo, re.I)
+        if referencia:
+            inicio = referencia.start()
+
+    # En la aclamación puede haber una cita breve antes de "Asamblea: Aleluya".
+    if nombre == "aclamacion":
+        prefijo = (texto or "")[:inicio].strip()
+        if len(prefijo) <= 45 and re.search(
+            r"\b(?:JN|MT|MC|LC|FLP|CF[RC]?\.?)\s*\d",
+            prefijo,
+            re.I,
+        ):
+            inicio = max(0, (texto or "").rfind(prefijo))
+
+    return (texto or "")[inicio:].strip(), True
+
+
+def _recortar_fin_seccion(nombre, texto):
+    """
+    Recorta el texto al marcador final o al inicio de la siguiente parte de
+    la celebración. No sustituye ni completa el contenido de las fuentes.
+    """
+    patrones = []
+    if nombre in {"primera_lectura", "segunda_lectura"}:
+        patrones = [
+            re.compile(r"\bPALABRA\s+DE\s+DIOS\b", re.I),
+        ]
+    elif nombre == "salmo_responsorial":
+        patrones = [
+            re.compile(
+                r"\b(?:LECTURA\s+(?:DEL|DE\s+LA)|ACLAMACI[ÓO]N|"
+                r"LECTURA\s+DEL\s+(?:SANTO\s+)?EVANGELIO|"
+                r"PROFESI[ÓO]N\s+DE\s+FE|ORACI[ÓO]N\s+UNIVERSAL)\b",
+                re.I,
+            ),
+        ]
+    elif nombre == "aclamacion":
+        patrones = [
+            re.compile(
+                r"\b(?:LECTURA\s+DEL\s+(?:SANTO\s+)?EVANGELIO|"
+                r"DEL\s+SANTO\s+EVANGELIO|SEG[ÚU]N\s+SAN\s+"
+                r"(?:MATEO|MARCOS|LUCAS|JUAN)|"
+                r"PROFESI[ÓO]N\s+DE\s+FE|ORACI[ÓO]N\s+UNIVERSAL|"
+                r"\d{1,2}\s*[.)]\s*POR\s+(?:EL\s+PAPA|LA\s+IGLESIA|LOS\s+GOBERNANTES))\b",
+                re.I,
+            ),
+        ]
+    elif nombre == "evangelio":
+        patrones = [
+            re.compile(r"\bPALABRA\s+DEL\s+SE[ÑN]OR\b", re.I),
+            re.compile(
+                r"\b(?:PROFESI[ÓO]N\s+DE\s+FE|ORACI[ÓO]N\s+UNIVERSAL|"
+                r"ORACI[ÓO]N\s+SOBRE\s+LAS\s+OFRENDAS|"
+                r"LITURGIA\s+EUCAR[ÍI]STICA)\b",
+                re.I,
+            ),
+        ]
+
+    posiciones = []
+    for patron in patrones:
+        coincidencia = patron.search(texto or "")
+        if coincidencia:
+            posiciones.append(coincidencia.start())
+    if not posiciones:
+        return texto
+    return (texto or "")[:min(posiciones)].strip()
+
+
 def _extraer_secciones(texto):
     """
     Detecta encabezados en cualquier posición de una línea cuando van
@@ -390,7 +500,13 @@ def _extraer_secciones(texto):
                 terminado = True
                 break
 
-        secciones[nombre] = "\n".join(bloque).strip()
+        texto_seccion = "\n".join(bloque).strip()
+        texto_seccion, _ancla_encontrada = _recortar_inicio_seccion(
+            nombre,
+            texto_seccion,
+        )
+        texto_seccion = _recortar_fin_seccion(nombre, texto_seccion)
+        secciones[nombre] = texto_seccion
 
     return secciones
 
