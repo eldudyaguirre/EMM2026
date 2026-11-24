@@ -603,7 +603,7 @@ def _limpiar_rotulos_banda_ocr(texto):
         normalizada = re.sub(r"[^A-Z ]+", " ", normalizada)
         normalizada = re.sub(r"\s+", " ", normalizada).strip()
         if re.fullmatch(
-            r"(?:LITURGIA DE LA PALAB(?:RA)?|LITURGIA EUCAR(?:ISTICA)?|ISTICA)",
+            r"(?:LITURGIA DE LA PALAB(?:RA)?|LITURGIA EUCAR(?:ISTICA|I)?|ISTICA)",
             normalizada,
         ):
             continue
