@@ -261,16 +261,19 @@ def _texto_para_catalogo(base, fila, texto_respaldo):
 
 def _recortar_fin_lectura(texto):
     """
-    Recorta el marcador final sobre el texto original para conservar
-    exactamente los desplazamientos de caracteres.
+    Recorta solo la fórmula final "Palabra de Dios" cuando aparece como
+    marcador litúrgico independiente, no cuando la frase forma parte de una
+    oración de la lectura (por ejemplo, "aceptaron la palabra del Señor").
     """
     coincidencia = re.search(
-        r"\bPALABRA\s+(?:DE\s+DIOS|DEL\s+SE[ÑN]OR)\b",
+        r"(?im)(?:^|[.!?]\s+|[”’]\s+)PALABRA\s+DE\s+DIOS\b",
         texto or "",
-        re.I,
     )
     if coincidencia:
-        return texto[:coincidencia.start()].strip(), True
+        inicio = coincidencia.start()
+        fragmento = coincidencia.group(0)
+        inicio += len(fragmento) - len(fragmento.lstrip())
+        return texto[:inicio].strip(), True
     return texto, False
 
 
@@ -355,7 +358,9 @@ def _recortar_fin_seccion(nombre, texto):
     patrones = []
     if nombre in {"primera_lectura", "segunda_lectura"}:
         patrones = [
-            re.compile(r"\bPALABRA\s+DE\s+DIOS\b", re.I),
+            re.compile(
+                r"(?im)(?:^|[.!?]\s+|[”’]\s+)PALABRA\s+DE\s+DIOS\b"
+            ),
         ]
     elif nombre == "salmo_responsorial":
         patrones = [
@@ -369,6 +374,9 @@ def _recortar_fin_seccion(nombre, texto):
     elif nombre == "aclamacion":
         patrones = [
             re.compile(
+                r"(?im)^\s*(?:\([OD0]\)\s*)?(?:EVANGELIO|EVANCE[LI]O)\b"
+            ),
+            re.compile(
                 r"\b(?:LECTURA\s+DEL\s+(?:SANTO\s+)?EVANGELIO|"
                 r"DEL\s+SANTO\s+EVANGELIO|SEG[ÚU]N\s+SAN\s+"
                 r"(?:MATEO|MARCOS|LUCAS|JUAN)|"
@@ -379,7 +387,9 @@ def _recortar_fin_seccion(nombre, texto):
         ]
     elif nombre == "evangelio":
         patrones = [
-            re.compile(r"\bPALABRA\s+DEL\s+SE[ÑN]OR\b", re.I),
+            re.compile(
+                r"(?im)(?:^|[.!?]\s+|[”’]\s+)PALABRA\s+DEL\s+SE[ÑN]OR\b"
+            ),
             re.compile(
                 r"\b(?:PROFESI[ÓO]N\s+DE\s+FE|ORACI[ÓO]N\s+UNIVERSAL|"
                 r"ORACI[ÓO]N\s+SOBRE\s+LAS\s+OFRENDAS|"
