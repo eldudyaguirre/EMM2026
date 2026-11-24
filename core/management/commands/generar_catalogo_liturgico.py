@@ -79,7 +79,7 @@ PATRONES_SECCION = (
         "segunda_lectura",
         re.compile(
             r"(?<![A-ZÁÉÍÓÚÑ])(?P<numero>\d{1,3}(?:\s*[,.)|!]){0,3}\s*)?"
-            r"(?P<titulo>SE{1,2}[GCB]UN[D0OB]\s+LECTURA)",
+            r"(?P<titulo>SE{1,2}[GCB]UN[D0OB]A\s+LECTURA)",
             re.I,
         ),
     ),
