@@ -48,6 +48,85 @@ def gestionar_cancion_repertorio(request, servicio_id):
             messages.success(request, f'«{cancion.titulo}» se agregó al repertorio.')
         else:
             messages.info(request, f'«{cancion.titulo}» ya estaba en este repertorio.')
+    elif accion == 'mover':
+        entrada = get_object_or_404(
+            RepertorioServicio,
+            pk=request.POST.get('repertorio_id'),
+            servicio=servicio,
+        )
+        direccion = request.POST.get('direccion', '').strip()
+        if direccion not in {'arriba', 'abajo'}:
+            messages.error(request, 'La dirección solicitada no es válida.')
+        else:
+            with transaction.atomic():
+                ordenadas = list(
+                    servicio.repertorio.select_for_update().order_by('orden', 'id')
+                )
+                posicion = next(
+                    (i for i, item in enumerate(ordenadas) if item.pk == entrada.pk),
+                    None,
+                )
+                desplazamiento = -1 if direccion == 'arriba' else 1
+                destino = posicion + desplazamiento if posicion is not None else None
+
+                if destino is None or destino < 0 or destino >= len(ordenadas):
+                    messages.info(request, 'La canción ya está en ese extremo del repertorio.')
+                else:
+                    ordenadas[posicion], ordenadas[destino] = (
+                        ordenadas[destino],
+                        ordenadas[posicion],
+                    )
+                    for nuevo_orden, item in enumerate(ordenadas, start=1):
+                        if item.orden != nuevo_orden:
+                            item.orden = nuevo_orden
+                            item.save(update_fields=['orden'])
+                    messages.success(request, 'El orden del repertorio fue actualizado.')
+
+    elif accion == 'reemplazar':
+        entrada = get_object_or_404(
+            RepertorioServicio,
+            pk=request.POST.get('repertorio_id'),
+            servicio=servicio,
+        )
+        cancion_nueva = get_object_or_404(
+            Cancion,
+            pk=request.POST.get('cancion_id'),
+        )
+
+        if entrada.cancion_id == cancion_nueva.pk:
+            messages.info(request, 'Esta canción ya está asignada a esta posición.')
+        elif servicio.repertorio.filter(cancion_id=cancion_nueva.pk).exclude(pk=entrada.pk).exists():
+            messages.error(
+                request,
+                f'«{cancion_nueva.titulo}» ya está en este repertorio. No se puede repetir.',
+            )
+        else:
+            entrada.cancion = cancion_nueva
+            entrada.numero_snapshot = cancion_nueva.numero
+            entrada.titulo_snapshot = cancion_nueva.titulo
+            entrada.letra_snapshot = cancion_nueva.letra
+            entrada.usa_capodastro = cancion_nueva.usa_capodastro
+            entrada.traste_capodastro = cancion_nueva.traste_capodastro
+            try:
+                with transaction.atomic():
+                    entrada.save(update_fields=[
+                        'cancion',
+                        'numero_snapshot',
+                        'titulo_snapshot',
+                        'letra_snapshot',
+                        'usa_capodastro',
+                        'traste_capodastro',
+                    ])
+                messages.success(
+                    request,
+                    f'La canción fue reemplazada por «{cancion_nueva.titulo}».',
+                )
+            except Exception:
+                messages.error(
+                    request,
+                    'No se pudo reemplazar la canción. Comprueba que no esté repetida.',
+                )
+
     elif accion == 'editar':
         entrada = get_object_or_404(
             RepertorioServicio,
