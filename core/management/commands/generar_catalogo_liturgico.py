@@ -79,7 +79,7 @@ PATRONES_SECCION = (
         "segunda_lectura",
         re.compile(
             r"(?<![A-ZÁÉÍÓÚÑ])(?P<numero>\d{1,3}(?:\s*[,.)|!]){0,3}\s*)?"
-            r"(?P<titulo>SE{1,2}[GC]UN[DO]A\s+LECTURA)",
+            r"(?P<titulo>(?:SEGUNDA|SECUNDA|SECUNBA|SEGUN0A)\s+LECTURA)",
             re.I,
         ),
     ),
@@ -285,7 +285,7 @@ def _es_prefijo_ocr_encabezado(prefijo):
     return bool(
         re.fullmatch(
             r"(?:\[[0-9sSoO., )|!]{1,6}\]?|\[EJ\]|\[EY|\[E|\[ON|\[EX|"
-            r"110\.\||EEN|EM|EJ|UY|EN|E|KN|Y|\(O\)|\(0\)|\[O\]|\[0\]|\(O|\[O|Q)",
+            r"110\.\||EEN|EM|EJ|UY|EN|E|KN|Y|\(\s*\)|\(O\)|\(0\)|\[O\]|\[0\]|\(O|\[O|Q)",
             (prefijo or "").strip(),
         )
     )
@@ -452,6 +452,23 @@ def _extraer_secciones(texto):
 
                     if len(linea) > 110 and not encabezado_evangelio_completo:
                         continue
+
+                    # "Aleluya" también puede ser el estribillo final del
+                    # salmo responsorial. Solo tratarlo como encabezado de
+                    # aclamación si está numerado o va seguido de una
+                    # intervención del cantor. Así no se desplazan las estrofas
+                    # del salmo al campo de aclamación.
+                    if nombre == "aclamacion" and titulo_detectado == "ALELUYA":
+                        if not numerado:
+                            contexto_siguiente = " ".join(
+                                lineas[indice + 1:indice + 7]
+                            )
+                            if not re.search(
+                                r"\\bCANTOR\\s*:",
+                                contexto_siguiente,
+                                re.I,
+                            ):
+                                continue
 
                 candidatos.append(
                     (
