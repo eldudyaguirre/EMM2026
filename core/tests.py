@@ -65,10 +65,10 @@ class OrdenColumnasPDFTests(SimpleTestCase):
             raise AssertionError(f"Modo de extracción inesperado: {modo}")
 
     def test_lee_columna_izquierda_antes_de_derecha_y_respeta_bandas(self):
-        largo_izq_1 = "PRIMERA LECTURA " + ("texto izquierdo " * 5)
-        largo_der_1 = "SALMO RESPONSORIAL " + ("texto derecho " * 5)
-        largo_izq_2 = "SEGUNDA LECTURA " + ("texto izquierdo final " * 4)
-        largo_der_2 = "ACLAMACIÓN " + ("texto derecho final " * 4)
+        largo_izq_1 = ("PRIMERA LECTURA " + ("texto izquierdo " * 5)).strip()
+        largo_der_1 = ("SALMO RESPONSORIAL " + ("texto derecho " * 5)).strip()
+        largo_izq_2 = ("SEGUNDA LECTURA " + ("texto izquierdo final " * 4)).strip()
+        largo_der_2 = ("ACLAMACIÓN " + ("texto derecho final " * 4)).strip()
         bloques = [
             (25, 10, 185, 38, largo_izq_1, 0, 0),
             (215, 10, 375, 38, largo_der_1, 1, 0),
