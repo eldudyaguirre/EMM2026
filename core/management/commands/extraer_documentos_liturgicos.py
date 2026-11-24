@@ -268,16 +268,20 @@ def _texto_pagina_por_columnas(pagina):
         1 for centro, *_resto in palabras_cuerpo
         if centro > ancho * 0.55
     )
+    # Medir el canal real entre columnas, no una franja amplia. En varios
+    # PDFs de la Arquidiócesis las columnas llegan hasta x=48%-52%; medir
+    # 45%-55% incluye palabras de ambos lados y hace que la página se
+    # clasifique erróneamente como una sola columna, mezclando las lecturas.
     cuenta_canal = sum(
         1 for centro, *_resto in palabras_cuerpo
-        if ancho * 0.45 <= centro <= ancho * 0.55
+        if ancho * 0.49 <= centro <= ancho * 0.51
     )
     proporcion_canal = cuenta_canal / total_cuerpo
 
     hay_dos_columnas = (
         cuenta_izquierda >= 18
         and cuenta_derecha >= 18
-        and proporcion_canal <= 0.055
+        and proporcion_canal <= 0.012
     )
 
     if not hay_dos_columnas:
