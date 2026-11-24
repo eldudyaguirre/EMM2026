@@ -684,7 +684,10 @@ def _ocr_pdf(
     de la columna derecha para no mezclar los ritos iniciales con las lecturas.
     El PDF original nunca se modifica.
 
-    Devuelve (textos_por_pagina, numeros_de_pagina_ocr_por_columnas).
+    Devuelve:
+      - textos por página ordenados por columnas y bandas;
+      - números de páginas procesadas como dos columnas;
+      - OCR de página completa para encabezados/fechas en páginas a columnas.
     """
     try:
         import pymupdf
@@ -804,9 +807,9 @@ def _ocr_pdf(
                         limite_eucaristica is not None
                         and limite_eucaristica > inicio_vertical_derecha + int(alto * 0.10)
                     ):
-                        # La página tiene dos bloques litúrgicos transversales.
-                        # Leer por bandas: izquierda+d erecha antes de la banda
-                        # eucarística y luego izquierda+derecha después de ella.
+                        # La página tiene una banda litúrgica transversal.
+                        # Leer por bandas: izquierda y derecha antes de la banda
+                        # eucarística, y luego izquierda y derecha después.
                         solapamiento = int(alto * 0.004)
                         regiones = [
                             (
