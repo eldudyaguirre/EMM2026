@@ -224,14 +224,17 @@ def _texto_pdf_por_columnas(ruta_pdf):
             izquierda = []
             derecha = []
             centro = []
-            bandas = []
             for item in todos:
                 item["banda"] = bool(
                     patron_banda.search(normalizar_bloque(item["texto"]))
                 )
+            bandas = [item for item in todos if item["banda"]]
+            for item in todos:
                 if item["banda"]:
-                    bandas.append(item)
                     continue
+                if re.fullmatch(r"\\s*ISTICA\\s*", item["texto"], re.I):
+                    if any(abs(item["y0"] - banda["y0"]) < 18 for banda in bandas):
+                        continue
                 centro_x = (item["x0"] + item["x1"]) / 2
                 if item["x0"] < mitad - 8 and item["x1"] > mitad + 8:
                     centro.append(item)
