@@ -587,6 +587,30 @@ def _limite_banda_liturgia(archivo_imagen, ejecutable, idioma):
     return None
 
 
+def _limpiar_rotulos_banda_ocr(texto):
+    """
+    Quita solo rótulos gráficos de transición que pueden quedar partidos
+    entre columnas; no elimina texto de las lecturas ni oraciones.
+    """
+    resultado = []
+    for linea in (texto or "").splitlines():
+        normalizada = (
+            unicodedata.normalize("NFD", linea)
+            .encode("ascii", "ignore")
+            .decode("ascii")
+            .upper()
+        )
+        normalizada = re.sub(r"[^A-Z ]+", " ", normalizada)
+        normalizada = re.sub(r"\s+", " ", normalizada).strip()
+        if re.fullmatch(
+            r"(?:LITURGIA DE LA PALAB(?:RA)?|LITURGIA EUCAR(?:ISTICA)?|ISTICA)",
+            normalizada,
+        ):
+            continue
+        resultado.append(linea)
+    return "\n".join(resultado).strip()
+
+
 def _ocr_pdf(
     ruta_pdf,
     ejecutable,
@@ -725,6 +749,12 @@ def _ocr_pdf(
                         psm="4",
                     ).strip()
 
+                    texto_izquierda = _limpiar_rotulos_banda_ocr(
+                        texto_izquierda
+                    )
+                    texto_derecha = _limpiar_rotulos_banda_ocr(
+                        texto_derecha
+                    )
                     texto = "\n\n".join(
                         parte for parte in (texto_izquierda, texto_derecha)
                         if parte
