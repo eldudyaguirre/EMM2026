@@ -255,11 +255,10 @@ def _texto_pagina_por_columnas(pagina):
     izquierda = []
     derecha = []
     centro = []
-    bandas = []
+    bandas = [item for item in bloques if item["banda"]]
 
     for item in bloques:
         if item["banda"]:
-            bandas.append(item)
             continue
         if patron_fragmento.fullmatch(item["texto"]):
             # A veces "Liturgia Eucarística" se parte entre columnas:
