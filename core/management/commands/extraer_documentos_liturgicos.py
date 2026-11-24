@@ -199,6 +199,105 @@ def _leer_listado(url, timeout, reintentos):
     return encontrados, status
 
 
+def _texto_pagina_por_columnas(pagina):
+    """
+    Extrae texto por bloques y respeta el orden de lectura de páginas a dos
+    columnas. Los bloques que cruzan el centro (por ejemplo, bandas como
+    'Liturgia de la Palabra') dividen la página en zonas; dentro de cada zona
+    se lee primero la columna izquierda y después la derecha.
+    """
+    bloques = []
+    try:
+        bloques_pdf = pagina.get_text("blocks")
+    except Exception:
+        bloques_pdf = []
+
+    ancho = float(pagina.rect.width)
+    mitad = ancho / 2.0
+
+    for bloque in bloques_pdf:
+        if len(bloque) < 5:
+            continue
+        x0, y0, x1, y1, texto = bloque[:5]
+        texto = (texto or "").strip()
+        if not texto:
+            continue
+        item = {
+            "x0": float(x0),
+            "y0": float(y0),
+            "x1": float(x1),
+            "y1": float(y1),
+            "texto": texto,
+        }
+        bloques.append(item)
+
+    if not bloques:
+        return pagina.get_text("text", sort=True) or ""
+
+    izquierda = [
+        b for b in bloques
+        if (b["x0"] + b["x1"]) / 2 < mitad
+        and not (b["x0"] < mitad - 8 and b["x1"] > mitad + 8)
+    ]
+    derecha = [
+        b for b in bloques
+        if (b["x0"] + b["x1"]) / 2 >= mitad
+        and not (b["x0"] < mitad - 8 and b["x1"] > mitad + 8)
+    ]
+    transversales = [
+        b for b in bloques
+        if b["x0"] < mitad - 8 and b["x1"] > mitad + 8
+    ]
+
+    caracteres_izquierda = sum(len(b["texto"]) for b in izquierda)
+    caracteres_derecha = sum(len(b["texto"]) for b in derecha)
+
+    # No forzar dos columnas en páginas de una sola columna o con texto centrado.
+    if (
+        len(izquierda) < 2
+        or len(derecha) < 2
+        or caracteres_izquierda < 100
+        or caracteres_derecha < 100
+    ):
+        return pagina.get_text("text", sort=True) or ""
+
+    def ordenar_columna(items):
+        return sorted(items, key=lambda b: (b["y0"], b["x0"]))
+
+    salida = []
+    limite_superior = float("-inf")
+    for transversal in sorted(transversales, key=lambda b: (b["y0"], b["x0"])):
+        zona_izquierda = [
+            b for b in izquierda
+            if limite_superior <= b["y0"] < transversal["y0"]
+        ]
+        zona_derecha = [
+            b for b in derecha
+            if limite_superior <= b["y0"] < transversal["y0"]
+        ]
+        salida.extend(b["texto"] for b in ordenar_columna(zona_izquierda))
+        salida.extend(b["texto"] for b in ordenar_columna(zona_derecha))
+        salida.append(transversal["texto"])
+        limite_superior = max(limite_superior, transversal["y1"])
+
+    restantes_izquierda = [
+        b for b in izquierda if b["y0"] >= limite_superior
+    ]
+    restantes_derecha = [
+        b for b in derecha if b["y0"] >= limite_superior
+    ]
+    salida.extend(b["texto"] for b in ordenar_columna(restantes_izquierda))
+    salida.extend(b["texto"] for b in ordenar_columna(restantes_derecha))
+
+    texto_ordenado = "\n".join(salida).strip()
+    texto_original = pagina.get_text("text", sort=True) or ""
+    # Si una peculiaridad de la geometría descartara demasiada información,
+    # conservar la extracción estándar.
+    if len(texto_ordenado) < len(texto_original) * 0.75:
+        return texto_original
+    return texto_ordenado
+
+
 def _extraer_pdf(ruta_pdf):
     """Extrae texto digital por página y metadatos del PDF."""
     try:
@@ -209,7 +308,7 @@ def _extraer_pdf(ruta_pdf):
 
         with pymupdf.open(str(ruta_pdf)) as documento:
             paginas = [
-                pagina.get_text("text", sort=True) or ""
+                _texto_pagina_por_columnas(pagina)
                 for pagina in documento
             ]
             metadatos = documento.metadata or {}
