@@ -1577,7 +1577,7 @@ class Command(BaseCommand):
                                     + "."
                                 )
                             bandas_recuperadas = [
-                                n for n in paginas_banda_liturgia
+                                n for n in paginas_ocr_banda_liturgia
                                 if n in paginas_recuperadas
                             ]
                             if bandas_recuperadas:
