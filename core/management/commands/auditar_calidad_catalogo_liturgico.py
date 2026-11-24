@@ -205,15 +205,24 @@ class Command(BaseCommand):
 
             if fecha_documento and conteo_fechas[fecha_documento] > 1:
                 agregar_alerta(alertas, "FECHA_DUPLICADA_EN_INDICE")
-            if not titulo:
-                cantidad_con_titulo_vacio += 1
-                agregar_alerta(alertas, "TITULO_CELEBRACION_VACIO")
-            if not ciclo:
-                cantidad_con_ciclo_vacio += 1
-                agregar_alerta(alertas, "CICLO_NO_IDENTIFICADO")
+            es_registro_lectura = categoria == "LECTURA_LITURGICA" and bool(indice_fila)
+            es_secuencia_pascual_2020 = (
+                archivo == "2020-04-12_339.pdf"
+                and fecha_documento == "2020-04-12"
+            )
+
+            if es_registro_lectura:
+                if not titulo:
+                    cantidad_con_titulo_vacio += 1
+                    agregar_alerta(alertas, "TITULO_CELEBRACION_VACIO")
+                if not ciclo:
+                    cantidad_con_ciclo_vacio += 1
+                    agregar_alerta(alertas, "CICLO_NO_IDENTIFICADO")
 
             if es_ocr:
                 agregar_alerta(alertas, "OCR_REQUIERE_COTEJO_HUMANO")
+            if categoria != "LECTURA_LITURGICA":
+                agregar_alerta(alertas, "DOCUMENTO_FUERA_DEL_INDICE_DE_LECTURAS")
             if "\ufffd" in texto_completo:
                 cantidad_texto_sospechoso += 1
                 agregar_alerta(alertas, "CARACTER_REEMPLAZO_EN_TEXTO")
@@ -229,13 +238,16 @@ class Command(BaseCommand):
                 referencia = referencia_biblica(contenido)
                 referencias[campo] = referencia
 
-                if not contenido:
-                    secciones_faltantes.append(campo)
-                    total_faltantes[campo] += 1
-                    agregar_alerta(alertas, f"FALTA_{campo.upper()}")
-                elif longitud < minimo:
+                if es_registro_lectura and not contenido:
+                    if es_secuencia_pascual_2020 and campo == "aclamacion":
+                        agregar_alerta(alertas, "ACLAMACION_NO_APLICA_SECUENCIA_PASCUAL")
+                    else:
+                        secciones_faltantes.append(campo)
+                        total_faltantes[campo] += 1
+                        agregar_alerta(alertas, f"FALTA_{campo.upper()}")
+                elif es_registro_lectura and contenido and longitud < minimo:
                     agregar_alerta(alertas, f"TEXTO_CORTO_{campo.upper()}")
-                if contenido and not referencia:
+                if es_registro_lectura and contenido and not referencia:
                     agregar_alerta(alertas, f"REFERENCIA_NO_DETECTADA_{campo.upper()}")
 
             if es_ocr and secciones_faltantes:
@@ -309,11 +321,18 @@ class Command(BaseCommand):
                 ])
                 for campo, etiqueta, _minimo in SECCIONES:
                     contenido = secciones[campo]
+                    nota_seccion = (
+                        "NO APLICA: el documento contiene la Secuencia de Pascua; "
+                        "no se considera aclamación."
+                        if es_secuencia_pascual_2020 and campo == "aclamacion" and not contenido
+                        else "NO DETECTADA" if not contenido else "CONTENIDO DETECTADO"
+                    )
                     detalle_revision.extend([
                         "",
                         f"--- {etiqueta} ({len(contenido)} caracteres) ---",
+                        f"Estado: {nota_seccion}",
                         f"Referencia detectada: {referencias[campo] or 'NO DETECTADA'}",
-                        contenido if contenido else "[SECCIÓN NO DETECTADA]",
+                        contenido if contenido else "[SIN CONTENIDO EN EL CAMPO DEL ÍNDICE]",
                     ])
 
         ruta_csv = base / "auditoria_calidad_liturgica.csv"
