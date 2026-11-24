@@ -167,7 +167,7 @@ main{padding:26px 0 70px}.empty{padding:40px 20px;text-align:center;background:v
       form.method='post';
       form.action=gestionarUrl;
       const values={
-       csrfmiddlewaretoken:csrfToken(),
+       csrfmiddlewaretoken:csrfToken()||(document.querySelector('input[name=csrfmiddlewaretoken]')||{}).value||'',
        accion:'reemplazar',
        repertorio_id:id,
        cancion_id:String(song.id)
