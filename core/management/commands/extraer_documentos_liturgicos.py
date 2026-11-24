@@ -617,6 +617,7 @@ def _ocr_pdf(
     escala = dpi / 72.0
     textos = []
     paginas_dos_columnas = []
+    textos_encabezado_completo = {}
     seleccion = (
         None
         if indices_paginas is None
@@ -700,6 +701,17 @@ def _ocr_pdf(
                         )
                     ).save(imagen_derecha)
 
+                    # Mantener una lectura de página completa solo para
+                    # reconocer el encabezado, la celebración y la fecha.
+                    # El texto usado para las secciones sigue siendo el OCR por
+                    # columnas, que evita mezclar Ritos Iniciales y lecturas.
+                    textos_encabezado_completo[numero_pagina] = _tesseract(
+                        imagen,
+                        ejecutable,
+                        idioma=idioma,
+                        psm="3",
+                    ).strip()
+
                     texto_izquierda = _tesseract(
                         imagen_izquierda,
                         ejecutable,
@@ -720,7 +732,7 @@ def _ocr_pdf(
                     textos.append(texto)
                     paginas_dos_columnas.append(numero_pagina)
 
-    return textos, paginas_dos_columnas
+    return textos, paginas_dos_columnas, textos_encabezado_completo
 
 
 def _texto_metadato(valor):
@@ -1224,6 +1236,7 @@ class Command(BaseCommand):
                 paginas, total_paginas, metadatos_pdf, motor = _extraer_pdf(ruta_pdf)
                 metodo_extraccion = "TEXTO_PDF"
                 observaciones_documento = []
+                paginas_ocr_encabezado = {}
 
                 # OCR por página: algunos PDF mezclan páginas editoriales con
                 # texto digital y páginas de celebración que son solo imágenes.
@@ -1237,7 +1250,11 @@ class Command(BaseCommand):
                 ]
                 if indices_paginas_ocr and total_paginas > 0 and tesseract:
                     try:
-                        paginas_ocr, paginas_ocr_columnas = _ocr_pdf(
+                        (
+                            paginas_ocr,
+                            paginas_ocr_columnas,
+                            paginas_ocr_encabezado,
+                        ) = _ocr_pdf(
                             ruta_pdf,
                             tesseract,
                             idioma=options["ocr_idioma"],
@@ -1306,7 +1323,12 @@ class Command(BaseCommand):
                 fila["metodo_extraccion"] = metodo_extraccion
                 paginas_total += total_paginas
 
-                texto_encabezado = "\n".join(paginas[:2])
+                paginas_para_encabezado = list(paginas)
+                if "paginas_ocr_encabezado" in locals():
+                    for numero_pagina, texto_pagina in paginas_ocr_encabezado.items():
+                        if 1 <= numero_pagina <= 2:
+                            paginas_para_encabezado[numero_pagina - 1] = texto_pagina
+                texto_encabezado = "\n".join(paginas_para_encabezado[:2])
                 datos = _extraer_datos_liturgicos(
                     texto_encabezado,
                     fecha_listado=item["fecha"],
