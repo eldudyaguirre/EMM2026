@@ -51,10 +51,9 @@ class OrdenColumnasPDFTests(SimpleTestCase):
         width = 400
 
     class PaginaFalsa:
-        rect = Rect()
-
         def __init__(self, bloques):
             self.bloques = bloques
+            self.rect = type("Rect", (), {"width": 400})()
 
         def get_text(self, modo, sort=False):
             if modo == "blocks":
