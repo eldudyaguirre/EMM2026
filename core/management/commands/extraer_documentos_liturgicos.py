@@ -637,8 +637,11 @@ def _limite_banda_liturgia(archivo_imagen, ejecutable, idioma):
                     normalizado,
                 )
                 normalizado = re.sub(r"\s+", " ", normalizado).strip()
-                if re.search(
-                    r"LITURGIA\s+DE\s+LA\s+PALAB",
+                # La banda es un rótulo corto e independiente. No confundir
+                # frases editoriales como "La Iglesia a través de la liturgia
+                # de la Palabra" con el encabezado de sección.
+                if re.fullmatch(
+                    r"(?:[A-Z0-9]{1,3}\s+)?LITURGIA\s+DE\s+LA\s+PALAB(?:RA)?",
                     normalizado,
                 ):
                     return max(p["y1"] for p in elementos)
