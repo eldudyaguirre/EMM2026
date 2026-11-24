@@ -322,14 +322,6 @@ def _texto_pagina_por_columnas(pagina):
                 key=lambda elemento: elemento[0],
             )
         ).strip()
-        combinado = " ".join(
-            token
-            for _x, token in sorted(
-                grupo["izquierda"] + grupo["derecha"],
-                key=lambda elemento: elemento[0],
-            )
-        ).strip()
-
         if not izquierda and not derecha:
             continue
 
