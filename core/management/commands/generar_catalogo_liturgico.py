@@ -169,9 +169,9 @@ def _lineas_documento(texto):
 
 def _texto_pdf_por_columnas(ruta_pdf):
     """
-    Recupera el texto del PDF ordenando primero la columna izquierda y luego
-    la derecha cuando la geometría confirma una página a dos columnas.
-    En páginas de una columna conserva el orden vertical habitual.
+    Recupera el texto digital respetando columnas y bandas transversales.
+    Cada zona entre "Liturgia de la Palabra" y "Liturgia Eucarística" se lee
+    primero por la columna izquierda y después por la derecha.
     """
     try:
         try:
@@ -186,32 +186,8 @@ def _texto_pdf_por_columnas(ruta_pdf):
     try:
         for pagina in documento:
             mitad = float(pagina.rect.width) / 2
-            izquierda = []
-            derecha = []
-            centro = []
             todos = []
 
-            for bloque in pagina.get_text("blocks"):
-                if len(bloque) < 5:
-                    continue
-                x0, y0, x1, y1, contenido = bloque[:5]
-                contenido = (contenido or "").strip()
-                if not contenido:
-                    continue
-                item = (float(y0), float(x0), float(x1), float(y1), contenido)
-                todos.append(item)
-
-                if float(x1) <= mitad + 3:
-                    izquierda.append(item)
-                elif float(x0) >= mitad - 3:
-                    derecha.append(item)
-                else:
-                    centro.append(item)
-
-            # En algunos misales los ritos iniciales ocupan la parte superior
-            # derecha y la Liturgia de la Palabra empieza más abajo. Se descarta
-            # solo el contenido derecho anterior a esa banda para que no se
-            # inserte la oración colecta dentro del salmo.
             def normalizar_bloque(valor):
                 return (
                     unicodedata.normalize("NFD", valor or "")
@@ -220,50 +196,119 @@ def _texto_pdf_por_columnas(ruta_pdf):
                     .upper()
                 )
 
-            bandas_palabra = [
-                item[3]
-                for item in todos
-                if re.search(
-                    r"LITURGIA\s+DE\s+LA\s+PALAB",
-                    normalizar_bloque(item[4]),
+            patron_banda = re.compile(
+                r"LITURGIA\s+(?:DE\s+LA\s+PALAB|EUCAR)",
+                re.I,
+            )
+            for bloque in pagina.get_text("blocks"):
+                if len(bloque) < 5:
+                    continue
+                x0, y0, x1, y1, contenido = bloque[:5]
+                contenido = (contenido or "").strip()
+                if not contenido:
+                    continue
+                todos.append({
+                    "x0": float(x0),
+                    "y0": float(y0),
+                    "x1": float(x1),
+                    "y1": float(y1),
+                    "texto": contenido,
+                })
+
+            if not todos:
+                texto = pagina.get_text("text", sort=True) or ""
+                if texto.strip():
+                    paginas.append(texto.strip())
+                continue
+
+            izquierda = []
+            derecha = []
+            centro = []
+            bandas = []
+            for item in todos:
+                item["banda"] = bool(
+                    patron_banda.search(normalizar_bloque(item["texto"]))
                 )
-            ]
-            if bandas_palabra:
-                limite_lecturas = max(bandas_palabra)
-                derecha = [
-                    item for item in derecha
-                    if item[0] >= limite_lecturas - 2
-                ]
-                centro = [
-                    item for item in centro
-                    if item[0] >= limite_lecturas - 2
-                    or re.search(
-                        r"LITURGIA\s+DE\s+LA\s+PALAB",
-                        normalizar_bloque(item[4]),
+                if item["banda"]:
+                    bandas.append(item)
+                    continue
+                centro_x = (item["x0"] + item["x1"]) / 2
+                if item["x0"] < mitad - 8 and item["x1"] > mitad + 8:
+                    centro.append(item)
+                elif centro_x < mitad:
+                    izquierda.append(item)
+                else:
+                    derecha.append(item)
+
+            if len(izquierda) < 2 or len(derecha) < 2:
+                texto = pagina.get_text("text", sort=True) or ""
+                if texto.strip():
+                    paginas.append(texto.strip())
+                continue
+
+            def ordenar(items):
+                return sorted(items, key=lambda x: (x["y0"], x["x0"]))
+
+            bandas_ordenadas = sorted(bandas, key=lambda x: (x["y0"], x["x0"]))
+            bandas_combinadas = []
+            for banda in bandas_ordenadas:
+                if bandas_combinadas and banda["y0"] <= bandas_combinadas[-1]["y1"] + 18:
+                    bandas_combinadas[-1]["y1"] = max(
+                        bandas_combinadas[-1]["y1"],
+                        banda["y1"],
                     )
+                else:
+                    bandas_combinadas.append({
+                        "y0": banda["y0"],
+                        "y1": banda["y1"],
+                    })
+
+            salida = []
+            limite_superior = float("-inf")
+            for banda in bandas_combinadas:
+                y_inicio = banda["y0"]
+                zona_izquierda = [
+                    x for x in izquierda
+                    if limite_superior <= x["y0"] < y_inicio
+                ]
+                zona_derecha = [
+                    x for x in derecha
+                    if limite_superior <= x["y0"] < y_inicio
+                ]
+                zona_centro = [
+                    x for x in centro
+                    if limite_superior <= x["y0"] < y_inicio
+                ]
+                salida.extend(x["texto"] for x in ordenar(zona_izquierda))
+                salida.extend(x["texto"] for x in ordenar(zona_derecha))
+                salida.extend(x["texto"] for x in ordenar(zona_centro))
+                limite_superior = max(limite_superior, banda["y1"])
+
+            if not bandas_combinadas:
+                restantes_izquierda = izquierda
+                restantes_derecha = derecha
+                restantes_centro = centro
+            else:
+                restantes_izquierda = [
+                    x for x in izquierda if x["y0"] >= limite_superior
+                ]
+                restantes_derecha = [
+                    x for x in derecha if x["y0"] >= limite_superior
+                ]
+                restantes_centro = [
+                    x for x in centro if x["y0"] >= limite_superior
                 ]
 
-            # Solo aplicar el orden por columnas si hay bloques de texto
-            # claramente ubicados a ambos lados de la página.
-            if len(izquierda) >= 2 and len(derecha) >= 2:
-                centro_izquierda = []
-                centro_derecha = []
-                for item in centro:
-                    if (item[1] + item[2]) / 2 < mitad:
-                        centro_izquierda.append(item)
-                    else:
-                        centro_derecha.append(item)
+            salida.extend(x["texto"] for x in ordenar(restantes_izquierda))
+            salida.extend(x["texto"] for x in ordenar(restantes_derecha))
+            salida.extend(x["texto"] for x in ordenar(restantes_centro))
 
-                ordenados = (
-                    sorted(izquierda + centro_izquierda, key=lambda x: (x[0], x[1]))
-                    + sorted(derecha + centro_derecha, key=lambda x: (x[0], x[1]))
-                )
-            else:
-                ordenados = sorted(todos, key=lambda x: (x[0], x[1]))
-
-            texto_pagina = "\n".join(item[4] for item in ordenados).strip()
-            if texto_pagina:
-                paginas.append(texto_pagina)
+            texto_pagina = "\n".join(salida).strip()
+            texto_original = pagina.get_text("text", sort=True) or ""
+            if len(texto_pagina) < len(texto_original) * 0.75:
+                texto_pagina = texto_original
+            if texto_pagina.strip():
+                paginas.append(texto_pagina.strip())
     except Exception:
         return ""
     finally:
