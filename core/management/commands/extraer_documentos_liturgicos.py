@@ -836,7 +836,8 @@ def _ocr_pdf(
     Devuelve:
       - textos por página ordenados por columnas y bandas;
       - números de páginas procesadas como dos columnas;
-      - OCR de página completa para encabezados/fechas en páginas a columnas.
+      - OCR de página completa para encabezados/fechas en páginas a columnas;
+      - páginas donde se detectó la banda "Liturgia de la Palabra".
     """
     try:
         import pymupdf
