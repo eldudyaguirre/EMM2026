@@ -1324,7 +1324,7 @@ class Command(BaseCommand):
                                 + ". Revisar nombres, signos y referencias bíblicas."
                             )
                             columnas_recuperadas = [
-                                n for n in paginas_dos_columnas
+                                n for n in paginas_ocr_columnas
                                 if n in paginas_recuperadas
                             ]
                             if columnas_recuperadas:
