@@ -169,155 +169,29 @@ def _lineas_documento(texto):
 
 def _texto_pdf_por_columnas(ruta_pdf):
     """
-    Recupera el texto digital respetando columnas y bandas transversales.
-    Cada zona entre "Liturgia de la Palabra" y "Liturgia Eucarística" se lee
-    primero por la columna izquierda y después por la derecha.
+    Usa el mismo extractor geométrico del comando de extracción principal,
+    para que el fallback del catálogo no vuelva a mezclar columnas.
     """
     try:
+        import pymupdf
+    except ImportError:
         try:
-            import pymupdf as fitz
+            import fitz as pymupdf
         except ImportError:
-            import fitz
-        documento = fitz.open(str(ruta_pdf))
-    except Exception:
-        return ""
+            return ""
 
-    paginas = []
     try:
-        for pagina in documento:
-            mitad = float(pagina.rect.width) / 2
-            todos = []
-
-            def normalizar_bloque(valor):
-                return (
-                    unicodedata.normalize("NFD", valor or "")
-                    .encode("ascii", "ignore")
-                    .decode("ascii")
-                    .upper()
-                )
-
-            patron_banda = re.compile(
-                r"LITURGIA\s+(?:DE\s+LA\s+PALAB|EUCAR)",
-                re.I,
-            )
-            for bloque in pagina.get_text("blocks"):
-                if len(bloque) < 5:
-                    continue
-                x0, y0, x1, y1, contenido = bloque[:5]
-                contenido = (contenido or "").strip()
-                if not contenido:
-                    continue
-                todos.append({
-                    "x0": float(x0),
-                    "y0": float(y0),
-                    "x1": float(x1),
-                    "y1": float(y1),
-                    "texto": contenido,
-                })
-
-            if not todos:
-                texto = pagina.get_text("text", sort=True) or ""
-                if texto.strip():
-                    paginas.append(texto.strip())
-                continue
-
-            izquierda = []
-            derecha = []
-            centro = []
-            for item in todos:
-                item["banda"] = bool(
-                    patron_banda.search(normalizar_bloque(item["texto"]))
-                )
-            bandas = [item for item in todos if item["banda"]]
-            for item in todos:
-                if item["banda"]:
-                    continue
-                if re.fullmatch(r"\s*ISTICA\s*", item["texto"], re.I):
-                    if any(abs(item["y0"] - banda["y0"]) < 18 for banda in bandas):
-                        continue
-                centro_x = (item["x0"] + item["x1"]) / 2
-                if item["x0"] < mitad - 8 and item["x1"] > mitad + 8:
-                    centro.append(item)
-                elif centro_x < mitad:
-                    izquierda.append(item)
-                else:
-                    derecha.append(item)
-
-            if len(izquierda) < 2 or len(derecha) < 2:
-                texto = pagina.get_text("text", sort=True) or ""
-                if texto.strip():
-                    paginas.append(texto.strip())
-                continue
-
-            def ordenar(items):
-                return sorted(items, key=lambda x: (x["y0"], x["x0"]))
-
-            bandas_ordenadas = sorted(bandas, key=lambda x: (x["y0"], x["x0"]))
-            bandas_combinadas = []
-            for banda in bandas_ordenadas:
-                if bandas_combinadas and banda["y0"] <= bandas_combinadas[-1]["y1"] + 18:
-                    bandas_combinadas[-1]["y1"] = max(
-                        bandas_combinadas[-1]["y1"],
-                        banda["y1"],
-                    )
-                else:
-                    bandas_combinadas.append({
-                        "y0": banda["y0"],
-                        "y1": banda["y1"],
-                    })
-
-            salida = []
-            limite_superior = float("-inf")
-            for banda in bandas_combinadas:
-                y_inicio = banda["y0"]
-                zona_izquierda = [
-                    x for x in izquierda
-                    if limite_superior <= x["y0"] < y_inicio
-                ]
-                zona_derecha = [
-                    x for x in derecha
-                    if limite_superior <= x["y0"] < y_inicio
-                ]
-                zona_centro = [
-                    x for x in centro
-                    if limite_superior <= x["y0"] < y_inicio
-                ]
-                salida.extend(x["texto"] for x in ordenar(zona_izquierda))
-                salida.extend(x["texto"] for x in ordenar(zona_derecha))
-                salida.extend(x["texto"] for x in ordenar(zona_centro))
-                limite_superior = max(limite_superior, banda["y1"])
-
-            if not bandas_combinadas:
-                restantes_izquierda = izquierda
-                restantes_derecha = derecha
-                restantes_centro = centro
-            else:
-                restantes_izquierda = [
-                    x for x in izquierda if x["y0"] >= limite_superior
-                ]
-                restantes_derecha = [
-                    x for x in derecha if x["y0"] >= limite_superior
-                ]
-                restantes_centro = [
-                    x for x in centro if x["y0"] >= limite_superior
-                ]
-
-            salida.extend(x["texto"] for x in ordenar(restantes_izquierda))
-            salida.extend(x["texto"] for x in ordenar(restantes_derecha))
-            salida.extend(x["texto"] for x in ordenar(restantes_centro))
-
-            texto_pagina = "\n".join(salida).strip()
-            texto_original = pagina.get_text("text", sort=True) or ""
-            if len(texto_pagina) < len(texto_original) * 0.75:
-                texto_pagina = texto_original
-            if texto_pagina.strip():
-                paginas.append(texto_pagina.strip())
+        from core.management.commands.extraer_documentos_liturgicos import (
+            _texto_pagina_por_columnas,
+        )
+        with pymupdf.open(str(ruta_pdf)) as documento:
+            paginas = [
+                _texto_pagina_por_columnas(pagina)
+                for pagina in documento
+            ]
+        return "\n\n".join(texto for texto in paginas if texto).strip()
     except Exception:
         return ""
-    finally:
-        documento.close()
-
-    return "\n".join(paginas).strip()
 
 
 def _texto_para_catalogo(base, fila, texto_respaldo):
