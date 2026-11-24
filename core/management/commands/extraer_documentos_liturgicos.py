@@ -774,8 +774,8 @@ def _ocr_pdf(
     Reconoce todas las páginas o solo las páginas indicadas (índice base cero).
 
     Si la página escaneada tiene dos columnas, las procesa por separado. En
-    páginas con el rótulo "Liturgia de la Palabra", recorta el inicio superior
-    de la columna derecha para no mezclar los ritos iniciales con las lecturas.
+    páginas con la banda "Liturgia de la Palabra", recorta ambas columnas
+    desde la misma coordenada para separar los Ritos Iniciales de las lecturas.
     El PDF original nunca se modifica.
 
     Devuelve:
@@ -852,10 +852,6 @@ def _ocr_pdf(
                         f"pagina_{numero_pagina:04d}_derecha.png"
                     )
 
-                    imagen_pagina.crop(
-                        (0, 0, corte_izquierdo, alto)
-                    ).save(imagen_izquierda)
-
                     # El rótulo "Liturgia de la Palabra" cruza el centro
                     # de la página. Detectarlo en la imagen completa evita
                     # cortar la palabra final al usar solo la mitad izquierda.
@@ -865,19 +861,34 @@ def _ocr_pdf(
                         idioma,
                     )
 
-                    inicio_vertical_derecha = 0
+                    inicio_vertical_lecturas = 0
                     if limite_banda is not None:
-                        # Deja un pequeño solapamiento bajo la banda para no
-                        # cortar la primera línea del salmo o de la lectura.
-                        inicio_vertical_derecha = max(
+                        # El bloque superior contiene Ritos Iniciales en ambas
+                        # columnas. La Liturgia de la Palabra comienza debajo
+                        # de la banda transversal, así que ambas columnas deben
+                        # recortarse desde el mismo punto para evitar que la
+                        # monición de entrada, el rito penitencial o la oración
+                        # colecta se inserten dentro de la primera lectura.
+                        # Se deja un pequeño solapamiento bajo la banda para no
+                        # cortar la primera línea de la monición a las lecturas.
+                        inicio_vertical_lecturas = max(
                             0,
                             limite_banda - int(alto * 0.004),
                         )
 
                     imagen_pagina.crop(
                         (
+                            0,
+                            inicio_vertical_lecturas,
+                            corte_izquierdo,
+                            alto,
+                        )
+                    ).save(imagen_izquierda)
+
+                    imagen_pagina.crop(
+                        (
                             inicio_derecho,
-                            inicio_vertical_derecha,
+                            inicio_vertical_lecturas,
                             ancho,
                             alto,
                         )
