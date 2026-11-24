@@ -202,19 +202,38 @@ def _leer_listado(url, timeout, reintentos):
 
 def _texto_pagina_por_columnas(pagina):
     """
-    Extrae texto por bloques y respeta el orden de lectura de páginas a dos
-    columnas. Los bloques que cruzan el centro (por ejemplo, bandas como
-    'Liturgia de la Palabra') dividen la página en zonas; dentro de cada zona
-    se lee primero la columna izquierda y después la derecha.
+    Extrae texto digital respetando la lectura por columnas y las bandas
+    transversales "Liturgia de la Palabra" y "Liturgia Eucarística".
+
+    Cada zona delimitada por una banda se lee primero a la izquierda y luego
+    a la derecha. Así se conserva la continuidad cuando una lectura comienza
+    en una columna y termina en la otra.
     """
-    bloques = []
     try:
         bloques_pdf = pagina.get_text("blocks")
     except Exception:
         bloques_pdf = []
 
+    if not bloques_pdf:
+        return pagina.get_text("text", sort=True) or ""
+
     ancho = float(pagina.rect.width)
     mitad = ancho / 2.0
+    bloques = []
+
+    def normalizar(valor):
+        return (
+            unicodedata.normalize("NFD", valor or "")
+            .encode("ascii", "ignore")
+            .decode("ascii")
+            .upper()
+        )
+
+    patron_banda = re.compile(
+        r"LITURGIA\s+(?:DE\s+LA\s+PALAB|EUCAR)",
+        re.I,
+    )
+    patron_fragmento = re.compile(r"^\s*ISTICA\s*$", re.I)
 
     for bloque in bloques_pdf:
         if len(bloque) < 5:
@@ -230,90 +249,73 @@ def _texto_pagina_por_columnas(pagina):
             "y1": float(y1),
             "texto": texto,
         }
+        item["banda"] = bool(patron_banda.search(normalizar(texto)))
         bloques.append(item)
 
-    if not bloques:
+    izquierda = []
+    derecha = []
+    centro = []
+    bandas = []
+
+    for item in bloques:
+        if item["banda"]:
+            bandas.append(item)
+            continue
+        if patron_fragmento.fullmatch(item["texto"]):
+            # A veces "Liturgia Eucarística" se parte entre columnas:
+            # "Liturgia Eucari" a la izquierda e "istica" a la derecha.
+            if any(abs(item["y0"] - b["y0"]) < 18 for b in bandas):
+                continue
+
+        centro_x = (item["x0"] + item["x1"]) / 2
+        if item["x0"] < mitad - 8 and item["x1"] > mitad + 8:
+            centro.append(item)
+        elif centro_x < mitad:
+            izquierda.append(item)
+        else:
+            derecha.append(item)
+
+    if len(izquierda) < 2 or len(derecha) < 2:
         return pagina.get_text("text", sort=True) or ""
 
-    izquierda = [
-        b for b in bloques
-        if (b["x0"] + b["x1"]) / 2 < mitad
-        and not (b["x0"] < mitad - 8 and b["x1"] > mitad + 8)
-    ]
-    derecha = [
-        b for b in bloques
-        if (b["x0"] + b["x1"]) / 2 >= mitad
-        and not (b["x0"] < mitad - 8 and b["x1"] > mitad + 8)
-    ]
-    transversales = [
-        b for b in bloques
-        if b["x0"] < mitad - 8 and b["x1"] > mitad + 8
-    ]
-
-    # En varios misales la página está organizada por bandas: los ritos
-    # iniciales aparecen arriba a la derecha, mientras que las lecturas
-    # comienzan después de la banda "Liturgia de la Palabra". Al concatenar
-    # toda la columna derecha se mezclaban los ritos con el salmo.
-    marcador_palabra = re.compile(
-        r"LITURGIA\s+DE\s+LA\s+PALAB",
-        re.IGNORECASE,
-    )
-    bandas_palabra = [
-        b["y1"] for b in bloques
-        if marcador_palabra.search(
-            unicodedata.normalize("NFD", b["texto"])
-            .encode("ascii", "ignore")
-            .decode("ascii")
-            .upper()
-        )
-    ]
-    if bandas_palabra:
-        limite_lecturas = max(bandas_palabra)
-        derecha = [
-            b for b in derecha
-            if b["y0"] >= limite_lecturas - 2
-        ]
-        transversales = [
-            b for b in transversales
-            if b["y0"] >= limite_lecturas - 2
-            or marcador_palabra.search(
-                unicodedata.normalize("NFD", b["texto"])
-                .encode("ascii", "ignore")
-                .decode("ascii")
-                .upper()
-            )
-        ]
-
-    caracteres_izquierda = sum(len(b["texto"]) for b in izquierda)
-    caracteres_derecha = sum(len(b["texto"]) for b in derecha)
-
-    # No forzar dos columnas en páginas de una sola columna o con texto centrado.
-    if (
-        len(izquierda) < 2
-        or len(derecha) < 2
-        or caracteres_izquierda < 100
-        or caracteres_derecha < 100
-    ):
-        return pagina.get_text("text", sort=True) or ""
-
-    def ordenar_columna(items):
+    def ordenar(items):
         return sorted(items, key=lambda b: (b["y0"], b["x0"]))
+
+    # Combina bandas que Tesseract/PyMuPDF haya fragmentado a la misma altura.
+    bandas_ordenadas = sorted(bandas, key=lambda b: (b["y0"], b["x0"]))
+    bandas_combinadas = []
+    for banda in bandas_ordenadas:
+        if bandas_combinadas and banda["y0"] <= bandas_combinadas[-1]["y1"] + 18:
+            bandas_combinadas[-1]["y1"] = max(
+                bandas_combinadas[-1]["y1"],
+                banda["y1"],
+            )
+        else:
+            bandas_combinadas.append({
+                "y0": banda["y0"],
+                "y1": banda["y1"],
+            })
 
     salida = []
     limite_superior = float("-inf")
-    for transversal in sorted(transversales, key=lambda b: (b["y0"], b["x0"])):
+    for banda in bandas_combinadas:
+        y_inicio = banda["y0"]
         zona_izquierda = [
             b for b in izquierda
-            if limite_superior <= b["y0"] < transversal["y0"]
+            if limite_superior <= b["y0"] < y_inicio
         ]
         zona_derecha = [
             b for b in derecha
-            if limite_superior <= b["y0"] < transversal["y0"]
+            if limite_superior <= b["y0"] < y_inicio
         ]
-        salida.extend(b["texto"] for b in ordenar_columna(zona_izquierda))
-        salida.extend(b["texto"] for b in ordenar_columna(zona_derecha))
-        salida.append(transversal["texto"])
-        limite_superior = max(limite_superior, transversal["y1"])
+        zona_centro = [
+            b for b in centro
+            if limite_superior <= b["y0"] < y_inicio
+        ]
+        salida.extend(b["texto"] for b in ordenar(zona_izquierda))
+        salida.extend(b["texto"] for b in ordenar(zona_derecha))
+        salida.extend(b["texto"] for b in ordenar(zona_centro))
+        limite_superior = max(limite_superior, banda["y1"])
 
     restantes_izquierda = [
         b for b in izquierda if b["y0"] >= limite_superior
@@ -321,13 +323,21 @@ def _texto_pagina_por_columnas(pagina):
     restantes_derecha = [
         b for b in derecha if b["y0"] >= limite_superior
     ]
-    salida.extend(b["texto"] for b in ordenar_columna(restantes_izquierda))
-    salida.extend(b["texto"] for b in ordenar_columna(restantes_derecha))
+    restantes_centro = [
+        b for b in centro if b["y0"] >= limite_superior
+    ]
+
+    if not bandas_combinadas:
+        restantes_izquierda = izquierda
+        restantes_derecha = derecha
+        restantes_centro = centro
+
+    salida.extend(b["texto"] for b in ordenar(restantes_izquierda))
+    salida.extend(b["texto"] for b in ordenar(restantes_derecha))
+    salida.extend(b["texto"] for b in ordenar(restantes_centro))
 
     texto_ordenado = "\n".join(salida).strip()
     texto_original = pagina.get_text("text", sort=True) or ""
-    # Si una peculiaridad de la geometría descartara demasiada información,
-    # conservar la extracción estándar.
     if len(texto_ordenado) < len(texto_original) * 0.75:
         return texto_original
     return texto_ordenado
