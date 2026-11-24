@@ -549,8 +549,9 @@ def _tesseract(imagen, ejecutable, idioma="spa", psm="4", salida="text"):
 
 def _limite_banda_liturgia(archivo_imagen, ejecutable, idioma):
     """
-    Localiza con TSV la banda "Liturgia de la Palabra" en la columna izquierda.
-    Devuelve la coordenada inferior en píxeles o None si no se reconoce.
+    Localiza con TSV la banda transversal "Liturgia de la Palabra" en la
+    página completa. Devuelve la coordenada inferior en píxeles o None si no
+    se reconoce.
     """
     try:
         resultado = _tesseract(
@@ -762,8 +763,11 @@ def _ocr_pdf(
                         (0, 0, corte_izquierdo, alto)
                     ).save(imagen_izquierda)
 
+                    # El rótulo "Liturgia de la Palabra" cruza el centro
+                    # de la página. Detectarlo en la imagen completa evita
+                    # cortar la palabra final al usar solo la mitad izquierda.
                     limite_banda = _limite_banda_liturgia(
-                        imagen_izquierda,
+                        imagen,
                         ejecutable,
                         idioma,
                     )
