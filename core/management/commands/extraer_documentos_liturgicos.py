@@ -1485,10 +1485,9 @@ class Command(BaseCommand):
                 paginas_total += total_paginas
 
                 paginas_para_encabezado = list(paginas)
-                if "paginas_ocr_encabezado" in locals():
-                    for numero_pagina, texto_pagina in paginas_ocr_encabezado.items():
-                        if 1 <= numero_pagina <= 2:
-                            paginas_para_encabezado[numero_pagina - 1] = texto_pagina
+                for numero_pagina, texto_pagina in paginas_ocr_encabezado.items():
+                    if 1 <= numero_pagina <= 2:
+                        paginas_para_encabezado[numero_pagina - 1] = texto_pagina
                 texto_encabezado = "\n".join(paginas_para_encabezado[:2])
                 datos = _extraer_datos_liturgicos(
                     texto_encabezado,
