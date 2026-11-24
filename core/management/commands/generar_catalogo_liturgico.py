@@ -79,7 +79,7 @@ PATRONES_SECCION = (
         "segunda_lectura",
         re.compile(
             r"(?<![A-ZÁÉÍÓÚÑ])(?P<numero>\d{1,3}(?:\s*[,.)|!]){0,3}\s*)?"
-            r"(?P<titulo>SE{1,2}[GC]UN[D0O]A\s+LECTURA)",
+            r"(?P<titulo>SE{1,2}[GCB]UN[D0OB]\s+LECTURA)",
             re.I,
         ),
     ),
@@ -410,9 +410,11 @@ def _recortar_fin_seccion(nombre, texto):
 
 def _extraer_secciones(texto):
     """
-    Detecta encabezados en cualquier posición de una línea cuando van
-    precedidos por un número de sección, y tolera prefijos OCR conocidos.
-    Separa también varios encabezados que aparecen en una misma línea.
+    Separa lecturas a partir de su encabezado y confirma el inicio real de cada
+    bloque. Solo acepta cierres como "Palabra de Dios" después de encontrar
+    el ancla de esa lectura, para no cerrar una sección con texto de la columna
+    vecina. Encabezados que comparten una misma línea no se usan como límite
+    entre dos columnas.
     """
     lineas = _lineas_documento(texto)
     detecciones = []
@@ -424,9 +426,18 @@ def _extraer_secciones(texto):
                 prefijo = linea[:coincidencia.start()].strip()
                 numerado = bool(coincidencia.group("numero"))
 
-                # Un encabezado numerado puede aparecer después de texto de
-                # otra columna en la misma línea. Sin número, solo se acepta
-                # al inicio o tras un artefacto OCR reconocido.
+                # Excluir la palabra "Evangelio" que forma parte del título
+                # "Aclamación antes del Evangelio".
+                if (
+                    nombre == "evangelio"
+                    and re.search(
+                        r"ACLAMACI[ÓO]N\s+ANTES\s+DEL\s*$",
+                        prefijo,
+                        re.I,
+                    )
+                ):
+                    continue
+
                 if not numerado:
                     if prefijo and not _es_prefijo_ocr_encabezado(prefijo):
                         continue
@@ -446,11 +457,6 @@ def _extraer_secciones(texto):
                         }
                     )
 
-                    # La palabra "Evangelio" aparece también dentro de las
-                    # moniciones ("...contemplar en el Evangelio, cómo...").
-                    # Solo aceptar el encabezado simple si está aislado o
-                    # precedido por ruido OCR; la fórmula "Lectura del santo
-                    # Evangelio" puede ser más larga.
                     if (
                         titulo_evangelio_simple
                         and not prefijo
@@ -461,11 +467,6 @@ def _extraer_secciones(texto):
                     if len(linea) > 110 and not encabezado_evangelio_completo:
                         continue
 
-                    # "Aleluya" también puede ser el estribillo final del
-                    # salmo responsorial. Solo tratarlo como encabezado de
-                    # aclamación si está numerado o va seguido de una
-                    # intervención del cantor. Así no se desplazan las estrofas
-                    # del salmo al campo de aclamación.
                     if nombre == "aclamacion" and titulo_detectado == "ALELUYA":
                         if not numerado:
                             contexto_siguiente = " ".join(
@@ -484,20 +485,14 @@ def _extraer_secciones(texto):
                     and prefijo
                     and _es_prefijo_ocr_encabezado(prefijo)
                 ):
-                    # Si el OCR antepone artefactos como "[ES]", "EN" o "Y",
-                    # el límite de la sección debe comenzar antes del ruido.
-                    # De otro modo el prefijo queda pegado al campo anterior.
                     inicio_encabezado = 0
 
-                candidatos.append(
-                    (
-                        inicio_encabezado,
-                        coincidencia.end(),
-                        nombre,
-                    )
-                )
+                candidatos.append((
+                    inicio_encabezado,
+                    coincidencia.end(),
+                    nombre,
+                ))
 
-        # Resolver posibles coincidencias solapadas y conservar el orden real.
         candidatos.sort(key=lambda item: (item[0], -(item[1] - item[0])))
         fin_anterior = -1
         for inicio, fin, nombre in candidatos:
@@ -523,37 +518,98 @@ def _extraer_secciones(texto):
         "evangelio": "",
     }
 
+    anclas_inicio = {
+        "primera_lectura": re.compile(
+            r"\bLECTURA\s+(?:DEL|DE\s+LA|DE\s+LOS|DE\s+LAS)\b",
+            re.I,
+        ),
+        "salmo_responsorial": re.compile(r"\bSALMISTA\s*:", re.I),
+        "segunda_lectura": re.compile(
+            r"\bLECTURA\s+(?:DEL|DE\s+LA|DE\s+LOS|DE\s+LAS)\b",
+            re.I,
+        ),
+        "aclamacion": re.compile(
+            r"\b(?:ASAMBLEA\s*:\s*(?:R\.?\s*)?ALELUYA|"
+            r"R\.?\s*ALELUYA|CANTOR\s*:)",
+            re.I,
+        ),
+        "evangelio": re.compile(
+            r"\b(?:LECTURA\s+DEL\s+(?:SANTO\s+)?EVANGELIO|"
+            r"DEL\s+SANTO\s+EVANGELIO|SEG[ÚU]N\s+SAN\s+"
+            r"(?:MATEO|MARCOS|LUCAS|JUAN))\b",
+            re.I,
+        ),
+    }
+
     for posicion, (linea_inicio, inicio, fin_encabezado, nombre) in enumerate(posiciones):
-        if posicion + 1 < len(posiciones):
-            linea_fin, inicio_siguiente, _fin_siguiente, _nombre_siguiente = posiciones[posicion + 1]
+        # Un encabezado de la otra columna puede aparecer a la misma altura.
+        # No debe cerrar la sección actual; el contenido comienza en las
+        # líneas posteriores dentro de la columna que contiene este título.
+        siguientes = [
+            item for item in posiciones[posicion + 1:]
+            if item[0] > linea_inicio
+        ]
+        if siguientes:
+            linea_fin, inicio_siguiente, _fin_siguiente, _nombre_siguiente = siguientes[0]
         else:
             linea_fin = len(lineas)
             inicio_siguiente = 0
 
         partes = []
-
-        # El encabezado y el contenido pueden compartir la misma línea.
-        # Cuando OCR pega la primera palabra al final del título (por ejemplo,
-        # "LECTURASobre"), suele ser texto de la columna vecina; se descarta
-        # ese resto de línea y se continúa con las líneas siguientes.
         resto_encabezado = lineas[linea_inicio][fin_encabezado:]
+
+        # Elimina del resto de la línea los títulos de la columna vecina
+        # (por ejemplo, "12. Oración Universal" junto a "10. Evangelio").
+        cortes = []
+        for otro_nombre, otro_patron in PATRONES_SECCION:
+            for coincidencia in otro_patron.finditer(resto_encabezado):
+                cortes.append(coincidencia.start())
+        marcador_otra = MARCADORES_OTRAS_SECCIONES.search(
+            _normalizar(resto_encabezado)
+        )
+        if marcador_otra:
+            # La normalización conserva espacios, por lo que esta posición se
+            # usa solo como límite aproximado del texto de la columna vecina.
+            cortes.append(marcador_otra.start())
+
+        if cortes:
+            resto_encabezado = resto_encabezado[:min(cortes)]
         if resto_encabezado and resto_encabezado[0].isalnum():
+            # Evita unir palabras cuando el OCR pegó la primera palabra del
+            # otro bloque al final del encabezado.
             resto_encabezado = ""
 
-        if linea_inicio == linea_fin:
-            partes.append(resto_encabezado[:max(0, inicio_siguiente - fin_encabezado)])
-        else:
-            partes.append(resto_encabezado)
-            for indice_linea in range(linea_inicio + 1, linea_fin):
-                partes.append(lineas[indice_linea])
-            if linea_fin < len(lineas):
-                partes.append(lineas[linea_fin][:inicio_siguiente])
+        partes.append(resto_encabezado)
+        partes.extend(lineas[linea_inicio + 1:linea_fin])
+        if linea_fin < len(lineas):
+            partes.append(lineas[linea_fin][:inicio_siguiente])
 
+        patron_inicio = anclas_inicio[nombre]
+        encontrado_inicio = False
         bloque = []
-        terminado = False
+
         for parte in partes:
             if not parte.strip():
                 continue
+
+            if not encontrado_inicio:
+                ancla = patron_inicio.search(parte)
+                if not ancla:
+                    # Antes del ancla pueden aparecer palabras de la columna
+                    # vecina, incluidos "Palabra de Dios" o "Profesión de Fe".
+                    continue
+
+                prefijo_ancla = parte[:ancla.start()]
+                if nombre == "salmo_responsorial":
+                    referencia = re.search(
+                        r"\(?\s*SALMO\s+\d{1,3}\s*\)?",
+                        prefijo_ancla,
+                        re.I,
+                    )
+                    if referencia:
+                        bloque.append(referencia.group(0))
+                parte = parte[ancla.start():]
+                encontrado_inicio = True
 
             contenido, es_fin = _recortar_fin_lectura(parte)
             if contenido:
@@ -562,15 +618,14 @@ def _extraer_secciones(texto):
                 bloque.append(contenido.strip())
 
             if es_fin:
-                terminado = True
                 break
+
+        if not encontrado_inicio:
+            secciones[nombre] = ""
+            continue
 
         texto_seccion = "\n".join(bloque).strip()
         texto_seccion = _limpiar_rotulos_pagina(texto_seccion)
-        texto_seccion, _ancla_encontrada = _recortar_inicio_seccion(
-            nombre,
-            texto_seccion,
-        )
         texto_seccion = _recortar_fin_seccion(nombre, texto_seccion)
         secciones[nombre] = texto_seccion
 
