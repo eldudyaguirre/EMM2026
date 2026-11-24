@@ -1,7 +1,7 @@
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
 from django.http import JsonResponse
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from django.shortcuts import get_object_or_404, render, redirect
 from django.contrib import messages
 from io import BytesIO
@@ -95,36 +95,44 @@ def gestionar_cancion_repertorio(request, servicio_id):
 
         if entrada.cancion_id == cancion_nueva.pk:
             messages.info(request, 'Esta canción ya está asignada a esta posición.')
-        elif servicio.repertorio.filter(cancion_id=cancion_nueva.pk).exclude(pk=entrada.pk).exists():
-            messages.error(
-                request,
-                f'«{cancion_nueva.titulo}» ya está en este repertorio. No se puede repetir.',
-            )
         else:
-            entrada.cancion = cancion_nueva
-            entrada.numero_snapshot = cancion_nueva.numero
-            entrada.titulo_snapshot = cancion_nueva.titulo
-            entrada.letra_snapshot = cancion_nueva.letra
-            entrada.usa_capodastro = cancion_nueva.usa_capodastro
-            entrada.traste_capodastro = cancion_nueva.traste_capodastro
             try:
                 with transaction.atomic():
-                    entrada.save(update_fields=[
-                        'cancion',
-                        'numero_snapshot',
-                        'titulo_snapshot',
-                        'letra_snapshot',
-                        'usa_capodastro',
-                        'traste_capodastro',
-                    ])
-                messages.success(
-                    request,
-                    f'La canción fue reemplazada por «{cancion_nueva.titulo}».',
-                )
-            except Exception:
+                    duplicada = servicio.repertorio.select_for_update().filter(
+                        cancion_id=cancion_nueva.pk
+                    ).exclude(pk=entrada.pk).exists()
+
+                    if duplicada:
+                        messages.error(
+                            request,
+                            f'«{cancion_nueva.titulo}» ya está en este repertorio. No se puede repetir.',
+                        )
+                    else:
+                        # Se sustituye solo esta entrada: conserva su orden y
+                        # los ajustes de transposición y notación del servicio.
+                        # La letra, acordes y capodastro vienen del cancionero.
+                        entrada.cancion = cancion_nueva
+                        entrada.numero_snapshot = cancion_nueva.numero
+                        entrada.titulo_snapshot = cancion_nueva.titulo
+                        entrada.letra_snapshot = cancion_nueva.letra
+                        entrada.usa_capodastro = cancion_nueva.usa_capodastro
+                        entrada.traste_capodastro = cancion_nueva.traste_capodastro
+                        entrada.save(update_fields=[
+                            'cancion',
+                            'numero_snapshot',
+                            'titulo_snapshot',
+                            'letra_snapshot',
+                            'usa_capodastro',
+                            'traste_capodastro',
+                        ])
+                        messages.success(
+                            request,
+                            f'La canción fue reemplazada por «{cancion_nueva.titulo}».',
+                        )
+            except IntegrityError:
                 messages.error(
                     request,
-                    'No se pudo reemplazar la canción. Comprueba que no esté repetida.',
+                    'No se pudo reemplazar la canción porque ya está incluida en este repertorio.',
                 )
 
     elif accion == 'editar':
