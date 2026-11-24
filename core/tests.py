@@ -52,9 +52,6 @@ class FechaDocumentalLiturgicaTests(SimpleTestCase):
 
 
 class OrdenColumnasPDFTests(SimpleTestCase):
-    class Rect:
-        width = 400
-
     class PaginaFalsa:
         def __init__(self, bloques):
             self.bloques = bloques
