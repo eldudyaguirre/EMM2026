@@ -470,9 +470,20 @@ def _extraer_secciones(texto):
                             ):
                                 continue
 
+                inicio_encabezado = coincidencia.start()
+                if (
+                    not numerado
+                    and prefijo
+                    and _es_prefijo_ocr_encabezado(prefijo)
+                ):
+                    # Si el OCR antepone artefactos como "[ES]", "EN" o "Y",
+                    # el límite de la sección debe comenzar antes del ruido.
+                    # De otro modo el prefijo queda pegado al campo anterior.
+                    inicio_encabezado = 0
+
                 candidatos.append(
                     (
-                        coincidencia.start(),
+                        inicio_encabezado,
                         coincidencia.end(),
                         nombre,
                     )
