@@ -360,6 +360,42 @@ class Command(BaseCommand):
 
                 estados_seccion[campo] = estado_seccion
 
+            # Detecta texto repetido entre campos: suele indicar que el parser
+            # cruzó columnas y asignó el mismo bloque a dos lecturas distintas.
+            campos_con_texto = [
+                campo for campo, _etiqueta, _minimo in SECCIONES
+                if secciones[campo]
+            ]
+            for indice_campo, campo_a in enumerate(campos_con_texto):
+                texto_a = re.sub(
+                    r"\W+",
+                    " ",
+                    secciones[campo_a].casefold(),
+                    flags=re.UNICODE,
+                ).strip()
+                if len(texto_a) < 100:
+                    continue
+                for campo_b in campos_con_texto[indice_campo + 1:]:
+                    texto_b = re.sub(
+                        r"\W+",
+                        " ",
+                        secciones[campo_b].casefold(),
+                        flags=re.UNICODE,
+                    ).strip()
+                    if len(texto_b) >= 100 and (
+                        texto_a == texto_b
+                        or texto_a in texto_b
+                        or texto_b in texto_a
+                    ):
+                        for campo in (campo_a, campo_b):
+                            if campo not in secciones_sospechosas:
+                                secciones_sospechosas.append(campo)
+                                estados_seccion[campo] = "POSIBLE_DUPLICADO"
+                                agregar_alerta(
+                                    alertas,
+                                    f"POSIBLE_DUPLICADO_ENTRE_SECCIONES_{campo.upper()}",
+                                )
+
             if es_ocr and (
                 secciones_faltantes
                 or secciones_sospechosas
@@ -564,7 +600,7 @@ class Command(BaseCommand):
             f"Documentos con carácter de reemplazo OCR: {cantidad_texto_sospechoso}",
             f"Documentos con prioridad ALTA: {sum(1 for fila in filas_reporte if fila['prioridad_revision'] == 'ALTA')}",
             f"Secciones con posible mezcla de contenido: {sum(len(fila['secciones_sospechosas'].split(';')) for fila in filas_reporte if fila['secciones_sospechosas'])}",
-            f"Secciones con texto críticamente corto: {sum(1 for alerta in resumen_alertas if alerta.startswith('TEXTO_CORTO_CRITICO_'))}",
+            f"Secciones con texto críticamente corto: {sum(cantidad for alerta, cantidad in resumen_alertas.items() if alerta.startswith('TEXTO_CORTO_CRITICO_'))}",
             f"Filas en revisión de fechas: {len(filas_revision_fechas)}",
             "",
             "FALTANTES POR SECCIÓN:",
