@@ -360,7 +360,15 @@ class Command(BaseCommand):
 
                 estados_seccion[campo] = estado_seccion
 
-            if es_ocr and secciones_faltantes:
+            if es_ocr and (
+                secciones_faltantes
+                or secciones_sospechosas
+                or any(
+                    longitudes[campo] < UMBRAL_CRITICO[campo]
+                    for campo, _etiqueta, _minimo in SECCIONES
+                    if secciones[campo]
+                )
+            ):
                 cantidad_ocr_incompleta += 1
 
             estado = (catalogo_fila.get("estado_extraccion") or "").upper()
@@ -547,7 +555,7 @@ class Command(BaseCommand):
             f"Documentos en catálogo: {len(catalogo)}",
             f"Registros en índice: {len(indice)}",
             f"Documentos con OCR (incluye OCR parcial): {cantidad_ocr}",
-            f"Documentos OCR con alguna sección faltante: {cantidad_ocr_incompleta}",
+            f"Documentos OCR con secciones faltantes o sospechosas: {cantidad_ocr_incompleta}",
             f"Fechas documentales distintas de la publicación: {cantidad_fecha_distinta}",
             f"Fechas del nombre del PDF distintas de la fecha documental: {cantidad_fecha_nombre_distinta}",
             f"Fechas duplicadas en el índice: {cantidad_duplicadas}",
