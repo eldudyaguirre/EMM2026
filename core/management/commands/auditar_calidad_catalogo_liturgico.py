@@ -459,7 +459,7 @@ class Command(BaseCommand):
                         "NO APLICA: el documento contiene la Secuencia de Pascua; "
                         "no se considera aclamación."
                         if es_secuencia_pascual_2020 and campo == "aclamacion" and not contenido
-                        else "NO DETECTADA" if not contenido else "CONTENIDO DETECTADO"
+                        else estados_seccion[campo]
                     )
                     detalle_revision.extend([
                         "",
@@ -478,6 +478,57 @@ class Command(BaseCommand):
             )
             escritor.writeheader()
             escritor.writerows(filas_reporte)
+
+        ruta_revision = base / "casos_prioritarios_revision.csv"
+        campos_prioridad = [
+            "archivo_pdf",
+            "fecha_publicacion",
+            "fecha_documento",
+            "titulo_celebracion",
+            "ciclo",
+            "prioridad_revision",
+            "secciones_faltantes",
+            "secciones_sospechosas",
+            "alertas",
+            "primera_lectura_caracteres",
+            "salmo_responsorial_caracteres",
+            "segunda_lectura_caracteres",
+            "aclamacion_caracteres",
+            "evangelio_caracteres",
+        ]
+        with ruta_revision.open("w", newline="", encoding="utf-8-sig") as archivo:
+            escritor = csv.DictWriter(
+                archivo,
+                fieldnames=campos_prioridad,
+                extrasaction="ignore",
+            )
+            escritor.writeheader()
+            escritor.writerows(
+                fila for fila in filas_reporte
+                if fila["prioridad_revision"] == "ALTA"
+            )
+
+        ruta_fechas = base / "revision_fechas_documentales.csv"
+        campos_fechas = [
+            "archivo_pdf",
+            "fecha_publicacion",
+            "fecha_en_nombre",
+            "fecha_documental",
+            "titulo_celebracion",
+            "ciclo",
+            "metodo_extraccion",
+            "discrepancias",
+            "posibles_archivos_con_fecha_publicada",
+            "decision",
+        ]
+        with ruta_fechas.open("w", newline="", encoding="utf-8-sig") as archivo:
+            escritor = csv.DictWriter(
+                archivo,
+                fieldnames=campos_fechas,
+                extrasaction="ignore",
+            )
+            escritor.writeheader()
+            escritor.writerows(filas_revision_fechas)
 
         ruta_ocr = base / "revision_humana_ocr.txt"
         ruta_ocr.write_text(
@@ -503,6 +554,10 @@ class Command(BaseCommand):
             f"Documentos sin título de celebración: {cantidad_con_titulo_vacio}",
             f"Documentos sin ciclo identificado: {cantidad_con_ciclo_vacio}",
             f"Documentos con carácter de reemplazo OCR: {cantidad_texto_sospechoso}",
+            f"Documentos con prioridad ALTA: {sum(1 for fila in filas_reporte if fila['prioridad_revision'] == 'ALTA')}",
+            f"Secciones con posible mezcla de contenido: {sum(len(fila['secciones_sospechosas'].split(';')) for fila in filas_reporte if fila['secciones_sospechosas'])}",
+            f"Secciones con texto críticamente corto: {sum(1 for alerta in resumen_alertas if alerta.startswith('TEXTO_CORTO_CRITICO_'))}",
+            f"Filas en revisión de fechas: {len(filas_revision_fechas)}",
             "",
             "FALTANTES POR SECCIÓN:",
         ]
@@ -516,7 +571,9 @@ class Command(BaseCommand):
         lineas.extend([
             "",
             "ARCHIVOS GENERADOS:",
-            "- auditoria_calidad_liturgica.csv: una fila por documento del catálogo.",
+            "- auditoria_calidad_liturgica.csv: una fila por documento del catálogo, con estado por sección.",
+            "- casos_prioritarios_revision.csv: lecturas cortas, vacías o con posible mezcla.",
+            "- revision_fechas_documentales.csv: discrepancias de fechas para cotejo, sin autocorrección.",
             "- revision_humana_ocr.txt: contenido detectado en cada documento con OCR.",
             "- resumen_auditoria_calidad.txt: conteos y alertas generales.",
             "",
@@ -533,6 +590,8 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("Auditoría de calidad generada."))
         self.stdout.write(f"CSV: {ruta_csv}")
         self.stdout.write(f"Revisión OCR: {ruta_ocr}")
+        self.stdout.write(f"Casos prioritarios: {ruta_revision}")
+        self.stdout.write(f"Revisión de fechas: {ruta_fechas}")
         self.stdout.write(f"Resumen: {ruta_resumen}")
         self.stdout.write(
             f"Documentos con OCR: {cantidad_ocr}; registros auditados: {len(filas_reporte)}."
