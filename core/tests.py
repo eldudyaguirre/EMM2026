@@ -9,6 +9,11 @@ from core.management.commands.extraer_documentos_liturgicos import (
 from core.management.commands.generar_catalogo_liturgico import (
     _extraer_secciones,
 )
+from core.management.commands.auditar_calidad_catalogo_liturgico import (
+    PATRONES_MEZCLA,
+    UMBRAL_CRITICO,
+    referencia_biblica,
+)
 
 
 class FechaDocumentalLiturgicaTests(SimpleTestCase):
@@ -123,3 +128,21 @@ Palabra del Señor.
         self.assertIn("san Mateo 22, 15-21", secciones["evangelio"])
         self.assertIn("Jesús enseñó", secciones["evangelio"])
         self.assertNotIn("Profesión de Fe", secciones["evangelio"])
+
+
+class AuditoriaCalidadLiturgicaTests(SimpleTestCase):
+    def test_reconoce_referencias_biblicas_abreviadas(self):
+        self.assertEqual(referencia_biblica("Jn 1,14.12"), "Jn 1,14.12")
+        self.assertEqual(referencia_biblica("Flp 2,15.16"), "Flp 2,15.16")
+        self.assertEqual(referencia_biblica("Mt 22, 34-40"), "Mt 22, 34-40")
+
+    def test_detecta_oracion_universal_dentro_de_aclamacion(self):
+        texto = (
+            "Asamblea: Aleluya. Cantor: Dichosos los que escuchan. "
+            "Asamblea: Aleluya. Oración Universal: Por la Iglesia..."
+        )
+        self.assertIsNotNone(PATRONES_MEZCLA["aclamacion"].search(texto))
+
+    def test_un_evangelio_de_74_caracteres_es_criticamente_corto(self):
+        self.assertEqual(UMBRAL_CRITICO["evangelio"], 100)
+        self.assertLess(74, UMBRAL_CRITICO["evangelio"])
