@@ -25,7 +25,7 @@ main{padding:26px 0 70px}.empty{padding:40px 20px;text-align:center;background:v
 .song{background:var(--panel);border:1px solid var(--line);border-radius:15px;margin-bottom:15px;overflow:hidden;scroll-margin-top:95px}.song.current{border-color:#ff4967;box-shadow:0 0 0 1px rgba(255,73,103,.2)}
 .song-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:15px 18px;background:rgba(255,255,255,.025);border-bottom:1px solid var(--line)}.song-title{font-size:18px;font-weight:800}.song-num{color:#ff8295;margin-right:9px}.song-meta{font-size:12px;color:var(--muted);margin-top:5px}
 .lyrics{padding:20px;white-space:pre-wrap;overflow-wrap:anywhere;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:16px;line-height:1.8;color:#f0f0f4;transition:font-size .15s}.lyric-wrap{overflow:auto}
-.song-actions{display:flex;gap:7px;flex-wrap:wrap}.song-edit{display:none;padding:16px;border-top:1px solid var(--line);background:#14151a}.song-edit.open{display:block}.song-edit input:not([type="checkbox"]),.song-edit textarea,.song-search input,.song-edit select{width:100%;background:#101114;color:#fff;border:1px solid #444650;border-radius:8px;padding:10px;margin:5px 0 12px}.song-edit textarea{min-height:220px;font-family:ui-monospace,monospace;line-height:1.6}.capo-edit{display:grid;grid-template-columns:minmax(220px,1fr) minmax(180px,240px);gap:12px;align-items:end;padding:12px;margin:2px 0 12px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.025)}.capo-toggle{display:flex;align-items:center;gap:9px;min-height:42px;font-weight:700}.capo-toggle input{width:18px;height:18px;margin:0;accent-color:var(--red)}.capo-fret label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}.capo-fret select:disabled{opacity:.55;cursor:not-allowed}.capo-help{display:block;color:var(--muted);font-size:12px;margin-top:-6px;margin-bottom:12px}@media(max-width:600px){.capo-edit{grid-template-columns:1fr;gap:8px}.capo-fret{width:100%}}.song-search{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:22px}.song-search h2{font-size:20px;font-weight:800;margin:0 0 8px}.search-results{display:grid;gap:8px;margin-top:12px}.search-result{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid var(--line);border-radius:9px;background:#202127}.search-result small{display:block;color:var(--muted);margin-top:4px}.search-status{font-size:13px;color:var(--muted);margin-top:8px}.search-result{cursor:pointer;transition:border-color .15s,background .15s}.search-result:hover,.search-result:focus{border-color:#ff4967;background:#292027;outline:none}.song-popup{display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.82);padding:24px;align-items:center;justify-content:center}.song-popup.open{display:flex}.song-popup-card{width:min(900px,100%);max-height:90vh;display:flex;flex-direction:column;background:#191a20;border:1px solid #48404a;border-radius:16px;overflow:hidden;box-shadow:0 20px 80px #000}.song-popup-head{padding:18px 22px;background:linear-gradient(120deg,#22232a,#36000f);border-bottom:1px solid var(--line);display:flex;align-items:flex-start;justify-content:space-between;gap:15px}.song-popup-head h2{font-size:23px;margin:0 0 5px}.song-popup-meta{color:#b9bac4;font-size:13px}.song-popup-lyrics{overflow:auto;padding:22px;white-space:pre-wrap;overflow-wrap:anywhere;font:16px/1.9 ui-monospace,SFMono-Regular,Consolas,monospace;min-height:180px;scroll-behavior:auto}.popup-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 22px;border-bottom:1px solid var(--line);background:#202127}.popup-controls label{font-size:13px;color:var(--muted)}.popup-controls select{background:#111216;color:#fff;border:1px solid #48404a;border-radius:8px;padding:8px}.popup-controls .btnx.active{background:#b40026;border-color:#ff4967}.popup-close{flex-shrink:0;font-size:20px}@media(max-width:600px){.song-popup{padding:8px}.song-popup-card{max-height:92vh}.song-popup-head{padding:12px;gap:8px}.song-popup-head h2{font-size:17px}.song-popup-lyrics{padding:14px;font-size:15px}.popup-controls{display:flex;flex-wrap:nowrap;align-items:center;gap:5px;padding:8px 10px;overflow-x:auto}.popup-controls label{font-size:11px;white-space:nowrap}.popup-controls select{flex:1 1 90px;min-width:0;width:90px;padding:8px 4px;font-size:13px}.popup-controls .btnx{flex:0 0 auto;padding:8px 9px;min-width:0;white-space:nowrap}.popup-controls #popupFontSmaller,.popup-controls #popupFontLarger{padding:8px 7px}.popup-controls #popupScrollTop{padding:8px 10px}}.popup-hint{font-size:12px;color:var(--muted);padding:0 22px 15px}.song-actions button{font-size:12px;padding:7px 9px}
+.song-actions{display:flex;gap:7px;flex-wrap:wrap}.song-actions form{display:inline-flex}.order-btn:disabled{opacity:.3;cursor:not-allowed;background:#202127;border-color:var(--line)}.song-replace{display:none;padding:16px;border-top:1px solid var(--line);background:#14151a}.song-replace.open{display:block}.song-replace input{width:100%;background:#101114;color:#fff;border:1px solid #444650;border-radius:8px;padding:10px;margin:5px 0 12px}.replace-results{display:grid;gap:8px;margin:8px 0 12px}.replace-result{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:9px;background:#202127}.replace-result strong{display:block}.replace-result small{display:block;color:var(--muted);margin-top:3px}.replace-result button{flex:0 0 auto}.song-edit{display:none;padding:16px;border-top:1px solid var(--line);background:#14151a}.song-edit.open{display:block}.song-edit input:not([type="checkbox"]),.song-edit textarea,.song-search input,.song-edit select{width:100%;background:#101114;color:#fff;border:1px solid #444650;border-radius:8px;padding:10px;margin:5px 0 12px}.song-edit textarea{min-height:220px;font-family:ui-monospace,monospace;line-height:1.6}.capo-edit{display:grid;grid-template-columns:minmax(220px,1fr) minmax(180px,240px);gap:12px;align-items:end;padding:12px;margin:2px 0 12px;border:1px solid var(--line);border-radius:10px;background:rgba(255,255,255,.025)}.capo-toggle{display:flex;align-items:center;gap:9px;min-height:42px;font-weight:700}.capo-toggle input{width:18px;height:18px;margin:0;accent-color:var(--red)}.capo-fret label{display:block;font-size:13px;color:var(--muted);margin-bottom:4px}.capo-fret select:disabled{opacity:.55;cursor:not-allowed}.capo-help{display:block;color:var(--muted);font-size:12px;margin-top:-6px;margin-bottom:12px}@media(max-width:600px){.capo-edit{grid-template-columns:1fr;gap:8px}.capo-fret{width:100%}.replace-result{align-items:flex-start;flex-direction:column}.replace-result form,.replace-result button{width:100%}}.song-search{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:22px}.song-search h2{font-size:20px;font-weight:800;margin:0 0 8px}.search-results{display:grid;gap:8px;margin-top:12px}.search-result{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px;border:1px solid var(--line);border-radius:9px;background:#202127}.search-result small{display:block;color:var(--muted);margin-top:4px}.search-status{font-size:13px;color:var(--muted);margin-top:8px}.search-result{cursor:pointer;transition:border-color .15s,background .15s}.search-result:hover,.search-result:focus{border-color:#ff4967;background:#292027;outline:none}.song-popup{display:none;position:fixed;inset:0;z-index:1000;background:rgba(0,0,0,.82);padding:24px;align-items:center;justify-content:center}.song-popup.open{display:flex}.song-popup-card{width:min(900px,100%);max-height:90vh;display:flex;flex-direction:column;background:#191a20;border:1px solid #48404a;border-radius:16px;overflow:hidden;box-shadow:0 20px 80px #000}.song-popup-head{padding:18px 22px;background:linear-gradient(120deg,#22232a,#36000f);border-bottom:1px solid var(--line);display:flex;align-items:flex-start;justify-content:space-between;gap:15px}.song-popup-head h2{font-size:23px;margin:0 0 5px}.song-popup-meta{color:#b9bac4;font-size:13px}.song-popup-lyrics{overflow:auto;padding:22px;white-space:pre-wrap;overflow-wrap:anywhere;font:16px/1.9 ui-monospace,SFMono-Regular,Consolas,monospace;min-height:180px;scroll-behavior:auto}.popup-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 22px;border-bottom:1px solid var(--line);background:#202127}.popup-controls label{font-size:13px;color:var(--muted)}.popup-controls select{background:#111216;color:#fff;border:1px solid #48404a;border-radius:8px;padding:8px}.popup-controls .btnx.active{background:#b40026;border-color:#ff4967}.popup-close{flex-shrink:0;font-size:20px}@media(max-width:600px){.song-popup{padding:8px}.song-popup-card{max-height:92vh}.song-popup-head{padding:12px;gap:8px}.song-popup-head h2{font-size:17px}.song-popup-lyrics{padding:14px;font-size:15px}.popup-controls{display:flex;flex-wrap:nowrap;align-items:center;gap:5px;padding:8px 10px;overflow-x:auto}.popup-controls label{font-size:11px;white-space:nowrap}.popup-controls select{flex:1 1 90px;min-width:0;width:90px;padding:8px 4px;font-size:13px}.popup-controls .btnx{flex:0 0 auto;padding:8px 9px;min-width:0;white-space:nowrap}.popup-controls #popupFontSmaller,.popup-controls #popupFontLarger{padding:8px 7px}.popup-controls #popupScrollTop{padding:8px 10px}}.popup-hint{font-size:12px;color:var(--muted);padding:0 22px 15px}.song-actions button{font-size:12px;padding:7px 9px}
 .status-panel{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:16px}.status-badge{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);border-radius:999px;padding:7px 12px;font-size:12px;font-weight:800;text-transform:uppercase}.status-programado{background:#292a31;color:#dedee5}.status-en_ejecucion{background:#123c2b;color:#8ff0b8;border-color:#26784d}.status-terminado{background:#292b38;color:#c9c9d8}.status-form{display:inline-flex;margin:0}.export-pdf-btn{display:inline-flex;align-items:center;gap:7px;background:#bd0026;border-color:#bd0026;text-decoration:none}.export-pdf-btn:hover{background:#97001e;border-color:#97001e;color:#fff}.status-note{font-size:12px;color:var(--muted)}.autoplay-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.autoplay-controls select{border:1px solid var(--line);border-radius:9px;background:#25262d;color:#fff;padding:9px}.progress{height:5px;background:#2a2b32;border-radius:10px;overflow:hidden;margin-top:12px}.progress>div{height:100%;background:#ff4967;width:0;transition:width .2s}
 @media(max-width:600px){
 .wrap{padding:0 13px}
@@ -79,8 +79,14 @@ main{padding:26px 0 70px}.empty{padding:40px 20px;text-align:center;background:v
 <div class="song-head"><div><div class="song-title"><span class="song-num">{{ forloop.counter }}.</span>{{ item.titulo_snapshot }}</div>
 <div class="song-meta">{% if item.usa_capodastro and item.traste_capodastro %}<i class="fa-solid fa-guitar"></i> Capodastro · traste {{ item.traste_capodastro }} &nbsp;·&nbsp;{% else %}Sin capodastro &nbsp;·&nbsp;{% endif %}Tonalidad: {% if item.semitonos_transpuestos > 0 %}+{% endif %}{{ item.semitonos_transpuestos }} semitono(s) · Notación: {{ item.get_notacion_acordes_display }}</div></div>
 <div class="song-actions"><button class="btnx" type="button" data-go="{{ forloop.counter0 }}" title="Abrir la letra y los acordes en una ventana">Abrir canción</button>
-{% if servicio.estado != 'terminado' %}<button class="btnx" type="button" data-edit-toggle="{{ item.id }}" aria-label="Editar letra y acordes" title="Editar letra y acordes"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
-<form method="post" action="{% url 'gestionar_cancion_repertorio' servicio.id %}" onsubmit="return confirm('¿Quitar esta canción del repertorio de este servicio?');" style="display:inline">{% csrf_token %}<input type="hidden" name="accion" value="quitar"><input type="hidden" name="repertorio_id" value="{{ item.id }}"><button class="btnx" type="submit" aria-label="Quitar canción" title="Quitar canción"><i class="fa-solid fa-trash" aria-hidden="true"></i></button></form>{% endif %}</div></div>
+{% if servicio.estado != 'terminado' %}
+<form method="post" action="{% url 'gestionar_cancion_repertorio' servicio.id %}" style="display:inline">{% csrf_token %}<input type="hidden" name="accion" value="mover"><input type="hidden" name="repertorio_id" value="{{ item.id }}"><input type="hidden" name="direccion" value="arriba"><button class="btnx order-btn" type="submit" aria-label="Mover canción hacia arriba" title="Mover hacia arriba" {% if forloop.first %}disabled{% endif %}><i class="fa-solid fa-arrow-up" aria-hidden="true"></i></button></form>
+<form method="post" action="{% url 'gestionar_cancion_repertorio' servicio.id %}" style="display:inline">{% csrf_token %}<input type="hidden" name="accion" value="mover"><input type="hidden" name="repertorio_id" value="{{ item.id }}"><input type="hidden" name="direccion" value="abajo"><button class="btnx order-btn" type="submit" aria-label="Mover canción hacia abajo" title="Mover hacia abajo" {% if forloop.last %}disabled{% endif %}><i class="fa-solid fa-arrow-down" aria-hidden="true"></i></button></form>
+<button class="btnx" type="button" data-replace-toggle="{{ item.id }}" aria-label="Reemplazar canción" title="Reemplazar con otra del cancionero"><i class="fa-solid fa-repeat" aria-hidden="true"></i></button>
+<button class="btnx" type="button" data-edit-toggle="{{ item.id }}" aria-label="Editar letra y acordes" title="Editar letra y acordes"><i class="fa-solid fa-pen" aria-hidden="true"></i></button>
+<form method="post" action="{% url 'gestionar_cancion_repertorio' servicio.id %}" onsubmit="return confirm('¿Quitar esta canción del repertorio de este servicio?');" style="display:inline">{% csrf_token %}<input type="hidden" name="accion" value="quitar"><input type="hidden" name="repertorio_id" value="{{ item.id }}"><button class="btnx" type="submit" aria-label="Quitar canción" title="Quitar canción"><i class="fa-solid fa-trash" aria-hidden="true"></i></button></form>
+{% endif %}</div></div>
+<div class="song-replace" id="replace-{{ item.id }}"><label for="replace-search-{{ item.id }}">Buscar canción en el cancionero general</label><input id="replace-search-{{ item.id }}" type="search" data-replace-search="{{ item.id }}" minlength="2" placeholder="Escribe el título, número o parte de la letra…" autocomplete="off"><div class="search-status" data-replace-status="{{ item.id }}" role="status">Escribe al menos dos caracteres para buscar.</div><div class="replace-results" data-replace-results="{{ item.id }}"></div><small class="capo-help">Al reemplazar, se copiarán la letra, los acordes y el capodastro de la canción seleccionada. Se conservarán la posición y los ajustes de transposición y notación de esta entrada.</small></div>
 <div class="song-edit" id="edit-{{ item.id }}"><form method="post" action="{% url 'gestionar_cancion_repertorio' servicio.id %}">{% csrf_token %}<input type="hidden" name="accion" value="editar"><input type="hidden" name="repertorio_id" value="{{ item.id }}"><label>Título de esta versión</label><input name="titulo_snapshot" maxlength="200" required value="{{ item.titulo_snapshot }}"><div class="capo-edit"><label class="capo-toggle"><input type="checkbox" name="usa_capodastro" value="1" data-capo-toggle="{{ item.id }}" {% if item.usa_capodastro %}checked{% endif %}> Usar capodastro en este servicio</label><div class="capo-fret"><label for="capodastro-{{ item.id }}">Traste del capodastro</label><select id="capodastro-{{ item.id }}" name="traste_capodastro" data-capo-fret="{{ item.id }}" {% if item.usa_capodastro %}required{% else %}disabled{% endif %}><option value="">Selecciona el traste</option>{% for traste in trastes_capodastro %}<option value="{{ traste }}" {% if item.traste_capodastro == traste %}selected{% endif %}>Traste {{ traste }}</option>{% endfor %}</select></div></div><small class="capo-help">Este ajuste se aplica únicamente a esta canción dentro del repertorio del servicio; no cambia la canción original.</small><label>Letra y acordes (conserva los saltos de línea)</label><textarea name="letra_snapshot" required>{{ item.letra_snapshot }}</textarea><button class="btnx" type="submit" aria-label="Guardar cambios" title="Guardar cambios"><i class="fa-solid fa-floppy-disk" aria-hidden="true"></i></button><button class="btnx" type="button" data-edit-toggle="{{ item.id }}" title="Cancelar la edición">Cancelar</button></form></div>
 <div class="lyric-wrap"><div class="lyrics">{{ item.letra_snapshot }}</div></div>
 </section>
@@ -114,6 +120,79 @@ main{padding:26px 0 70px}.empty{padding:40px 20px;text-align:center;background:v
  }
  function csrfToken(){const m=document.cookie.match(/(?:^|; )csrftoken=([^;]+)/);return m?decodeURIComponent(m[1]):'';}
  document.querySelectorAll('[data-edit-toggle]').forEach(b=>b.addEventListener('click',()=>{const panel=document.getElementById('edit-'+b.dataset.editToggle);if(panel)panel.classList.toggle('open');}));
+ const gestionarUrl="{% url 'gestionar_cancion_repertorio' servicio.id %}";
+ const buscarUrl="{% url 'buscar_canciones' %}";
+ document.querySelectorAll('[data-replace-toggle]').forEach(button=>{
+  button.addEventListener('click',()=>{
+   const id=button.dataset.replaceToggle;
+   const panel=document.getElementById('replace-'+id);
+   if(!panel)return;
+   panel.classList.toggle('open');
+   if(panel.classList.contains('open'))panel.querySelector('[data-replace-search]').focus();
+  });
+ });
+ document.querySelectorAll('[data-replace-search]').forEach(input=>{
+  let timer=null,controller=null;
+  const id=input.dataset.replaceSearch;
+  const status=document.querySelector('[data-replace-status="'+id+'"]');
+  const results=document.querySelector('[data-replace-results="'+id+'"]');
+  input.addEventListener('input',()=>{
+   clearTimeout(timer);
+   if(controller)controller.abort();
+   results.replaceChildren();
+   const q=input.value.trim();
+   if(q.length<2){status.textContent='Escribe al menos dos caracteres para buscar.';return;}
+   status.textContent='Buscando en el cancionero…';
+   timer=setTimeout(async()=>{
+    controller=new AbortController();
+    try{
+     const response=await fetch(buscarUrl+'?q='+encodeURIComponent(q),{
+      headers:{'X-Requested-With':'XMLHttpRequest'},
+      signal:controller.signal
+     });
+     const data=await response.json();
+     if(!response.ok||!data.ok)throw new Error('No se pudo consultar el cancionero.');
+     if(!data.results.length){status.textContent='No se encontraron canciones.';return;}
+     status.textContent=data.results.length+' resultado(s). Selecciona la canción que reemplazará esta entrada.';
+     data.results.forEach(song=>{
+      const row=document.createElement('div');
+      row.className='replace-result';
+      const info=document.createElement('div');
+      const title=document.createElement('strong');
+      title.textContent=(song.numero!==null&&song.numero!==undefined?song.numero+' · ':'')+song.titulo;
+      const meta=document.createElement('small');
+      meta.textContent=song.categoria+' · '+(song.preview||'Sin vista previa');
+      info.append(title,meta);
+      const form=document.createElement('form');
+      form.method='post';
+      form.action=gestionarUrl;
+      const values={
+       csrfmiddlewaretoken:csrfToken(),
+       accion:'reemplazar',
+       repertorio_id:id,
+       cancion_id:String(song.id)
+      };
+      Object.entries(values).forEach(([name,value])=>{
+       const hidden=document.createElement('input');
+       hidden.type='hidden';hidden.name=name;hidden.value=value;
+       form.appendChild(hidden);
+      });
+      const submit=document.createElement('button');
+      submit.type='submit';submit.className='btnx';
+      submit.innerHTML='<i class="fa-solid fa-repeat" aria-hidden="true"></i> Reemplazar';
+      submit.addEventListener('click',event=>{
+       if(!confirm('¿Reemplazar esta canción por «'+song.titulo+'»? La entrada conservará su posición en el repertorio.'))event.preventDefault();
+      });
+      form.appendChild(submit);
+      row.append(info,form);
+      results.appendChild(row);
+     });
+    }catch(error){
+     if(error.name!=='AbortError')status.textContent=error.message||'Error al buscar canciones.';
+    }
+   },250);
+  });
+ });
  document.querySelectorAll('[data-capo-toggle]').forEach(toggle=>{
   const selector=document.querySelector('[data-capo-fret="'+toggle.dataset.capoToggle+'"]');
   if(!selector)return;
