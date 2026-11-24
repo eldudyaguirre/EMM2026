@@ -33,12 +33,69 @@ LIBROS_BIBLICOS = (
     "Apocalipsis",
 )
 
+ABREVIATURAS_BIBLICAS = (
+    "Gn", "Gen", "Ex", "Lv", "Nm", "Dt", "Jos", "Jue", "Rt",
+    "1 Sam", "2 Sam", "1 Re", "2 Re", "1 Cr", "2 Cr", "Esd", "Neh",
+    "Tob", "Jdt", "Est", "Sal", "Prov", "Ecl", "Cant", "Sab", "Sir",
+    "Is", "Jer", "Lam", "Bar", "Ez", "Dn", "Os", "Jl", "Am", "Abd",
+    "Jon", "Miq", "Nah", "Hab", "Sof", "Ag", "Zac", "Mal",
+    "Mt", "Mc", "Lc", "Jn", "Hch", "Rom", "1 Cor", "2 Cor",
+    "Gal", "Ef", "Flp", "Col", "1 Tes", "2 Tes", "1 Tim", "2 Tim",
+    "Tit", "Flm", "Heb", "Sant", "Stg", "1 Pe", "2 Pe",
+    "1 Jn", "2 Jn", "3 Jn", "Jud", "Ap",
+)
+
+NOMBRES_REFERENCIA = LIBROS_BIBLICOS + ABREVIATURAS_BIBLICAS
 PATRON_REFERENCIA = re.compile(
-    r"\b(?:[1-3]\s*)?(?:"
-    + "|".join(re.escape(nombre) for nombre in sorted(LIBROS_BIBLICOS, key=len, reverse=True))
+    r"(?<![A-ZÁÉÍÓÚÑ])(?:[1-3]\s*)?(?:"
+    + "|".join(re.escape(nombre) for nombre in sorted(NOMBRES_REFERENCIA, key=len, reverse=True))
     + r")\s+\d{1,3}\b(?:\s*[,.:]\s*\d{1,3}(?:[-–]\d{1,3})?)?",
     re.IGNORECASE,
 )
+
+PATRONES_MEZCLA = {
+    "primera_lectura": re.compile(
+        r"\b(?:SALMISTA\s*:|SALMO\s+RESPONSORIAL|ACLAMACI[ÓO]N|"
+        r"LECTURA\s+DEL\s+(?:SANTO\s+)?EVANGELIO|"
+        r"ASAMBLEA\s*:\s*ALELUYA)\b",
+        re.I,
+    ),
+    "salmo_responsorial": re.compile(
+        r"\b(?:MONICI[ÓO]N\s+A\s+LAS\s+LECTURAS|RITOS\s+INICIALES|"
+        r"ORACI[ÓO]N\s+COLECTA|LECTURA\s+(?:DEL|DE\s+LA)|"
+        r"PALABRA\s+DE\s+DIOS|PALABRA\s+DEL\s+SE[ÑN]OR|"
+        r"ACLAMACI[ÓO]N|ORACI[ÓO]N\s+UNIVERSAL)\b",
+        re.I,
+    ),
+    "segunda_lectura": re.compile(
+        r"\b(?:SALMISTA\s*:|SALMO\s+RESPONSORIAL|ACLAMACI[ÓO]N|"
+        r"LECTURA\s+DEL\s+(?:SANTO\s+)?EVANGELIO|"
+        r"ASAMBLEA\s*:\s*ALELUYA)\b",
+        re.I,
+    ),
+    "aclamacion": re.compile(
+        r"\b(?:ORACI[ÓO]N\s+UNIVERSAL|PROFESI[ÓO]N\s+DE\s+FE|"
+        r"LECTURA\s+DEL\s+(?:SANTO\s+)?EVANGELIO|"
+        r"PALABRA\s+DEL\s+SE[ÑN]OR|"
+        r"\d{1,2}\s*[.)]\s*POR\s+(?:EL\s+PAPA|LA\s+IGLESIA|LOS\s+GOBERNANTES))\b",
+        re.I,
+    ),
+    "evangelio": re.compile(
+        r"\b(?:ORACI[ÓO]N\s+SOBRE\s+LAS\s+OFRENDAS|"
+        r"ORACI[ÓO]N\s+UNIVERSAL|PROFESI[ÓO]N\s+DE\s+FE|"
+        r"LITURGIA\s+EUCAR[ÍI]STICA|RITOS\s+INICIALES|"
+        r"ORACI[ÓO]N\s+COLECTA|SALMISTA\s*:)\b",
+        re.I,
+    ),
+}
+
+UMBRAL_CRITICO = {
+    "primera_lectura": 80,
+    "salmo_responsorial": 25,
+    "segunda_lectura": 80,
+    "aclamacion": 35,
+    "evangelio": 50,
+}
 
 CAMPOS_REPORTE = [
     "archivo_pdf",
@@ -62,7 +119,13 @@ CAMPOS_REPORTE = [
     "aclamacion_referencia",
     "evangelio_caracteres",
     "evangelio_referencia",
+    "primera_lectura_estado",
+    "salmo_responsorial_estado",
+    "segunda_lectura_estado",
+    "aclamacion_estado",
+    "evangelio_estado",
     "secciones_faltantes",
+    "secciones_sospechosas",
     "alertas",
     "prioridad_revision",
 ]
