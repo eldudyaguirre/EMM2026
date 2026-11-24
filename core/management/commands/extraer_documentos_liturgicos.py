@@ -599,10 +599,20 @@ def _limite_banda_liturgia(archivo_imagen, ejecutable, idioma):
 
 def _limpiar_rotulos_banda_ocr(texto):
     """
-    Quita solo rótulos gráficos de transición que pueden quedar partidos
-    entre columnas; no elimina texto de las lecturas ni oraciones.
+    Quita rótulos de maquetación y fechas de cabecera que pueden quedar
+    insertados entre dos fragmentos de una lectura en páginas a columnas.
+    Elimina únicamente líneas cortas de encabezado; no recorta el texto
+    bíblico que continúa después de ellas.
     """
     resultado = []
+    meses = (
+        "ENERO|FEBRERO|MARZO|ABRIL|MAYO|JUNIO|JULIO|AGOSTO|"
+        "SEPTIEMBRE|SETIEMBRE|OCTUBRE|NOVIEMBRE|DICIEMBRE"
+    )
+    patron_fecha = re.compile(
+        rf"^\s*\d{{1,2}}\s+DE\s+(?:{meses})\s+DE\s+20\d{{2}}\s*$",
+        re.I,
+    )
     for linea in (texto or "").splitlines():
         normalizada = (
             unicodedata.normalize("NFD", linea)
@@ -610,12 +620,22 @@ def _limpiar_rotulos_banda_ocr(texto):
             .decode("ascii")
             .upper()
         )
-        normalizada = re.sub(r"[^A-Z ]+", " ", normalizada)
-        normalizada = re.sub(r"\s+", " ", normalizada).strip()
-        if re.fullmatch(
-            r"(?:LITURGIA DE LA PALAB(?:RA)?|LITURGIA EUCAR(?:ISTICA|I)?|ISTICA)",
-            normalizada,
-        ):
+        compacta = re.sub(r"\s+", " ", re.sub(r"[^A-Z0-9 ]+", " ", normalizada)).strip()
+        if patron_fecha.fullmatch(linea.strip()):
+            continue
+        if compacta in {
+            "CELEBRACION DE LA EUCARISTIA",
+            "RITOS INICIALES",
+            "LITURGIA DE LA PALABRA",
+            "LITURGIA EUCARISTICA",
+            "LITURGIA EUCARI",
+            "LITURGIA EUCAR",
+            "DOMINGO DIA DEL SENOR",
+        }:
+            continue
+        if "LITURGIA EUCAR" in compacta and len(compacta) <= 55:
+            continue
+        if "LITURGIA DE LA PALAB" in compacta and len(compacta) <= 55:
             continue
         resultado.append(linea)
     return "\n".join(resultado).strip()
@@ -668,6 +688,81 @@ def _limite_banda_eucaristica(archivo_imagen, ejecutable, idioma):
     except Exception:
         return None
     return None
+
+
+def _reordenar_continuacion_evangelio(texto_izquierda, texto_derecha):
+    """
+    En algunos misales el Evangelio comienza al pie de la columna izquierda,
+    continúa al inicio de la derecha y termina antes de "Profesión de Fe".
+    Cuando la columna izquierda ya muestra "Oración sobre las ofrendas",
+    esa continuación debe insertarse antes de dicho rito.
+
+    Solo se reordena cuando la columna derecha contiene "Palabra del Señor"
+    antes de "Profesión de Fe"/"Oración Universal". Sin esa evidencia se
+    conserva el orden original.
+    """
+    izquierda = (texto_izquierda or "").strip()
+    derecha = (texto_derecha or "").strip()
+    if not izquierda or not derecha:
+        return "\n\n".join(x for x in (izquierda, derecha) if x), False
+
+    inicio_patron = re.compile(
+        r"(?im)^\s*(?:(?:\d{1,3}\s*[,.)|!]\s*)|(?:KN|UY|EN|EJ|EM|E)\s+)?"
+        r"(?:EVANGELIO\b|LECTURA\s+DEL\s+(?:SANTO\s+)?EVANGELIO\b)"
+    )
+    limite_izquierda_patron = re.compile(
+        r"(?im)^\s*.{0,14}(?:ORACI[ÓO]N\s+SOBRE\s+LAS\s+OFRENDAS|"
+        r"LITURGIA\s+EUCAR|ORACI[ÓO]N\s+DESPU[ÉE]S\s+DE\s+LA\s+COMUNI[ÓO]N|"
+        r"COMPROMISO)\b"
+    )
+    limite_derecha_patron = re.compile(
+        r"(?im)^\s*.{0,14}(?:PROFESI[ÓO]N\s+DE\s+FE|"
+        r"ORACI[ÓO]N\s+UNIVERSAL|LITURGIA\s+EUCAR)\b"
+    )
+    fin_evangelio = re.compile(r"PALABRA\s+DEL\s+SE[ÑN]OR", re.I)
+
+    inicio = inicio_patron.search(izquierda)
+    if not inicio:
+        return izquierda + "\n\n" + derecha, False
+
+    # No confundir "Evangelio" dentro de una monición con el encabezado.
+    titulo = inicio.group(0).upper()
+    if (
+        re.search(r"\bEVANGELIO\b", titulo)
+        and not re.search(r"\bKN\b|\bUY\b|\bEN\b|\bEJ\b|\bEM\b|\bE\b", titulo)
+        and not re.search(r"\d", titulo)
+        and not titulo.strip().startswith("LECTURA")
+    ):
+        primera_linea = izquierda[inicio.start():].splitlines()[0].strip()
+        if len(primera_linea) > 28:
+            return izquierda + "\n\n" + derecha, False
+
+    limite_izquierda = limite_izquierda_patron.search(
+        izquierda,
+        inicio.end(),
+    )
+    limite_derecha = limite_derecha_patron.search(derecha)
+    if not limite_izquierda or not limite_derecha:
+        return izquierda + "\n\n" + derecha, False
+
+    cuerpo_izquierdo = izquierda[inicio.end():limite_izquierda.start()]
+    if fin_evangelio.search(cuerpo_izquierdo):
+        return izquierda + "\n\n" + derecha, False
+
+    continuacion = derecha[:limite_derecha.start()]
+    if not fin_evangelio.search(continuacion):
+        return izquierda + "\n\n" + derecha, False
+
+    combinado = (
+        izquierda[:limite_izquierda.start()].rstrip()
+        + "\n\n"
+        + continuacion.strip()
+        + "\n\n"
+        + izquierda[limite_izquierda.start():].lstrip()
+        + "\n\n"
+        + derecha[limite_derecha.start():].lstrip()
+    )
+    return combinado, True
 
 
 def _ocr_pdf(
@@ -801,99 +896,39 @@ def _ocr_pdf(
                         psm="3",
                     ).strip()
 
-                    limite_eucaristica = _limite_banda_eucaristica(
-                        imagen,
+                    texto_izquierda = _tesseract(
+                        imagen_izquierda,
                         ejecutable,
-                        idioma,
+                        idioma=idioma,
+                        psm="4",
+                    ).strip()
+                    texto_derecha = _tesseract(
+                        imagen_derecha,
+                        ejecutable,
+                        idioma=idioma,
+                        psm="4",
+                    ).strip()
+
+                    texto_izquierda = _limpiar_rotulos_banda_ocr(
+                        texto_izquierda
+                    )
+                    texto_derecha = _limpiar_rotulos_banda_ocr(
+                        texto_derecha
                     )
 
-                    if (
-                        limite_eucaristica is not None
-                        and limite_eucaristica > inicio_vertical_derecha + int(alto * 0.10)
-                    ):
-                        # La página tiene una banda litúrgica transversal.
-                        # Leer por bandas: izquierda y derecha antes de la banda
-                        # eucarística, y luego izquierda y derecha después.
-                        solapamiento = int(alto * 0.004)
-                        regiones = [
-                            (
-                                "izquierda_pre",
-                                (0, 0, corte_izquierdo, limite_eucaristica),
-                            ),
-                            (
-                                "derecha_pre",
-                                (
-                                    inicio_derecho,
-                                    inicio_vertical_derecha,
-                                    ancho,
-                                    limite_eucaristica,
-                                ),
-                            ),
-                            (
-                                "izquierda_post",
-                                (
-                                    0,
-                                    max(0, limite_eucaristica - solapamiento),
-                                    corte_izquierdo,
-                                    alto,
-                                ),
-                            ),
-                            (
-                                "derecha_post",
-                                (
-                                    inicio_derecho,
-                                    max(
-                                        inicio_vertical_derecha,
-                                        limite_eucaristica - solapamiento,
-                                    ),
-                                    ancho,
-                                    alto,
-                                ),
-                            ),
-                        ]
-                        partes_ocr = []
-                        for nombre_region, caja in regiones:
-                            archivo_region = carpeta_temporal / (
-                                f"pagina_{numero_pagina:04d}_{nombre_region}.png"
-                            )
-                            imagen_pagina.crop(caja).save(archivo_region)
-                            texto_region = _tesseract(
-                                archivo_region,
-                                ejecutable,
-                                idioma=idioma,
-                                psm="4",
-                            ).strip()
-                            texto_region = _limpiar_rotulos_banda_ocr(
-                                texto_region
-                            )
-                            if texto_region:
-                                partes_ocr.append(texto_region)
-                        texto = "\n\n".join(partes_ocr)
-                    else:
-                        texto_izquierda = _tesseract(
-                            imagen_izquierda,
-                            ejecutable,
-                            idioma=idioma,
-                            psm="4",
-                        ).strip()
-                        texto_derecha = _tesseract(
-                            imagen_derecha,
-                            ejecutable,
-                            idioma=idioma,
-                            psm="4",
-                        ).strip()
-
-                        texto_izquierda = _limpiar_rotulos_banda_ocr(
-                            texto_izquierda
+                    texto, continuidad_evangelio = (
+                        _reordenar_continuacion_evangelio(
+                            texto_izquierda,
+                            texto_derecha,
                         )
-                        texto_derecha = _limpiar_rotulos_banda_ocr(
-                            texto_derecha
-                        )
+                    )
+                    if not continuidad_evangelio:
                         texto = "\n\n".join(
                             parte for parte in (texto_izquierda, texto_derecha)
                             if parte
                         )
-
+                    else:
+                        texto = _limpiar_rotulos_banda_ocr(texto)
                     textos.append(texto)
                     paginas_dos_columnas.append(numero_pagina)
 
