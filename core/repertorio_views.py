@@ -12,19 +12,10 @@ from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Preformatted, KeepTogether, ActionFlowable
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Preformatted, KeepTogether, CondPageBreak
 from reportlab.graphics import renderPDF
 from svglib.svglib import svg2rlg
 from .models import Servicio, RepertorioServicio, Cancion
-
-
-class PageBreakIfContent(ActionFlowable):
-    """Avanza de página solo si el marco actual ya contiene contenido."""
-
-    def apply(self, doc):
-        frame = getattr(doc, 'frame', None)
-        if frame is not None and not frame._atTop:
-            doc.handle_pageBreak()
 
 
 @login_required(login_url='home')
@@ -330,7 +321,10 @@ def exportar_repertorio_servicio_pdf(request, servicio_id):
 
     for numero, item in enumerate(canciones, start=1):
         if numero > 1:
-            story.append(PageBreakIfContent())
+            # Solo fuerza una página nueva si ya se consumió espacio en el marco.
+            # Si la letra anterior terminó justo al inicio de una página nueva,
+            # no agrega otra página vacía.
+            story.append(CondPageBreak(doc.height - 1))
 
         # Mantener unido el encabezado del servicio con el título de canción.
         # Si no caben en el espacio restante, KeepTogether mueve el bloque
