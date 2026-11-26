@@ -31,6 +31,34 @@ def gestionar_cancion_repertorio(request, servicio_id):
 
     if accion == 'agregar':
         cancion = get_object_or_404(Cancion, pk=request.POST.get('cancion_id'))
+
+        # Por omisión se conserva la configuración original de la canción.
+        # Si el formulario envía una elección para esta fecha, esa elección
+        # tiene prioridad y solo se guarda en RepertorioServicio.
+        usa_capodastro = bool(cancion.usa_capodastro)
+        traste_capodastro = (
+            cancion.traste_capodastro if usa_capodastro else None
+        )
+        if 'usa_capodastro' in request.POST:
+            usa_capodastro = request.POST.get('usa_capodastro', '').strip().lower() in {
+                '1', 'on', 'true', 'si', 'sí'
+            }
+            traste_capodastro = None
+            if usa_capodastro:
+                try:
+                    traste_capodastro = int(
+                        request.POST.get('traste_capodastro', '')
+                    )
+                except (TypeError, ValueError):
+                    traste_capodastro = None
+
+                if traste_capodastro is None or not 1 <= traste_capodastro <= 12:
+                    messages.error(
+                        request,
+                        'Selecciona un traste válido del 1 al 12 para el capodastro.',
+                    )
+                    return redirect('repertorio_servicio', servicio_id=servicio.pk)
+
         entrada, creada = RepertorioServicio.objects.get_or_create(
             servicio=servicio,
             cancion=cancion,
@@ -38,8 +66,8 @@ def gestionar_cancion_repertorio(request, servicio_id):
                 'numero_snapshot': cancion.numero,
                 'titulo_snapshot': cancion.titulo,
                 'letra_snapshot': cancion.letra,
-                'usa_capodastro': cancion.usa_capodastro,
-                'traste_capodastro': cancion.traste_capodastro,
+                'usa_capodastro': usa_capodastro,
+                'traste_capodastro': traste_capodastro,
                 'orden': servicio.repertorio.count() + 1,
                 'agregado_por': request.user,
             },
