@@ -12,7 +12,8 @@ from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import cm
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Preformatted, KeepTogether, CondPageBreak
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Preformatted, CondPageBreak
+from xml.sax.saxutils import escape
 from reportlab.graphics import renderPDF
 from svglib.svglib import svg2rlg
 from .models import Servicio, RepertorioServicio, Cancion
@@ -321,20 +322,10 @@ def exportar_repertorio_servicio_pdf(request, servicio_id):
 
     for numero, item in enumerate(canciones, start=1):
         if numero > 1:
-            # Solo fuerza una página nueva si ya se consumió espacio en el marco.
-            # Si la letra anterior terminó justo al inicio de una página nueva,
-            # no agrega otra página vacía.
+            # Cada canción inicia en una página nueva. CondPageBreak solo salta
+            # si queda contenido en el marco actual; si la letra anterior ya
+            # terminó al inicio de una página nueva, no crea una página vacía.
             story.append(CondPageBreak(doc.height - 1))
-
-        # Mantener unido el encabezado del servicio con el título de canción.
-        # Si no caben en el espacio restante, KeepTogether mueve el bloque
-        # completo a la página siguiente y evita páginas con solo metadata.
-        bloque_encabezado = [
-            Paragraph(servicio.titulo, title_style),
-            Paragraph(metadata, meta_style),
-            Spacer(1, 4),
-            Paragraph(f"{numero}. {item.titulo_snapshot}", song_style),
-        ]
 
         info = []
         if item.usa_capodastro and item.traste_capodastro:
@@ -344,14 +335,28 @@ def exportar_repertorio_servicio_pdf(request, servicio_id):
         notacion = item.get_notacion_acordes_display()
         if notacion:
             info.append(f"Notación: {notacion}")
-        if info:
-            bloque_encabezado.append(Paragraph(" · ".join(info), info_style))
 
-        story.append(KeepTogether(bloque_encabezado))
+        # Un solo Paragraph mantiene juntos el título del servicio, sus datos
+        # y el título de la canción. Así ReportLab no puede dejar la metadata
+        # aislada en una página al intentar dividir un KeepTogether.
+        encabezado = (
+            f'<para align="center">'
+            f'<font name="Helvetica-Bold" size="18" color="#bd0026">{escape(servicio.titulo)}</font>'
+            f'<br/><font name="Helvetica" size="9" color="#444444">{escape(metadata)}</font>'
+            f'<br/><br/><font name="Helvetica-Bold" size="15" color="#bd0026">{numero}. {escape(item.titulo_snapshot or "")}</font>'
+        )
+        if info:
+            encabezado += (
+                f'<br/><font name="Helvetica" size="9" color="#555555">'
+                f'{escape(" · ".join(info))}</font>'
+            )
+        encabezado += '</para>'
+        story.append(Paragraph(encabezado, base['Normal']))
+        story.append(Spacer(1, 8))
 
         # Normalizar saltos de línea Windows/Mac antes de dibujar el texto.
         # Los retornos de carro dentro de Preformatted se imprimen como cuadros.
-        letra_pdf = (item.letra_snapshot or "").replace("\r\n", "\n").replace("\r", "\n")
+        letra_pdf = (item.letra_snapshot or "").replace("\\r\\n", "\\n").replace("\\r", "\\n")
         story.append(Preformatted(letra_pdf, lyrics_style, maxLineLength=100))
 
     if not canciones:
