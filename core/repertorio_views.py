@@ -75,7 +75,19 @@ def gestionar_cancion_repertorio(request, servicio_id):
         if creada:
             messages.success(request, f'«{cancion.titulo}» se agregó al repertorio.')
         else:
-            messages.info(request, f'«{cancion.titulo}» ya estaba en este repertorio.')
+            if 'usa_capodastro' in request.POST:
+                entrada.usa_capodastro = usa_capodastro
+                entrada.traste_capodastro = traste_capodastro
+                entrada.save(update_fields=[
+                    'usa_capodastro',
+                    'traste_capodastro',
+                ])
+                messages.success(
+                    request,
+                    f'Se actualizó la configuración de capodastro de «{cancion.titulo}» para este servicio.',
+                )
+            else:
+                messages.info(request, f'«{cancion.titulo}» ya estaba en este repertorio.')
     elif accion == 'mover':
         entrada = get_object_or_404(
             RepertorioServicio,
