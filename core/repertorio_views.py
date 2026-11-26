@@ -320,22 +320,28 @@ def exportar_repertorio_servicio_pdf(request, servicio_id):
     )
 
     story = []
+    metadata = (
+        f"{servicio.fecha.strftime('%d/%m/%Y')} · "
+        f"{servicio.hora_inicio.strftime('%H:%M')}"
+        f"{' – ' + servicio.hora_fin.strftime('%H:%M') if servicio.hora_fin else ''}"
+        f" · {servicio.grupo.nombre}"
+        f"{' · ' + servicio.lugar if servicio.lugar else ''}"
+    )
+
     for numero, item in enumerate(canciones, start=1):
         if numero > 1:
             story.append(PageBreakIfContent())
-        story.extend([
+
+        # Mantener unido el encabezado del servicio con el título de canción.
+        # Si no caben en el espacio restante, KeepTogether mueve el bloque
+        # completo a la página siguiente y evita páginas con solo metadata.
+        bloque_encabezado = [
             Paragraph(servicio.titulo, title_style),
-            Paragraph(
-                f"{servicio.fecha.strftime('%d/%m/%Y')} · "
-                f"{servicio.hora_inicio.strftime('%H:%M')}"
-                f"{' – ' + servicio.hora_fin.strftime('%H:%M') if servicio.hora_fin else ''}"
-                f" · {servicio.grupo.nombre}"
-                f"{' · ' + servicio.lugar if servicio.lugar else ''}",
-                meta_style,
-            ),
+            Paragraph(metadata, meta_style),
             Spacer(1, 4),
             Paragraph(f"{numero}. {item.titulo_snapshot}", song_style),
-        ])
+        ]
+
         info = []
         if item.usa_capodastro and item.traste_capodastro:
             info.append(f"Capodastro: traste {item.traste_capodastro}")
@@ -345,9 +351,12 @@ def exportar_repertorio_servicio_pdf(request, servicio_id):
         if notacion:
             info.append(f"Notación: {notacion}")
         if info:
-            story.append(Paragraph(" · ".join(info), info_style))
+            bloque_encabezado.append(Paragraph(" · ".join(info), info_style))
+
+        story.append(KeepTogether(bloque_encabezado))
+
         # Normalizar saltos de línea Windows/Mac antes de dibujar el texto.
-        # Los \r que quedan dentro de Preformatted se imprimen como cuadros negros.
+        # Los retornos de carro dentro de Preformatted se imprimen como cuadros.
         letra_pdf = (item.letra_snapshot or "").replace("\r\n", "\n").replace("\r", "\n")
         story.append(Preformatted(letra_pdf, lyrics_style, maxLineLength=100))
 
