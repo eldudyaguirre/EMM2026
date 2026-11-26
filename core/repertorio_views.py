@@ -356,7 +356,7 @@ def exportar_repertorio_servicio_pdf(request, servicio_id):
 
         # Normalizar saltos de línea Windows/Mac antes de dibujar el texto.
         # Los retornos de carro dentro de Preformatted se imprimen como cuadros.
-        letra_pdf = (item.letra_snapshot or "").replace("\\r\\n", "\\n").replace("\\r", "\\n")
+        letra_pdf = (item.letra_snapshot or "").replace("\r\n", "\n").replace("\r", "\n")
         story.append(Preformatted(letra_pdf, lyrics_style, maxLineLength=100))
 
     if not canciones:
