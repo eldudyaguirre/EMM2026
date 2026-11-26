@@ -1491,10 +1491,14 @@
         function setCapoFormForService(service){
             const savedTrack = getTrackForCurrentSong(service);
             if(savedTrack){
+                // Si la canción ya está en este servicio, recuperar exactamente
+                // el ajuste guardado para esa fecha (incluido "Sin capodastro").
                 setCapoForm(savedTrack.usa_capodastro, savedTrack.traste_capodastro);
-            }else{
-                setCapoForm(originalCapoSettings.usa_capodastro, originalCapoSettings.traste_capodastro);
             }
+            // Si es un servicio nuevo para esta canción, conservar la selección
+            // actual del usuario. El valor inicial del cancionero ya se cargó al
+            // abrir el modal, y una elección manual no debe reiniciarse al
+            // seleccionar la fecha.
         }
 
         function updateSaveButton(){
