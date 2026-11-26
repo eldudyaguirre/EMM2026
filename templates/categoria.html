@@ -117,8 +117,11 @@
         .song-service-note{font-size:12px;color:#69646a;line-height:1.5;margin:-3px 0 15px}
         .song-service-current-song{font-size:13px;font-weight:800;color:#bd0026;margin:0 0 10px}
         .song-service-capo-panel{margin:0 0 14px;padding:13px;border:1px solid #e5dce0;border-radius:10px;background:#faf7f8}
-        .song-service-capo-check{display:flex;align-items:center;gap:9px;font-size:12px;font-weight:800;color:#292329;cursor:pointer;margin:0}
-        .song-service-capo-check input{width:16px;height:16px;accent-color:#bd0026}
+        .song-service-capo-title{display:block;font-size:12px;font-weight:900;color:#292329;margin:0 0 9px}
+        .song-service-capo-options{display:flex;gap:9px;flex-wrap:wrap;margin:0;padding:0;border:0}
+        .song-service-capo-choice{display:flex;align-items:center;gap:7px;padding:9px 12px;border:1px solid #ded4d9;border-radius:8px;background:#fff;color:#292329;font-size:12px;font-weight:800;cursor:pointer}
+        .song-service-capo-choice:has(input:checked){border-color:#bd0026;background:#fff0f3;box-shadow:0 0 0 1px rgba(189,0,38,.12)}
+        .song-service-capo-choice input{width:16px;height:16px;margin:0;accent-color:#bd0026}
         .song-service-capo-fret{display:none;grid-template-columns:105px minmax(100px,160px);align-items:center;gap:10px;margin-top:12px}
         .song-service-capo-fret.open{display:grid}
         .song-service-capo-fret label{font-size:11px;font-weight:800;color:#555;margin:0}
@@ -452,10 +455,17 @@
             </div>
             <p class="song-service-current-song" id="songServiceCurrentSong">Canción seleccionada</p>
             <div class="song-service-capo-panel">
-                <label class="song-service-capo-check" for="songServiceUsesCapo">
-                    <input type="checkbox" id="songServiceUsesCapo">
-                    Usar capodastro en este servicio
-                </label>
+                <strong class="song-service-capo-title">¿Cómo van a interpretar esta canción en esta fecha?</strong>
+                <fieldset class="song-service-capo-options" aria-label="Capodastro para este servicio">
+                    <label class="song-service-capo-choice" for="songServiceNoCapo">
+                        <input type="radio" name="songServiceCapoChoice" id="songServiceNoCapo" value="sin_capodastro">
+                        Sin capodastro
+                    </label>
+                    <label class="song-service-capo-choice" for="songServiceUseCapo">
+                        <input type="radio" name="songServiceCapoChoice" id="songServiceUseCapo" value="con_capodastro">
+                        Con capodastro
+                    </label>
+                </fieldset>
                 <div class="song-service-capo-fret" id="songServiceCapoFretPanel">
                     <label for="songServiceCapoFret">Traste del capo</label>
                     <select id="songServiceCapoFret">
@@ -1413,7 +1423,8 @@
         const repertoireWrap = document.getElementById('songServiceRepertoire');
         const repertoireTitle = document.getElementById('songServiceRepertoireTitle');
         const repertoireList = document.getElementById('songServiceRepertoireList');
-        const usesCapoCheckbox = document.getElementById('songServiceUsesCapo');
+        const usesCapoRadio = document.getElementById('songServiceUseCapo');
+        const noCapoRadio = document.getElementById('songServiceNoCapo');
         const capoFretPanel = document.getElementById('songServiceCapoFretPanel');
         const capoFretSelect = document.getElementById('songServiceCapoFret');
         const optionsUrlTemplate = "{% url 'servicios_programados_para_cancion' 987654321 %}";
@@ -1452,10 +1463,22 @@
         }
 
         function setCapoForm(enabled, fret){
-            usesCapoCheckbox.checked = !!enabled;
+            usesCapoRadio.checked = !!enabled;
+            noCapoRadio.checked = !enabled;
             capoFretPanel.classList.toggle('open', !!enabled);
             capoFretSelect.required = !!enabled;
             capoFretSelect.value = enabled && fret ? String(fret) : '';
+        }
+
+        function syncCapoChoice(){
+            const enabled = usesCapoRadio.checked;
+            capoFretPanel.classList.toggle('open', enabled);
+            capoFretSelect.required = enabled;
+            if(!enabled){
+                capoFretSelect.value = '';
+            }else if(!capoFretSelect.value && originalCapoSettings.traste_capodastro){
+                capoFretSelect.value = String(originalCapoSettings.traste_capodastro);
+            }
         }
 
         function getTrackForCurrentSong(service){
@@ -1688,8 +1711,8 @@
                         letra_snapshot: currentSongLyrics,
                         semitonos_transpuestos: currentSongMeta.semitonos_transpuestos || 0,
                         notacion_acordes: currentSongMeta.notacion_acordes || 'original',
-                        usa_capodastro: usesCapoCheckbox.checked,
-                        traste_capodastro: usesCapoCheckbox.checked ? capoFretSelect.value : null
+                        usa_capodastro: usesCapoRadio.checked,
+                        traste_capodastro: usesCapoRadio.checked ? capoFretSelect.value : null
                     })
                 });
                 const data = await response.json();
@@ -1717,11 +1740,8 @@
         modal.addEventListener('click', function(event){
             if(event.target === modal) modal.classList.remove('open');
         });
-        usesCapoCheckbox.addEventListener('change', function(){
-            capoFretPanel.classList.toggle('open', usesCapoCheckbox.checked);
-            capoFretSelect.required = usesCapoCheckbox.checked;
-            if(!usesCapoCheckbox.checked) capoFretSelect.value = '';
-        });
+        usesCapoRadio.addEventListener('change', syncCapoChoice);
+        noCapoRadio.addEventListener('change', syncCapoChoice);
         saveButton.addEventListener('click', saveToRepertoire);
         document.addEventListener('keydown', function(event){
             if(event.key === 'Escape') modal.classList.remove('open');
